@@ -7,6 +7,7 @@ dependencies:
   # - adios_db
   - aiohttp
   - numpy
+  - opendrift
   - scipy
   - xarray
   ##############
