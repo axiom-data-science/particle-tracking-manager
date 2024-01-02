@@ -10,7 +10,7 @@ from opendrift.models.oceandrift import OceanDrift
 from opendrift.models.oceandrift import Lagrangian3DArray
 from opendrift.models.openoil import OpenOil
 
-from the_manager import ParticleTrackingManager
+from .the_manager import ParticleTrackingManager
 
 
 class OpenDrift(ParticleTrackingManager):

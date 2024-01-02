@@ -1,0 +1,17 @@
+name: test_env_particle-tracking-manager
+channels:
+  - conda-forge
+dependencies:
+  - python=3.9
+  ############## These will have to be adjusted to your specific project
+  - adios_db
+  - aiohttp
+  - numpy
+  - scipy
+  - xarray
+  ##############
+  - pytest
+  - pip:
+    - codecov
+    - pytest-cov
+    - coverage[toml]
