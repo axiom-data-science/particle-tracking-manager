@@ -1,5 +1,7 @@
 """Using OpenDrift for particle tracking."""
-from datetime import datetime
+import datetime
+from typing import Optional, Union
+import pandas as pd
 import opendrift
 from opendrift.readers import reader_ROMS_native, reader_netCDF_CF_generic, reader_global_landmask
 from opendrift.models.oceandrift import OceanDrift
@@ -10,21 +12,76 @@ from opendrift.models.oceandrift import OceanDrift
 from opendrift.models.oceandrift import Lagrangian3DArray
 from opendrift.models.openoil import OpenOil
 
+from .utils import copydocstring
+
 from .the_manager import ParticleTrackingManager
 
 
+ciofs_operational_start_time = datetime.datetime(2021,8,31,19,0,0)
+ciofs_operational_end_time = (pd.Timestamp.now() + pd.Timedelta("48H")).to_pydatetime()
+ciofs_end_time = datetime.datetime(2023,1,1,0,0,0)
+nwgoa_end_time = datetime.datetime(2009,1,1,0,0,0)
+overall_start_time = datetime.datetime(1999,1,1,0,0,0)
+overall_end_time = ciofs_operational_end_time
+
+
+# @copydocstring( ParticleTrackingManager )
 class OpenDrift(ParticleTrackingManager):
+    """Open drift particle tracking model."""
     
-    def __init__(self, model="opendrift", driftmodel=None, **kwargs) -> None:
+    def __init__(self, model: str="opendrift", driftmodel: str=None, 
+                 lon: Optional[Union[int,float]] = None,
+                 lat: Optional[Union[int,float]] = None,
+                 z: Optional[Union[int,float,str]] = None,
+                 start_time: Optional[datetime.datetime] = None,
+                 run_forward: Optional[bool] = None,
+                 time_step: Optional[int] = None,  # s
+                 time_step_output: Optional[int] = None,
+                 
+                 steps: Optional[int] = None,
+                 duration: Optional[datetime.timedelta] = None,
+                 end_time: Optional[datetime.datetime] = None,
+                              
+                 # universal inputs
+                 log: Optional[str] = None,
+                 oceanmodel: Optional[str] = None,
+                 surface_only: Optional[bool] = None,
+                 do3D: Optional[bool] = None,
+                 vertical_mixing: Optional[bool] = None,
+                 coastline_action: Optional[str] = None,
+                 stokes_drift: Optional[bool] = None,
+                 **kw) -> None:
+        """Inputs for OpenDrift model.
+
+        Parameters
+        ----------
+        model : str
+            Name of Lagrangian model to use for drifter tracking, in this case: "opendrift"
+        driftmodel : str, optional
+            Options: "OceanDrift", "LarvalFish", "OpenOil", "Leeway", by default "OceanDrift"
+        use_auto_landmask : bool
+            Set as True to use general landmask instead of that from oceanmodel. 
+            Use for testing primarily. Default is False.
+        number : int
+            Number of drifters to simulate. Default is 100.
+        INCLUDE OTHER OPTIONAL PARAMETERS?
+        """
         driftmodel = driftmodel or "OceanDrift"
         self.driftmodel = driftmodel
         # self.kwargs = kwargs
-
-
-        # # Calling general constructor of parent class
         # import pdb; pdb.set_trace()
-        super(OpenDrift, self).__init__(model, **kwargs)
+
+        # # # Calling general constructor of parent class
+        # super(OpenDrift, self).__init__(model, lon, lat, z, 
+        #                                 start_time, run_forward, 
+        #                                 time_step, time_step_output,
+        #                                 steps, duration, end_time,
+        #                                 log, oceanmodel, surface_only,
+        #                                 do3D, vertical_mixing,
+        #                                 coastline_action, stokes_drift,
+        #                                 **kwargs)
         # super().__init__()
+        super().__init__(self, **kw)
         
         if self.log == "low":
             self.loglevel = 20
@@ -108,7 +165,7 @@ class OpenDrift(ParticleTrackingManager):
 
         # add defaults for seeding
         kw.update({"radius": 1000,
-                   "ndrifters": 100,
+                   "number": 100,
         })
 
         # use defaults when I don't want to override
@@ -185,17 +242,28 @@ class OpenDrift(ParticleTrackingManager):
         self.kw.update(kw)
 
 
-    def run_add_reader(self):
-        """Might need to cache this if its still slow locally."""
+    def run_add_reader(self, loc=None, kwargs_xarray=None, oceanmodel_lon0_360=False, ):
+        """Might need to cache this if its still slow locally.
+        
+        Parameters
+        ----------
+        oceanmodel_lon0_360 : bool
+            True if ocean model longitudes span 0 to 360 instead of -180 to 180.
+        """
         
         oceanmodel = self.oceanmodel
+        kwargs_xarray = kwargs_xarray or {}
         
-        if oceanmodel is not None:
+        if loc is not None:
+            self.oceanmodel = "user_input"
+
+        if oceanmodel is not None or loc is not None:
             if oceanmodel == "NWGOA":
+                oceanmodel_lon0_360 = True
                 loc = "http://xpublish-nwgoa.srv.axds.co/datasets/nwgoa_all/zarr/"
                 kwargs_xarray = dict(engine="zarr", chunks={"ocean_time":1})
-                reader = reader_ROMS_native.Reader(loc, kwargs_xarray=kwargs_xarray)
             elif oceanmodel == "CIOFS":
+                oceanmodel_lon0_360 = False
                 loc = "http://xpublish-ciofs.srv.axds.co/datasets/ciofs_hindcast/zarr/"
                 kwargs_xarray = dict(engine="zarr", chunks={"ocean_time":1})
                 reader = reader_ROMS_native.Reader(loc, kwargs_xarray=kwargs_xarray)
@@ -204,10 +272,13 @@ class OpenDrift(ParticleTrackingManager):
                 # loc = "http://xpublish-ciofs.srv.axds.co/datasets/ciofs_hindcast/zarr/"
                 # kwargs_xarray = dict(engine="zarr", chunks={"ocean_time":1})
                 # reader = reader_ROMS_native.Reader(loc, kwargs_xarray=kwargs_xarray) 
-            # elif oceanmodel == "fake":
             
+            reader = reader_ROMS_native.Reader(loc, kwargs_xarray=kwargs_xarray)
             self.o.add_reader([reader])
             self.reader = reader
+            # can find reader at manager.o.env.readers['roms native']            
+            
+            self.oceanmodel_lon0_360 = oceanmodel_lon0_360
 
 
     def run_seed(self):
@@ -218,9 +289,13 @@ class OpenDrift(ParticleTrackingManager):
         seed_kws = dict(lon=self.lon,
                         lat=self.lat,
                         radius=self.kw["radius"],
-                        number=self.kw["ndrifters"],
+                        number=self.kw["number"],
                         time=self.start_time,
                     )
+        
+        if "radius_type" in self.kw:
+            seed_kws.update({"radius_type": self.kw["radius_type"]})
+            self.kw.pop("radius_type")
 
         if self.z != "seabed":
             seed_kws.update({"z": self.z})
@@ -245,13 +320,22 @@ class OpenDrift(ParticleTrackingManager):
                 m3_per_hour=self.kw["m3_per_hour"],
                                 ))
 
+        self.o.seed_kws = seed_kws
+        
         self.o.seed_elements(**seed_kws)
+        
+        self.initial_drifters = self.o.elements_scheduled
 
 
     def run_drifters(self):
+
+        if self.run_forward:
+            timedir = 1
+        else:
+            timedir = -1
         
         self.o.run(
-            time_step=self.time_step,
-            steps=self.nsteps,
+            time_step=timedir*self.time_step,
+            steps=self.steps,
             outfile=f'output-results_{datetime.utcnow():%Y-%m-%dT%H%M:%SZ}.nc'
         )

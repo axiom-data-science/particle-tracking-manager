@@ -10,6 +10,7 @@ dependencies:
   - opendrift
   - scipy
   - xarray
+  - xroms
   ##############
   - pytest
   - pip:

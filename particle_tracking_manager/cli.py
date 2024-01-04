@@ -5,7 +5,7 @@ import ast
 from datetime import datetime
 import pandas as pd
 
-import model_opendrift
+import particle_tracking_manager as ptm
 
 
 def is_int(s):
@@ -101,7 +101,15 @@ if __name__ == "__main__":
     }
     args.kwargs.update(to_bool)
     
-    if args.kwargs["oceanmodel"] is None and args.kwargs["start_time"] is None:
-        raise KeyError("Need to either use a reader or input a start_time to avoid error.")
+    # import pdb; pdb.set_trace()
     
-    model_opendrift.OpenDrift(**args.kwargs).run_all()
+    # set default
+    if "model" not in args:
+        args.kwargs["model"] = "opendrift"
+    
+    # if args.kwargs["oceanmodel"] is None and args.kwargs["start_time"] is None:
+    #     raise KeyError("Need to either use a reader or input a start_time to avoid error.")
+    
+    ptm.OpenDrift(**args.kwargs).run_all()
+    
+    # ptm.ParticleTrackingManager(**args.kwargs).run_all()

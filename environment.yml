@@ -16,6 +16,7 @@ dependencies:
   - dask
   - netcdf4
   - pandas
+  - pip
   - requests
   - matplotlib
   - zarr

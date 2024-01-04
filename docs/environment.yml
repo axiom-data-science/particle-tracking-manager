@@ -25,6 +25,7 @@ dependencies:
    - recommonmark
    - pip
    - pip:
+     - docstring-inheritance
      - docrep<=0.2.7
      - nbsphinx>=0.8.7
      - jupyter_client
