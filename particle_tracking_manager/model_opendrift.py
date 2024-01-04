@@ -81,7 +81,14 @@ class OpenDrift(ParticleTrackingManager):
         #                                 coastline_action, stokes_drift,
         #                                 **kwargs)
         # super().__init__()
-        super().__init__(self, **kw)
+        super().__init__(model, lon, lat, z, 
+                            start_time, run_forward, 
+                            time_step, time_step_output,
+                            steps, duration, end_time,
+                            log, oceanmodel, surface_only,
+                            do3D, vertical_mixing,
+                            coastline_action, stokes_drift,
+                         **kw)
         
         if self.log == "low":
             self.loglevel = 20
