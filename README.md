@@ -6,7 +6,7 @@ particle-tracking-manager
 [![Documentation Status](https://img.shields.io/readthedocs/particle-tracking-manager/latest.svg?style=for-the-badge)](https://particle-tracking-manager.readthedocs.io/en/latest/?badge=latest)
 [![Code Style Status](https://img.shields.io/github/actions/workflow/status/axiom-data-science/particle-tracking-manager/pre-commit.yml?branch-main&label=Code%20Style&style=for-the-badge)](https://github.com/axiom-data-science/particle-tracking-manager/actions)
 [![Conda Version](https://img.shields.io/conda/vn/conda-forge/particle-tracking-manager.svg?style=for-the-badge)](https://anaconda.org/conda-forge/particle-tracking-manager)
-[![Python Package Index](https://img.shields.io/pypi/v/xroms.svg?style=for-the-badge)](https://pypi.org/project/particle-tracking-manager)
+[![Python Package Index](https://img.shields.io/pypi/v/particle-tracking-manager.svg?style=for-the-badge)](https://pypi.org/project/particle-tracking-manager)
 
 
 Manager for particle tracking simulations.
