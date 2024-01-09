@@ -1,9 +1,12 @@
 particle-tracking-manager
 ==============================
-[![Build Status](https://github.com/axiom-data-science/particle-tracking-manager/workflows/Tests/badge.svg)](https://github.com/axiom-data-science/particle-tracking-manager/actions)
-[![codecov](https://codecov.io/gh/axiom-data-science/particle-tracking-manager/branch/main/graph/badge.svg)](https://codecov.io/gh/axiom-data-science/particle-tracking-manager)
-[![License:MIT](https://img.shields.io/badge/License-MIT-lightgray.svg?style=flt-square)](https://opensource.org/licenses/MIT)[![pypi](https://img.shields.io/pypi/v/particle-tracking-manager.svg)](https://pypi.org/project/particle-tracking-manager)
-<!-- [![conda-forge](https://img.shields.io/conda/dn/conda-forge/particle-tracking-manager?label=conda-forge)](https://anaconda.org/conda-forge/particle-tracking-manager) -->[![Documentation Status](https://readthedocs.org/projects/particle-tracking-manager/badge/?version=latest)](https://particle-tracking-manager.readthedocs.io/en/latest/?badge=latest)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/axiom-data-science/particle-tracking-manager/test.yaml?branch=main&logo=github&style=for-the-badge)](https://github.com/axiom-data-science/particle-tracking-manager/actions)
+[![Code Coverage](https://img.shields.io/codecov/c/github/axiom-data-science/particle-tracking-manager.svg?style=for-the-badge)](https://codecov.io/gh/axiom-data-science/particle-tracking-manager)
+[![License:MIT](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
+[![Documentation Status](https://img.shields.io/readthedocs/particle-tracking-manager/latest.svg?style=for-the-badge)](https://particle-tracking-manager.readthedocs.io/en/latest/?badge=latest)
+[![Code Style Status](https://img.shields.io/github/actions/workflow/status/axiom-data-science/particle-tracking-manager/pre-commit.yml?branch-main&label=Code%20Style&style=for-the-badge)](https://github.com/axiom-data-science/particle-tracking-manager/actions)
+[![Conda Version](https://img.shields.io/conda/vn/conda-forge/particle-tracking-manager.svg?style=for-the-badge)](https://anaconda.org/conda-forge/particle-tracking-manager)
+[![Python Package Index](https://img.shields.io/pypi/v/particle-tracking-manager.svg?style=for-the-badge)](https://pypi.org/project/particle-tracking-manager)
 
 
 Manager for particle tracking simulations.
