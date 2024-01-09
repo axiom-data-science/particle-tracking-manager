@@ -101,13 +101,11 @@ if __name__ == "__main__":
     }
     args.kwargs.update(to_bool)
     
-    # import pdb; pdb.set_trace()
-    
     # set default
     if "model" not in args:
         args.kwargs["model"] = "opendrift"
     
-    # if args.kwargs["oceanmodel"] is None and args.kwargs["start_time"] is None:
+    # if args.kwargs["ocean_model"] is None and args.kwargs["start_time"] is None:
     #     raise KeyError("Need to either use a reader or input a start_time to avoid error.")
     
     ptm.OpenDrift(**args.kwargs).run_all()

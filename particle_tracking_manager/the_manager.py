@@ -2,6 +2,7 @@
 
 
 from pathlib import Path
+import pathlib
 from typing import Optional, Union
 import warnings
 
@@ -10,35 +11,51 @@ import xarray as xr
 
 import pandas as pd
 import cmocean.cm as cmo
-from docstring_inheritance import NumpyDocstringInheritanceMeta
+# from docstring_inheritance import NumpyDocstringInheritanceMeta
 import datetime
+import yaml
+
+from .cli import is_None
 
 
-class ParticleTrackingManager(metaclass=NumpyDocstringInheritanceMeta):
+# Read PTM configuration information
+loc = pathlib.Path(__file__).parent / pathlib.Path("the_manager_config.yaml")
+with open(loc, "r") as f:
+    # Load the YAML file into a Python object
+    config_ptm = yaml.safe_load(f)
+
+# convert "None"s to Nones
+for key in config_ptm.keys():
+    if is_None(config_ptm[key]["default"]):
+        config_ptm[key]["default"] = None
+
+
+class ParticleTrackingManager():
     """Manager class that controls particle tracking model."""
     
-    def __init__(self, 
-                 model,
+    def __init__(self,
+                 model: str,
                  lon: Optional[Union[int,float]] = None,
                  lat: Optional[Union[int,float]] = None,
-                 z: Union[int,float,str] = 0,
+                 z: Union[int,float] = config_ptm["z"]["default"],
+                 seed_seafloor: bool = config_ptm["seed_seafloor"]["default"],
                  start_time: Optional[datetime.datetime] = None,
-                 run_forward: bool = True,
-                 time_step: int = 3600,  # s
-                 time_step_output: Optional[int] = None,
+                 run_forward: bool = config_ptm["run_forward"]["default"],
+                 time_step: int = config_ptm["time_step"]["default"],
+                 time_step_output: Optional[int] = config_ptm["time_step_output"]["default"],
                  
-                 steps: Optional[int] = 3,
-                 duration: Optional[datetime.timedelta] = None,
-                 end_time: Optional[datetime.datetime] = None,
+                 steps: Optional[int] = config_ptm["steps"]["default"],
+                 duration: Optional[datetime.timedelta] = config_ptm["duration"]["default"],
+                 end_time: Optional[datetime.datetime] = config_ptm["end_time"]["default"],
                               
                  # universal inputs
-                 log: str = "low",
-                 oceanmodel: Optional[str] = None,
-                 surface_only: Optional[bool] = None,
-                 do3D: bool = False,
-                 vertical_mixing: bool = False,
-                 coastline_action: str = "previous",
-                 stokes_drift: bool = True,
+                 log: str = config_ptm["log"]["default"],
+                 ocean_model: Optional[str] = config_ptm["ocean_model"]["default"],
+                 surface_only: Optional[bool] = config_ptm["surface_only"]["default"],
+                 do3D: bool = config_ptm["do3D"]["default"],
+                 vertical_mixing: bool = config_ptm["vertical_mixing"]["default"],
+                 coastline_action: str = config_ptm["coastline_action"]["default"],
+                 stokes_drift: bool = config_ptm["stokes_drift"]["default"],
                  **kw) -> None:
         """Inputs necessary for any particle tracking.
 
@@ -50,9 +67,13 @@ class ParticleTrackingManager(metaclass=NumpyDocstringInheritanceMeta):
             Longitude of center of initial drifter locations, by default None
         lat : Optional[Union[int,float]], optional
             Latitude of center of initial drifter locations, by default None
-        z : Union[int,float,str], optional
-            Depth of initial drifter locations, by default 0. Values are overridden if 
-            ``surface_only==True``.
+        z : Union[int,float], optional
+            Depth of initial drifter locations, by default 0 but taken from the 
+            default in the model. Values are overridden if 
+            ``surface_only==True`` to 0 and to the seabed if ``seed_seafloor`` is True.
+        seed_seafloor : bool, optional
+            Set to True to seed drifters vertically at the seabed, default is False. If True
+            then value of z is set to None and ignored.
         start_time : Optional[datetime], optional
             Start time of simulation, as a datetime object, by default None
         run_forward : bool, optional
@@ -67,7 +88,8 @@ class ParticleTrackingManager(metaclass=NumpyDocstringInheritanceMeta):
             steps, end_time, or duration must be input by user. By default steps is 3 and 
             duration and end_time are None.
         duration : Optional[datetime.timedelta], optional
-            Length of simulation to run, as positive-valued timedelta object.
+            Length of simulation to run, as positive-valued timedelta object, in hours,
+            such as ``timedelta(hours=48)``.
             steps, end_time, or duration must be input by user. By default steps is 3 and 
             duration and end_time are None.
         end_time : Optional[datetime], optional
@@ -76,10 +98,10 @@ class ParticleTrackingManager(metaclass=NumpyDocstringInheritanceMeta):
             duration and end_time are None.
         log : str, optional
             Options are "low" and "high" verbosity for log, by default "low"
-        oceanmodel : Optional[str], optional
+        ocean_model : Optional[str], optional
             Name of ocean model to use for driving drifter simulation, by default None.
             Use None for testing and set up. Otherwise input a string. 
-            Options are: "NWGOA", "CIOFS", "CIOFS (operational)".
+            Options are: "NWGOA", "CIOFS", "CIOFS_now".
             Alternatively keep as None and set up a separate reader (see example in docs).
         surface_only : bool, optional
             Set to True to keep drifters at the surface, by default None. 
@@ -110,6 +132,7 @@ class ParticleTrackingManager(metaclass=NumpyDocstringInheritanceMeta):
         self.surface_only = surface_only
         self.do3D = do3D
         self.z = z
+        self.seed_seafloor = seed_seafloor
         self.vertical_mixing = vertical_mixing
 
         # checks are in __setattr__
@@ -127,7 +150,7 @@ class ParticleTrackingManager(metaclass=NumpyDocstringInheritanceMeta):
         self.model = model
         
         self.log = log
-        self.oceanmodel = oceanmodel
+        self.ocean_model = ocean_model
         self.vertical_mixing = vertical_mixing
         self.coastline_action = coastline_action
         self.stokes_drift = stokes_drift
@@ -140,6 +163,8 @@ class ParticleTrackingManager(metaclass=NumpyDocstringInheritanceMeta):
 
         self.kw = kw
         
+        self.config_ptm = config_ptm
+        
         
     def __setattr__(self, name: str, value) -> None:
         self.__dict__[name] = value
@@ -147,10 +172,17 @@ class ParticleTrackingManager(metaclass=NumpyDocstringInheritanceMeta):
         # check longitude when it is set
         if value is not None and name == "lon":
             assert -180 <= value <= 180, "Longitude needs to be between -180 and 180 degrees."
+        
+        if value is not None and name == "lat":
+            assert -90 <= value <= 90, "Latitude needs to be between -90 and 90 degrees."
 
+        # make sure ocean_model name uppercase
+        if name == "ocean_model" and value is not None:
+            self.__dict__[name] = value.upper()
+            
         # deal with if input longitudes need to be shifted due to model
         if name == "oceanmodel_lon0_360" and value:
-            if self.oceanmodel is not None and self.lon is not None:
+            if self.ocean_model is not "test" and self.lon is not None:
                 # move longitude to be 0 to 360 for this model
                 # this is not a user-defined option
                 if -180 < self.lon < 0:
@@ -178,7 +210,42 @@ class ParticleTrackingManager(metaclass=NumpyDocstringInheritanceMeta):
                 self.__dict__["do3D"] = False
                 self.__dict__["z"] = 0
                 self.__dict__["vertical_mixing"] = False
+        
+        # set z to None if seed_seafloor is True
+        if name == "seed_seafloor" and value:
+            print("setting z to None since being seeded at seafloor")
+            self.__dict__["z"] = None
+        
+        # in case z is changed back after initialization
+        if name == "z" and value is not None and hasattr(self, "seed_seafloor"):
+            print("setting `seed_seafloor` to False since now setting a non-None z value")
+            self.__dict__["seed_seafloor"] = False
+
+        # if reader, lon, and lat set, check inputs
+        if name == "has_added_reader" and value and self.lon is not None and self.lat is not None \
+            or name in ["lon","lat"] and hasattr(self, "has_added_reader") and self.has_added_reader and self.lon is not None and self.lat is not None:
                 
+            if self.ocean_model != "TEST":
+                rlon = self.reader_metadata("lon")
+                assert rlon.min() < self.lon < rlon.max()
+                rlat = self.reader_metadata("lat")
+                assert rlat.min() < self.lat < rlat.max()
+
+        # use reader start time if not otherwise input
+        if name == "has_added_reader" and value and self.start_time is None:
+            print("setting reader start_time as simulation start_time")
+            self.__dict__["start_time"] = self.reader_metadata("start_time")
+
+        # if reader, lon, and lat set, check inputs
+        if name == "has_added_reader" and value and self.start_time is not None:
+                
+            if self.ocean_model != "TEST":
+                assert self.reader_metadata("start_time") <= self.start_time
+
+        # if reader, lon, and lat set, check inputs
+        if name == "has_added_reader" and value:
+            assert self.ocean_model is not None
+
 
         # # forward/backward
         # if name in ["time_step", "run_forward"]:
@@ -201,53 +268,39 @@ class ParticleTrackingManager(metaclass=NumpyDocstringInheritanceMeta):
         if not self.has_run_config:
             raise KeyError("first run configuration with `manager.config()`.")
 
-        self.run_add_reader(**kwargs)
+        self.run_add_reader(**kwargs)    
 
         self.has_added_reader = True
 
-    def seed(self):
+    def seed(self, lon=None, lat=None, z=None):
         """Initialize the drifters in space and time
         
         ... and with any special properties.
         """
         
-        if not self.has_run_config:
-            raise KeyError("first run configuration with `manager.config()`.")
-
-        msg = f"""lon, lat, and z all need non-None values. 
-                  Please update them with e.g. `self.lon=-151`."""
-        assert self.lon is not None and self.lat is not None and self.z is not None, msg
-
-        # use reader start time if not otherwise input
-        if self.start_time is None and self.has_added_reader:
-            self.start_time = self.o.env.readers['roms native'].start_time
-        elif self.start_time is None and not self.has_added_reader:
-            msg = f"""`start_time` is required or first setup reader and then will use 
-                      that start_time by default."""
-            raise KeyError(msg)
-
-        # MOVE THIS TO CHECKS?
-        # if reader already set, check inputs
-        if self.oceanmodel is not None and self.has_added_reader:
-
-            rlon = self.o.env.readers['roms native'].lon
-            assert rlon.min() < self.lon < rlon.max()
-            rlat = self.o.env.readers['roms native'].lat
-            assert rlat.min() < self.lat < rlat.max()
-            assert self.o.env.readers['roms native'].start_time <= self.start_time
-        else:
-            print("did not check seeding inputs for location or time")
+        for key in [lon, lat, z]:
+            if key is not None:
+                self.__setattr__(self, f"{key}", key)
         
+        if self.ocean_model != "TEST" and not self.has_added_reader:
+            raise ValueError("first add reader with `manager.add_reader(**kwargs)`.")
+
+        msg = f"""lon and lat need non-None values. 
+                  Update them with e.g. `self.lon=-151` or input to `seed`."""
+        assert self.lon is not None and self.lat is not None
+
+        msg = f"""z needs a non-None value. 
+                  Please update it with e.g. `self.z=-10` or input to `seed`."""
+        if not self.seed_seafloor:
+            assert self.z is not None, msg
+
         self.run_seed()
         self.has_run_seeding = True
     
     def run(self):
         
         if not self.has_run_seeding:
-            raise KeyError("first run configuration with `manager.seed()`.")
-
-        if not self.has_added_reader:
-            raise KeyError("first run configuration with `manager.add_reader()`.")
+            raise KeyError("first run seeding with `manager.seed()`.")
 
         # need end time info
         assert self.steps is not None or self.duration is not None or self.end_time is not None
@@ -287,4 +340,36 @@ class ParticleTrackingManager(metaclass=NumpyDocstringInheritanceMeta):
 
     
     def output(self):
+        pass
+    
+    def _config(self):
+        """Model should have its own version which returns variable config"""
+        pass
+    
+    def _ptm_config(self):
+        """Configuration metadata for PTM parameters."""
+
+        # Modify model parameter config with PTM config
+        self._ptm_config_model()
+
+        # combine model config and PTM config updates
+        self._config.update(self.config_ptm)
+
+    def show_config(self, **kwargs) -> dict:
+        """Show parameter configuration across both model and PTM."""
+        
+        if not self.has_run_config:
+            print("running config for you...")
+            self.config()
+        
+        # add in PTM-specific info to base model config
+        self._ptm_config()
+        
+        # Filter config
+        config = self.show_config_model(**kwargs)
+
+        return config
+    
+    def query_reader(self):
+        """Overwrite method in model."""
         pass

@@ -1,0 +1,145 @@
+model:
+  type: enum
+  enum:
+    - opendrift
+  default: opendrift
+  ptm_level: 1
+  description: Lagrangian model to use for simulation.
+
+lon:
+  type: float
+  default: -151.0
+  min: -180
+  max: 180
+  units: degrees_east
+  description: Central longitude for seeding drifters.
+  ptm_level: 1
+
+lat:
+  type: float
+  default: 58.0
+  min: -90
+  max: 90
+  units: degrees_north
+  description: Central latitude for seeding drifters.
+  ptm_level: 1
+
+start_time:
+  type: datetime.datetime
+  default: pd.Timestamp.now()
+  min: datetime.datetime(1999,1,1)
+  max: pd.Timestamp.now() + pd.Timedelta("48H")
+  units: time
+  description: Start time for drifter simulation.
+  ptm_level: 1
+
+run_forward:
+  type: bool
+  default: True
+  description: Run forward in time.
+  ptm_level: 1
+
+time_step:
+  type:
+    - float
+    - datetime.timedelta
+  default: 3600
+  min: 1
+  max: 86400
+  units: seconds
+  description: Interval between particles updates, in seconds or as timedelta.
+  ptm_level: 1
+
+time_step_output:
+  type:
+    - float
+    - datetime.timedelta
+  default: None
+  min: 1
+  max: 604800
+  units: seconds
+  description: Time step at which element properties are stored and eventually written to file.
+  ptm_level: 2
+
+steps:
+  type: int
+  default: 3
+  min: 1
+  max: 10000
+  units: None
+  description: Maximum number of steps. End of simulation will be start_time + steps*time_step. steps, end_time, or duration must be input by user.
+  ptm_level: 1
+
+duration:
+  type: datetime.timedelta
+  default: None
+  min: None
+  max: None
+  units: None
+  description: The length of the simulation. steps, end_time, or duration must be input by user.
+  ptm_level: 1
+
+end_time:
+  type: datetime.datetime
+  default: None
+  min: None
+  max: None
+  units: None
+  description: The end of the simulation. steps, end_time, or duration must be input by user.
+  ptm_level: 1
+
+log:
+  type: enum
+  enum:
+    - low
+    - high
+  default: low
+  ptm_level: 2
+  description: Log verbosity
+
+ocean_model:
+  type: enum
+  enum:
+    - NWGOA
+    - CIOFS
+    - CIOFS_now
+  default: None
+  ptm_level: 1
+  description: Ocean model to drive drifters.
+
+surface_only:
+  type: bool
+  default: None
+  description: Set to True to keep drifters at the surface.
+  ptm_level: 1
+
+do3D:
+  type: bool
+  default: False
+  description: Drifters move in 3D space.
+  ptm_level: 1
+
+coastline_action:
+  default: previous
+  od_mapping: "general:coastline_action"
+  ptm_level: 2
+
+stokes_drift:
+  default: True
+  od_mapping: "drift:stokes_drift"
+  ptm_level: 2
+
+vertical_mixing:
+  default: False
+  od_mapping: "drift:vertical_mixing"
+  ptm_level: 1
+
+z:
+  default: 0
+  od_mapping: "seed:z"
+  ptm_level: 1
+
+seed_seafloor:
+  default: False
+  od_mapping: "seed:seafloor"
+  ptm_level: 2

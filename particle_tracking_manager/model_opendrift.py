@@ -1,4 +1,5 @@
 """Using OpenDrift for particle tracking."""
+import copy
 import datetime
 from typing import Optional, Union
 import pandas as pd
@@ -29,27 +30,7 @@ overall_end_time = ciofs_operational_end_time
 class OpenDrift(ParticleTrackingManager):
     """Open drift particle tracking model."""
     
-    def __init__(self, model: str="opendrift", driftmodel: str=None, 
-                 lon: Optional[Union[int,float]] = None,
-                 lat: Optional[Union[int,float]] = None,
-                 z: Optional[Union[int,float,str]] = None,
-                 start_time: Optional[datetime.datetime] = None,
-                 run_forward: Optional[bool] = None,
-                 time_step: Optional[int] = None,  # s
-                 time_step_output: Optional[int] = None,
-                 
-                 steps: Optional[int] = None,
-                 duration: Optional[datetime.timedelta] = None,
-                 end_time: Optional[datetime.datetime] = None,
-                              
-                 # universal inputs
-                 log: Optional[str] = None,
-                 oceanmodel: Optional[str] = None,
-                 surface_only: Optional[bool] = None,
-                 do3D: Optional[bool] = None,
-                 vertical_mixing: Optional[bool] = None,
-                 coastline_action: Optional[str] = None,
-                 stokes_drift: Optional[bool] = None,
+    def __init__(self, model: str="opendrift", driftmodel: str=None,
                  **kw) -> None:
         """Inputs for OpenDrift model.
 
@@ -60,35 +41,20 @@ class OpenDrift(ParticleTrackingManager):
         driftmodel : str, optional
             Options: "OceanDrift", "LarvalFish", "OpenOil", "Leeway", by default "OceanDrift"
         use_auto_landmask : bool
-            Set as True to use general landmask instead of that from oceanmodel. 
+            Set as True to use general landmask instead of that from ocean_model. 
             Use for testing primarily. Default is False.
         number : int
             Number of drifters to simulate. Default is 100.
         INCLUDE OTHER OPTIONAL PARAMETERS?
+        
+        Notes
+        -----
+        Docs available for more initialization options with ``ptm.ParticleTrackingManager?``
+        
         """
         driftmodel = driftmodel or "OceanDrift"
         self.driftmodel = driftmodel
-        # self.kwargs = kwargs
-        # import pdb; pdb.set_trace()
-
-        # # # Calling general constructor of parent class
-        # super(OpenDrift, self).__init__(model, lon, lat, z, 
-        #                                 start_time, run_forward, 
-        #                                 time_step, time_step_output,
-        #                                 steps, duration, end_time,
-        #                                 log, oceanmodel, surface_only,
-        #                                 do3D, vertical_mixing,
-        #                                 coastline_action, stokes_drift,
-        #                                 **kwargs)
-        # super().__init__()
-        super().__init__(model, lon, lat, z, 
-                            start_time, run_forward, 
-                            time_step, time_step_output,
-                            steps, duration, end_time,
-                            log, oceanmodel, surface_only,
-                            do3D, vertical_mixing,
-                            coastline_action, stokes_drift,
-                         **kw)
+        super().__init__(model, **kw)
         
         if self.log == "low":
             self.loglevel = 20
@@ -226,7 +192,7 @@ class OpenDrift(ParticleTrackingManager):
                 o.set_config('vertical_mixing:timestep', kw["vertical_mixing_timestep"]) # seconds
 
 
-        if self.z == "seabed":
+        if self.seed_seafloor:
             o.set_config('seed:seafloor', True)
 
 
@@ -258,23 +224,28 @@ class OpenDrift(ParticleTrackingManager):
             True if ocean model longitudes span 0 to 360 instead of -180 to 180.
         """
         
-        oceanmodel = self.oceanmodel
+        # ocean_model = self.ocean_model
         kwargs_xarray = kwargs_xarray or {}
         
-        if loc is not None:
-            self.oceanmodel = "user_input"
+        if loc is not None and self.ocean_model is None:
+            self.ocean_model = "user_input"
 
-        if oceanmodel is not None or loc is not None:
-            if oceanmodel == "NWGOA":
+        if self.ocean_model.upper() == "TEST":
+            oceanmodel_lon0_360 = True
+            loc = "test"
+            kwargs_xarray = dict()
+
+        elif self.ocean_model is not None or loc is not None:
+            if self.ocean_model == "NWGOA":
                 oceanmodel_lon0_360 = True
                 loc = "http://xpublish-nwgoa.srv.axds.co/datasets/nwgoa_all/zarr/"
                 kwargs_xarray = dict(engine="zarr", chunks={"ocean_time":1})
-            elif oceanmodel == "CIOFS":
+            elif self.ocean_model == "CIOFS":
                 oceanmodel_lon0_360 = False
                 loc = "http://xpublish-ciofs.srv.axds.co/datasets/ciofs_hindcast/zarr/"
                 kwargs_xarray = dict(engine="zarr", chunks={"ocean_time":1})
                 reader = reader_ROMS_native.Reader(loc, kwargs_xarray=kwargs_xarray)
-            elif oceanmodel == "CIOFS (operational)":
+            elif self.ocean_model == "CIOFS_now":
                 pass
                 # loc = "http://xpublish-ciofs.srv.axds.co/datasets/ciofs_hindcast/zarr/"
                 # kwargs_xarray = dict(engine="zarr", chunks={"ocean_time":1})
@@ -283,9 +254,13 @@ class OpenDrift(ParticleTrackingManager):
             reader = reader_ROMS_native.Reader(loc, kwargs_xarray=kwargs_xarray)
             self.o.add_reader([reader])
             self.reader = reader
-            # can find reader at manager.o.env.readers['roms native']            
+            # can find reader at manager.o.env.readers['roms native']      
             
             self.oceanmodel_lon0_360 = oceanmodel_lon0_360
+            
+        else:
+            raise ValueError("reader did not set an ocean_model")
+
 
 
     def run_seed(self):
@@ -304,7 +279,7 @@ class OpenDrift(ParticleTrackingManager):
             seed_kws.update({"radius_type": self.kw["radius_type"]})
             self.kw.pop("radius_type")
 
-        if self.z != "seabed":
+        if not self.seed_seafloor:
             seed_kws.update({"z": self.z})
 
         # Include model-specific inputs
@@ -344,5 +319,145 @@ class OpenDrift(ParticleTrackingManager):
         self.o.run(
             time_step=timedir*self.time_step,
             steps=self.steps,
-            outfile=f'output-results_{datetime.utcnow():%Y-%m-%dT%H%M:%SZ}.nc'
+            outfile=f'output-results_{datetime.datetime.utcnow():%Y-%m-%dT%H%M:%SZ}.nc'
         )
+    
+    @property
+    def _config(self):
+        """Surface the model configuration."""
+        
+        return self.o._config
+    
+    def _ptm_config_model(self):
+        """Add PTM configuration into opendrift config."""
+        
+        # combine PTM config with opendrift metadata for some parameters        
+        od_config_to_add_ptm_config_to = {key: self.show_config_model(key=self.config_ptm[key]["od_mapping"]) for key in self.config_ptm.keys() if "od_mapping" in self.config_ptm[key].keys()}
+
+        # otherwise things get combined too much        
+        od_config_to_add_ptm_config_to = copy.deepcopy(od_config_to_add_ptm_config_to)
+        
+        for key in od_config_to_add_ptm_config_to.keys():
+            # self.config_ptm[key].update(od_config_to_add_ptm_config_to[key])
+            od_config_to_add_ptm_config_to[key].update(self.config_ptm[key])
+
+        self.config_ptm.update(od_config_to_add_ptm_config_to)
+
+    def get_configspec(self, prefix, substring, level,
+                       ptm_level):
+        """Copied from OpenDrift, then modified."""
+
+        if not isinstance(level, list) and level is not None:
+            level = [level]
+        if not isinstance(ptm_level, list) and ptm_level is not None:
+            ptm_level = [ptm_level]
+
+        # check for prefix or substring comparison
+        configspec = {
+            k: v
+            for (k, v) in self._config.items()
+            if k.startswith(prefix) and substring in k
+        }
+
+        if level is not None:
+            # check for levels (if present)
+            configspec = {
+                k: v
+                for (k, v) in configspec.items()
+                if "level" in configspec[k] and configspec[k]['level'] in level
+            }
+
+        if ptm_level is not None:
+            # check for ptm_levels (if present)
+            configspec = {
+                k: v
+                for (k, v) in configspec.items()
+                if "ptm_level" in configspec[k] and configspec[k]['ptm_level'] in ptm_level
+            }
+
+        return configspec
+
+    def show_config_model(self, key=None, prefix='', level=None, 
+                          ptm_level=None, substring='') -> dict:
+        """Show configuring for the drift model selected in configuration.
+        
+        Runs configuration for you if it hasn't yet been run.
+        
+        Parameters
+        ----------
+        key : str, optional
+            If input, show configuration for just that key.
+        prefix : str, optional
+            prefix to search config for, only for OpenDrift parameters (not PTM).
+        level : int, list, optional
+            Limit search by level:
+            * CONFIG_LEVEL_ESSENTIAL = 1
+            * CONFIG_LEVEL_BASIC = 2
+            * CONFIG_LEVEL_ADVANCED = 3
+            e.g. 1, [1,2], [1,2,3]
+        ptm_level : int, list, optional
+            Limit search by level:
+            * Surface to user = 1
+            * Medium surface to user = 2
+            * Surface but bury = 3
+            e.g. 1, [1,2], [1,2,3]. To access all PTM parameters search for 
+            `ptm_level=[1,2,3]`.
+
+        
+        Examples
+        --------
+        Show all possible configuration for the previously-selected drift model:
+        
+        >>> manager.show_config()
+        
+        Show configuration with a specific prefix:
+        
+        >>> manager.show_config(prefix="seed")
+
+        Show configuration matching a substring:
+        
+        >>> manager.show_config(substring="stokes")
+        
+        Show configuration at a specific level (from OpenDrift):
+        
+        >>> manager.show_config(level=1)
+
+        Show all OpenDrift configuration:
+        
+        >>> manager.show_config(level=[1,2,3])
+        
+        Show configuration for only PTM-specified parameters:
+        
+        >>> manager.show_config(ptm_level=[1,2,3])
+        
+        Show configuration for a specific PTM level:
+        
+        >>> manager.show_config(ptm_level=2)
+        
+        Show configuration for a single key:
+        
+        >>> manager.show_config("seed:oil_type")
+        
+        Show configuration for parameters that are both OpenDrift and PTM-modified:
+        
+        >>> m.show_config(ptm_level=[1,2,3], level=[1,2,3])
+        
+        """
+
+        if key is not None:
+            prefix = key
+            
+        output = self.get_configspec(prefix=prefix, level=level, 
+                                    ptm_level=ptm_level, substring=substring)
+        
+        if key is not None:
+            return output[key]
+        else:
+            return output
+    
+    def reader_metadata(self, key):
+        """allow manager to query reader metadata."""
+        
+        if not self.has_added_reader:
+            raise ValueError("reader has not been added yet.")
+        return self.o.env.readers['roms native'].__dict__[key]
