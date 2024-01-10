@@ -25,3 +25,17 @@ def test_show_config():
     
     # check PTM level sorting
     assert "lon" in m.show_config(ptm_level=1).keys() and "log" not in m.show_config(ptm_level=1).keys()
+
+
+def test_default_overrides():
+    """Make sure input to OpenDrift and to PTM are represented as values in config."""
+    
+    m = ptm.OpenDrift(emulsification=False, driftmodel="OpenOil", steps=5)
+    
+    # the value should be False due to input value
+    assert not m.show_config(key="processes:emulsification")["value"]
+    
+    # value should be what was entered
+    assert m.show_config(key="steps")["value"] == 5
+
+    

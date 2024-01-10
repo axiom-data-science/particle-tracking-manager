@@ -62,7 +62,8 @@ class ParticleTrackingManager():
         Parameters
         ----------
         model : str
-            Name of Lagrangian model to use for drifter tracking
+            Name of Lagrangian model to use for drifter tracking. Only option
+            currently is "opendrift".
         lon : Optional[Union[int,float]], optional
             Longitude of center of initial drifter locations, by default None
         lat : Optional[Union[int,float]], optional
@@ -126,34 +127,63 @@ class ParticleTrackingManager():
             Set to True to turn on Stokes drift, by default True.
         """
         
-        self.lon = lon
-        self.lat = lat
-
-        self.surface_only = surface_only
-        self.do3D = do3D
-        self.z = z
-        self.seed_seafloor = seed_seafloor
-        self.vertical_mixing = vertical_mixing
-
-        # checks are in __setattr__
-
-        self.run_forward = run_forward
-        self.time_step = time_step
-        self.time_step_output = time_step_output
+        # get all named parameters input to ParticleTrackingManager class
+        from inspect import signature
+        sig = signature(ParticleTrackingManager)
         
-        self.start_time = start_time
-        self.steps = steps
-        self.duration = duration
-        self.end_time = end_time
+        self.config_ptm = config_ptm
+
+        # Set all attributes which will trigger some checks and changes in __setattr__
+        # these will also update "value" in the config dict
+        for key in sig.parameters.keys():
+            self.__setattr__(key, locals()[key])
+        
+        # # Update config for all named input arguments
+        # for key in sig.parameters.keys():
+        #     if key != "kw":
+        #         config_ptm[f"{key}"]["value"] = locals()[key]
+        
+        
+        
+        # # CHECK KWARGS HERE AND UPDATE CONFIG ACCORDINGLY!
+        
+        # # config_ptm["steps"]["value"] = steps
+        
+        # # update value in 
+        # from inspect import signature
+        # sig = signature(ParticleTrackingManager)
+        # for key in sig.parameters.keys():
+        #     config_ptm[f"{key}"]["value"] = key
+        # import pdb; pdb.set_trace()
+        
+        # self.lon = lon
+        # self.lat = lat
+
+        # self.surface_only = surface_only
+        # self.do3D = do3D
+        # self.z = z
+        # self.seed_seafloor = seed_seafloor
+        # self.vertical_mixing = vertical_mixing
+
+        # # checks are in __setattr__
+
+        # self.run_forward = run_forward
+        # self.time_step = time_step
+        # self.time_step_output = time_step_output
+        
+        # self.start_time = start_time
+        # self.steps = steps
+        # self.duration = duration
+        # self.end_time = end_time
             
 
-        self.model = model
+        # self.model = model
         
-        self.log = log
-        self.ocean_model = ocean_model
-        self.vertical_mixing = vertical_mixing
-        self.coastline_action = coastline_action
-        self.stokes_drift = stokes_drift
+        # self.log = log
+        # self.ocean_model = ocean_model
+        # self.vertical_mixing = vertical_mixing
+        # self.coastline_action = coastline_action
+        # self.stokes_drift = stokes_drift
 
         # mode flags
         self.has_run_config = False
@@ -162,12 +192,24 @@ class ParticleTrackingManager():
         self.has_run = False
 
         self.kw = kw
-        
-        self.config_ptm = config_ptm
-        
+
+    def __setattr_model__(self, name: str, value) -> None:
+        """Implement this in model class."""
+        pass        
         
     def __setattr__(self, name: str, value) -> None:
+        # print(name)
+        # import pdb; pdb.set_trace()
+        
+        # create/update class attribute
         self.__dict__[name] = value
+        
+        # create/update "value" keyword in config to keep it up to date
+        if name != "config_ptm" and name in self.config_ptm.keys():
+            self.config_ptm[name]["value"] = value
+        
+        # create/update "value" keyword in model config to keep it up to date
+        self.__setattr_model__(name, value)
         
         # check longitude when it is set
         if value is not None and name == "lon":
@@ -205,7 +247,7 @@ class ParticleTrackingManager():
 
         # in case any of these are reset by user after surface_only is already set
         if name in ["do3D", "z", "vertical_mixing"]:
-            if self.surface_only:
+            if hasattr(self, "surface_only") and self.surface_only:
                 print("overriding values for `do3D`, `z`, and `vertical_mixing` because `surface_only` True")
                 self.__dict__["do3D"] = False
                 self.__dict__["z"] = 0
@@ -346,14 +388,23 @@ class ParticleTrackingManager():
         """Model should have its own version which returns variable config"""
         pass
     
-    def _ptm_config(self):
-        """Configuration metadata for PTM parameters."""
+    def _add_ptm_config(self):
+        """Have this in the model class to modify config"""
+        pass
+    
+    def _add_model_config(self):
+        """Have this in the model class to modify config"""
+        pass
+    
+    # def _ptm_config(self):
+    #     """Configuration metadata for PTM parameters."""
 
-        # Modify model parameter config with PTM config
-        self._ptm_config_model()
+    #     # Modify model parameter config with PTM config
+    #     # self._ptm_config_model()
+    #     self._add_ptm_config()
 
-        # combine model config and PTM config updates
-        self._config.update(self.config_ptm)
+    #     # combine model config and PTM config updates
+    #     self._config.update(self.config_ptm)
 
     def show_config(self, **kwargs) -> dict:
         """Show parameter configuration across both model and PTM."""
@@ -362,8 +413,14 @@ class ParticleTrackingManager():
             print("running config for you...")
             self.config()
         
-        # add in PTM-specific info to base model config
-        self._ptm_config()
+        # # add in PTM-specific info to base model config
+        # self._ptm_config()
+        # Modify model parameter config with PTM config
+        # self._ptm_config_model()
+        self._add_ptm_config()
+        
+        # add in additional model config to base model config
+        self._add_model_config()
         
         # Filter config
         config = self.show_config_model(**kwargs)

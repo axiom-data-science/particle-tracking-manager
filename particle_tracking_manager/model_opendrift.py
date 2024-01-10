@@ -1,8 +1,10 @@
 """Using OpenDrift for particle tracking."""
 import copy
 import datetime
+import pathlib
 from typing import Optional, Union
 import pandas as pd
+import yaml
 import opendrift
 from opendrift.readers import reader_ROMS_native, reader_netCDF_CF_generic, reader_global_landmask
 from opendrift.models.oceandrift import OceanDrift
@@ -13,9 +15,21 @@ from opendrift.models.oceandrift import OceanDrift
 from opendrift.models.oceandrift import Lagrangian3DArray
 from opendrift.models.openoil import OpenOil
 
-from .utils import copydocstring
-
+# from .utils import copydocstring
+from .cli import is_None
 from .the_manager import ParticleTrackingManager
+
+
+# Read PTM configuration information
+loc = pathlib.Path(__file__).parent / pathlib.Path("opendrift_config.yaml")
+with open(loc, "r") as f:
+    # Load the YAML file into a Python object
+    config_model = yaml.safe_load(f)
+
+# convert "None"s to Nones
+for key in config_model.keys():
+    if is_None(config_model[key]["default"]):
+        config_model[key]["default"] = None
 
 
 ciofs_operational_start_time = datetime.datetime(2021,8,31,19,0,0)
@@ -30,14 +44,14 @@ overall_end_time = ciofs_operational_end_time
 class OpenDrift(ParticleTrackingManager):
     """Open drift particle tracking model."""
     
-    def __init__(self, model: str="opendrift", driftmodel: str=None,
+    def __init__(self,
+                 driftmodel: str=None,
+                 emulsification: bool = config_model["emulsification"]["default"],
                  **kw) -> None:
         """Inputs for OpenDrift model.
 
         Parameters
         ----------
-        model : str
-            Name of Lagrangian model to use for drifter tracking, in this case: "opendrift"
         driftmodel : str, optional
             Options: "OceanDrift", "LarvalFish", "OpenOil", "Leeway", by default "OceanDrift"
         use_auto_landmask : bool
@@ -52,14 +66,40 @@ class OpenDrift(ParticleTrackingManager):
         Docs available for more initialization options with ``ptm.ParticleTrackingManager?``
         
         """
-        driftmodel = driftmodel or "OceanDrift"
-        self.driftmodel = driftmodel
+        
+        model = "opendrift"
+
         super().__init__(model, **kw)
         
+        # get all named parameters input to ParticleTrackingManager class
+        from inspect import signature
+        sig = signature(OpenDrift)
+        # ADD SETATTR ADDITION HERE TO ADD TO MANAGER
+        self.config_model = config_model
+
+        # Set all attributes which will trigger some checks and changes in __setattr__
+        # these will also update "value" in the config dict
+        for key in sig.parameters.keys():
+            self.__setattr__(key, locals()[key])
+        
+        # ## OpenOil ##
+        # self.emulsification = emulsification
+        
+        driftmodel = driftmodel or "OceanDrift"
+        self.driftmodel = driftmodel
+
         if self.log == "low":
             self.loglevel = 20
         elif self.log == "high":
             self.loglevel = 0
+
+        
+    def __setattr_model__(self, name: str, value) -> None:
+        
+        # create/update "value" keyword in config to keep it up to date
+        if hasattr(self, "config_model") and name != "config_model" and name != "config_ptm" and name in self.config_model.keys():
+            self.config_model[name]["value"] = value
+        
 
     def run_config(self):
 
@@ -88,9 +128,9 @@ class OpenDrift(ParticleTrackingManager):
         
         # defaults that might be overridden by incoming kwargs
         kw = {
-            "emulsification": True,
-            "dispersion": True,
-            "evaporation": True,
+            # "emulsification": True,
+            # "dispersion": True,
+            # "evaporation": True,
             "wave_entrainment": True,
             "update_oilfilm_thickness": True,
             "biodegradation": True,
@@ -158,9 +198,9 @@ class OpenDrift(ParticleTrackingManager):
             pass
 
         elif self.driftmodel == "OpenOil":
-            o.set_config('processes:emulsification',  kw["emulsification"])
-            o.set_config('processes:dispersion', kw["dispersion"])
-            o.set_config('processes:evaporation', kw["evaporation"])
+            # o.set_config('processes:emulsification',  kw["emulsification"])
+            # o.set_config('processes:dispersion', kw["dispersion"])
+            # o.set_config('processes:evaporation', kw["evaporation"])
             if kw["wave_entrainment"]:
                 o.set_config('wave_entrainment:entrainment_rate', 'Li et al. (2017)')  # only option
             o.set_config('wave_entrainment:droplet_size_distribution', kw["wave_entrainment_droplet_size_distribution"])
@@ -328,20 +368,94 @@ class OpenDrift(ParticleTrackingManager):
         
         return self.o._config
     
-    def _ptm_config_model(self):
-        """Add PTM configuration into opendrift config."""
+    # def _ptm_config_model(self):
+    #     """Add PTM configuration into opendrift config."""
         
-        # combine PTM config with opendrift metadata for some parameters        
-        od_config_to_add_ptm_config_to = {key: self.show_config_model(key=self.config_ptm[key]["od_mapping"]) for key in self.config_ptm.keys() if "od_mapping" in self.config_ptm[key].keys()}
+    #     # combine PTM config with opendrift metadata for some parameters        
+    #     od_config_to_add_ptm_config_to = {key: self.show_config_model(key=self.config_ptm[key]["od_mapping"]) for key in self.config_ptm.keys() if "od_mapping" in self.config_ptm[key].keys()}
 
-        # otherwise things get combined too much        
-        od_config_to_add_ptm_config_to = copy.deepcopy(od_config_to_add_ptm_config_to)
+    #     # otherwise things get combined too much        
+    #     od_config_to_add_ptm_config_to = copy.deepcopy(od_config_to_add_ptm_config_to)
         
-        for key in od_config_to_add_ptm_config_to.keys():
-            # self.config_ptm[key].update(od_config_to_add_ptm_config_to[key])
-            od_config_to_add_ptm_config_to[key].update(self.config_ptm[key])
+    #     for key in od_config_to_add_ptm_config_to.keys():
+    #         # self.config_ptm[key].update(od_config_to_add_ptm_config_to[key])
+    #         od_config_to_add_ptm_config_to[key].update(self.config_ptm[key])
 
-        self.config_ptm.update(od_config_to_add_ptm_config_to)
+    #     self.config_ptm.update(od_config_to_add_ptm_config_to)
+
+        
+    #     # dict1 = copy.deepcopy(self._config)
+    #     # dict2 = copy.deepcopy(self.config_ptm)
+        
+    #     # dictB = {k: {**v, **dict2[k]} if k in dict2.keys() else {**v} for k, v in dict1.items()}
+        
+    #     # dict2.update(dictB)
+    
+    def _add_ptm_config(self):        
+        
+        dict1 = copy.deepcopy(self._config)
+        dict2 = copy.deepcopy(self.config_ptm)
+
+        # dictB has the od_mapping version of the keys of dict2
+        # e.g.  'processes:emulsification' instead of 'emulsification'
+        # dictB values are the OpenDrift config parameters with config_od parameters added on top
+        dictB = {v["od_mapping"]: ({**dict1[v["od_mapping"]], **v} if "od_mapping" in v and v["od_mapping"] in dict1.keys() else {**v}) for k, v in dict2.items() if "od_mapping" in v}
+
+        # dictC is the same as dictB except the names are the PTM/OpenDrift names instead of the 
+        # original OpenDrift names
+        dictC = {k: {**dict1[v["od_mapping"]], **v} if "od_mapping" in v and v["od_mapping"] in dict1.keys() else {**v} for k, v in dict2.items()}
+        
+        # this step brings config overrides from config_ptm into the overall config
+        self._config.update(dictB)
+        # this step brings other model config (plus additions from mapped parameter config) into the overall config
+        self._config.update(dictC)
+        # # this step brings other model config into the overall config
+        # self._config.update(dict2)
+    
+    def _add_model_config(self): 
+        """Goal is to combine the config both directions:
+        
+        * override OpenDrift config defaults with those from opendrift_config as well
+          as include extra information like ptm_level
+        * bring OpenDrift config parameter metadata into config_model so application 
+          could query it to get the ranges, options, etc.
+        """       
+        
+        dict1 = copy.deepcopy(self._config)
+        dict2 = copy.deepcopy(self.config_model)
+
+        # dictB has the od_mapping version of the keys of dict2
+        # e.g.  'processes:emulsification' instead of 'emulsification'
+        # dictB values are the OpenDrift config parameters with config_od parameters added on top
+        dictB = {v["od_mapping"]: {**dict1[v["od_mapping"]], **v} if "od_mapping" in v and v["od_mapping"] in dict1.keys() else {**v} for k, v in dict2.items()}
+
+        # dictC is the same as dictB except the names are the PTM/OpenDrift names instead of the 
+        # original OpenDrift names
+        dictC = {k: {**dict1[v["od_mapping"]], **v} if "od_mapping" in v and v["od_mapping"] in dict1.keys() else {**v} for k, v in dict2.items()}
+
+
+        # this step brings config overrides from config_model into the overall config
+        self._config.update(dictB)
+        # this step brings other model config (plus additions from mapped parameter config) into the overall config
+        self._config.update(dictC)
+        # self._config.update(dict2)
+        # import pdb; pdb.set_trace()
+    
+    # def _add_od_config_old(self):
+        
+    #     dict1 = copy.deepcopy(self._config)
+    #     dict2 = copy.deepcopy(config_model)
+        
+    #     # dictB is dict1 but overwrite and combine any keys from dict2 that match
+    #     # combine and as relevant prioritize key/values from dict2 into dict1
+    #     # dictB keys are identical to dict1        
+    #     dictB = {k: {**v, **dict2[k]} if k in dict2.keys() else {**v} for k, v in dict1.items()}
+    #     # import pdb; pdb.set_trace()
+        
+    #     # effect of this step is to have fully combined dict1 and dict2 
+    #     # including nested dicts
+    #     dict2.update(dictB)
+    #     self._config.update(dict2)
 
     def get_configspec(self, prefix, substring, level,
                        ptm_level):
@@ -451,7 +565,10 @@ class OpenDrift(ParticleTrackingManager):
                                     ptm_level=ptm_level, substring=substring)
         
         if key is not None:
-            return output[key]
+            if key in output:
+                return output[key]
+            else:
+                return output
         else:
             return output
     
@@ -461,3 +578,7 @@ class OpenDrift(ParticleTrackingManager):
         if not self.has_added_reader:
             raise ValueError("reader has not been added yet.")
         return self.o.env.readers['roms native'].__dict__[key]
+
+
+# class LeewayModel(ParticleTrackingManager, OpenDrift):
+#     def __init__(self)

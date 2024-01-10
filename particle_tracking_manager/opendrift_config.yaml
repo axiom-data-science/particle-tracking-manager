@@ -1,0 +1,26 @@
+# Configuration options to add to existing opendrift parameters
+# The od_mapping key in this file is used to map the variable name in PTM
+# with the name in OpenDrift.
+
+
+## OpenOil ##
+
+# processes:emulsification:
+#   default: True
+#   # od_mapping: "processes:emulsification"
+#   ptm_level: 2
+
+emulsification:
+  default: True
+  od_mapping: "processes:emulsification"
+  ptm_level: 2
+
+dispersion:
+  default: True
+  od_mapping: "processes:dispersion"
+  ptm_level: 2
+
+evaporation:
+  default: True
+  od_mapping: "processes:evaporation"
+  ptm_level: 2
