@@ -28,7 +28,7 @@ with open(loc, "r") as f:
 
 # convert "None"s to Nones
 for key in config_model.keys():
-    if is_None(config_model[key]["default"]):
+    if "default" in config_model[key] and is_None(config_model[key]["default"]):
         config_model[key]["default"] = None
 
 
@@ -41,25 +41,45 @@ overall_end_time = ciofs_operational_end_time
 
 
 # @copydocstring( ParticleTrackingManager )
-class OpenDrift(ParticleTrackingManager):
+class OpenDriftModel(ParticleTrackingManager):
     """Open drift particle tracking model."""
     
     def __init__(self,
-                 driftmodel: str=None,
+                 drift_model: str=None,
+                 horizontal_diffusivity: float = config_model["horizontal_diffusivity"]["default"],
+                 use_auto_landmask: bool = config_model["use_auto_landmask"]["default"],
+                 diffusivitymodel: str = config_model["diffusivitymodel"]["default"],
+                 stokes_drift: bool = config_model["stokes_drift"]["default"],
+                 mixed_layer_depth: int = config_model["mixed_layer_depth"]["default"],
+                 coastline_action: str = config_model["coastline_action"]["default"],
+                 max_speed: int = config_model["max_speed"]["default"],
+                 wind_drift_depth: float = config_model["wind_drift_depth"]["default"],
+                 vertical_mixing_timestep: int = config_model["vertical_mixing_timestep"]["default"],
                  emulsification: bool = config_model["emulsification"]["default"],
+                 dispersion: bool = config_model["dispersion"]["default"],
+                 evaporation: bool = config_model["evaporation"]["default"],
+                #  wave_entrainment: bool = config_model["wave_entrainment"]["default"],
+                 update_oilfilm_thickness: bool = config_model["update_oilfilm_thickness"]["default"],
+                 biodegradation: bool = config_model["biodegradation"]["default"],
+                #  advection_scheme: Optional[str] = None, -> in kw
                  **kw) -> None:
         """Inputs for OpenDrift model.
 
         Parameters
         ----------
-        driftmodel : str, optional
+        drift_model : str, optional
             Options: "OceanDrift", "LarvalFish", "OpenOil", "Leeway", by default "OceanDrift"
+        stokes_drift : bool, optional
+            Set to True to turn on Stokes drift, by default True.
+        coastline_action : str, optional
+            Action to perform if a drifter hits the coastline, by default "previous". Options
+            are 'stranding', 'previous'.
         use_auto_landmask : bool
             Set as True to use general landmask instead of that from ocean_model. 
             Use for testing primarily. Default is False.
         number : int
             Number of drifters to simulate. Default is 100.
-        INCLUDE OTHER OPTIONAL PARAMETERS?
+        ADD MORE PARAMETERS
         
         Notes
         -----
@@ -70,10 +90,44 @@ class OpenDrift(ParticleTrackingManager):
         model = "opendrift"
 
         super().__init__(model, **kw)
+
+        if self.log == "low":
+            self.loglevel = 20
+        elif self.log == "high":
+            self.loglevel = 0
+
+        drift_model = drift_model or "OceanDrift"
+        
+        self.drift_model = drift_model
+
+        # do this right away so I can query the object
+        if self.drift_model == "Leeway":
+            o = Leeway(loglevel=self.loglevel)
+
+        elif self.drift_model == "OceanDrift":
+            o = OceanDrift(loglevel=self.loglevel)
+
+        elif self.drift_model == "LarvalFish":
+            o = LarvalFish(loglevel=self.loglevel)
+
+        elif self.drift_model == "OpenOil":
+            o = OpenOil(loglevel=self.loglevel, weathering_model='noaa')
+
+        else:
+            raise ValueError(f"Drifter model {self.drift_model} is not recognized.")
+        
+        self.o = o
+
+        # Note that you can see configuration possibilities for a given model with
+        # o.list_configspec()
+        # You can check the metadata for a given configuration with (min/max/default/type)
+        # o.get_configspec('vertical_mixing:timestep')
+        # You can check required variables for a model with
+        # o.required_variables
         
         # get all named parameters input to ParticleTrackingManager class
         from inspect import signature
-        sig = signature(OpenDrift)
+        sig = signature(OpenDriftModel)
         # ADD SETATTR ADDITION HERE TO ADD TO MANAGER
         self.config_model = config_model
 
@@ -84,14 +138,6 @@ class OpenDrift(ParticleTrackingManager):
         
         # ## OpenOil ##
         # self.emulsification = emulsification
-        
-        driftmodel = driftmodel or "OceanDrift"
-        self.driftmodel = driftmodel
-
-        if self.log == "low":
-            self.loglevel = 20
-        elif self.log == "high":
-            self.loglevel = 0
 
         
     def __setattr_model__(self, name: str, value) -> None:
@@ -99,46 +145,82 @@ class OpenDrift(ParticleTrackingManager):
         # create/update "value" keyword in config to keep it up to date
         if hasattr(self, "config_model") and name != "config_model" and name != "config_ptm" and name in self.config_model.keys():
             self.config_model[name]["value"] = value
+            
+        # if user sets ocean_model and horizontal_diffusivity is set up, overwrite it
+        if name  == "ocean_model" and value in ['NWGOA', 'CIOFS', 'CIOFS_now']:
+            if hasattr(self, "horizontal_diffusivity"):
+
+                print("overriding horizontal_diffusivity parameter with one tuned to reader model")
+                
+                # dx: approximate horizontal grid resolution (meters), used to calculate horizontal diffusivity
+                if self.ocean_model == "NWGOA":
+                    dx = 1500  
+                elif "CIOFS" in self.ocean_model:
+                    dx = 100
+
+                # horizontal diffusivity is calculated based on the mean horizontal grid resolution
+                # for the model being used.
+                # 0.1 is a guess for the magnitude of velocity being missed in the models, the sub-gridscale velocity
+                sub_gridscale_velocity = 0.1
+                horizontal_diffusivity = sub_gridscale_velocity * dx  
+                
+                self.__dict__["horizontal_diffusivity"] = horizontal_diffusivity
         
+        # if user sets horizontal_diffusivity as None and ocean_model is set, overwrite horizontal_diffusivity
+        # if user changes horizontal_diffusivity subsequently without changing model, allow it
+        if name == "horizontal_diffusivity" and value is None:
+            if hasattr(self,"ocean_model") and self.ocean_model in ['NWGOA', 'CIOFS', 'CIOFS_now']:
+
+                print("overriding horizontal_diffusivity parameter with one tuned to reader model")
+                
+                # dx: approximate horizontal grid resolution (meters), used to calculate horizontal diffusivity
+                if self.ocean_model == "NWGOA":
+                    dx = 1500  
+                elif "CIOFS" in self.ocean_model:
+                    dx = 100
+
+                # horizontal diffusivity is calculated based on the mean horizontal grid resolution
+                # for the model being used.
+                # 0.1 is a guess for the magnitude of velocity being missed in the models, the sub-gridscale velocity
+                sub_gridscale_velocity = 0.1
+                horizontal_diffusivity = sub_gridscale_velocity * dx  
+                
+                self.__dict__["horizontal_diffusivity"] = horizontal_diffusivity
+
+        # turn on other things if using stokes_drift
+        if name == "stokes_drift" and value:
+            self.o.set_config('drift:use_tabularised_stokes_drift', True)
+            # self.o.set_config('drift:tabularised_stokes_drift_fetch', '25000')  # default
+            # self.o.set_config('drift:stokes_drift_profile', 'Phillips')  # default
+
+        # too soon to do this, need to run it later
+        # # Leeway model doesn't have this option built in
+        # if name in ["surface_only", "drift_model"] and hasattr(self, "surface_only") and hasattr(self, "drift_model"):
+        #     if self.surface_only and self.drift_model != "Leeway":
+        #         self.o.set_config('drift:truncate_ocean_model_below_m', 0.5)
+
+        # Leeway doesn't have this option available
+        if name == "do3D" and not value and hasattr(self, "drift_model") and self.drift_model != "Leeway":
+            self.o.disable_vertical_motion()
+        elif name == "do3D" and value:
+            self.o.set_config('drift:vertical_advection', True)
+                    
 
     def run_config(self):
-
-        # do this right away so I can query the object
-        if self.driftmodel == "Leeway":
-            o = Leeway(loglevel=self.loglevel)
-
-        elif self.driftmodel == "OceanDrift":
-            o = OceanDrift(loglevel=self.loglevel)
-
-        elif self.driftmodel == "LarvalFish":
-            o = LarvalFish(loglevel=self.loglevel)
-
-        elif self.driftmodel == "OpenOil":
-            o = OpenOil(loglevel=self.loglevel, weathering_model='noaa')
-
-        else:
-            raise ValueError(f"Drifter model {self.driftmodel} is not recognized.")
-
-        # Note that you can see configuration possibilities for a given model with
-        # o.list_configspec()
-        # You can check the metadata for a given configuration with (min/max/default/type)
-        # o.get_configspec('vertical_mixing:timestep')
-        # You can check required variables for a model with
-        # o.required_variables
         
         # defaults that might be overridden by incoming kwargs
         kw = {
             # "emulsification": True,
             # "dispersion": True,
             # "evaporation": True,
-            "wave_entrainment": True,
-            "update_oilfilm_thickness": True,
-            "biodegradation": True,
-            "diffusivitymodel": 'windspeed_Large1994',
-            "mixed_layer_depth": 30,
-            "max_speed": 5,
+            # "wave_entrainment": True,
+            # "update_oilfilm_thickness": True,
+            # "biodegradation": True,
+            # "diffusivitymodel": 'windspeed_Large1994',
+            # "mixed_layer_depth": 30,
+            # "max_speed": 5,
             "oil_type": 'GENERIC MEDIUM CRUDE',
-            "use_auto_landmask": False,
+            # "use_auto_landmask": False,
             }
         # use some built in defaults when I don't care to override for my own default
         key = 'seed:object_type'
@@ -164,17 +246,17 @@ class OpenDrift(ParticleTrackingManager):
         key = 'seed:weight'
         kw.update({key.split(":")[1]: lf.get_configspec(key)[key]["default"],})
                                 
-        od = OceanDrift(loglevel=50)
-        key = 'wave_entrainment:droplet_size_distribution'
-        kw.update({"wave_entrainment_droplet_size_distribution": oo.get_configspec(key)[key]["default"],})
-        key = 'drift:wind_drift_depth'
-        kw.update({key.split(":")[1]: od.get_configspec(key)[key]["default"],})
-        key = 'vertical_mixing:timestep'
-        kw.update({key.split(":")[1]: od.get_configspec(key)[key]["default"],})
-        key = 'drift:advection_scheme'
-        kw.update({key.split(":")[1]: od.get_configspec(key)[key]["default"],})
-        key = 'drift:horizontal_diffusivity'
-        kw.update({key.split(":")[1]: od.get_configspec(key)[key]["default"],})
+        # od = OceanDrift(loglevel=50)
+        # key = 'wave_entrainment:droplet_size_distribution'
+        # kw.update({"wave_entrainment_droplet_size_distribution": oo.get_configspec(key)[key]["default"],})
+        # key = 'drift:wind_drift_depth'
+        # kw.update({key.split(":")[1]: od.get_configspec(key)[key]["default"],})
+        # key = 'vertical_mixing:timestep'
+        # kw.update({key.split(":")[1]: od.get_configspec(key)[key]["default"],})
+        # key = 'drift:advection_scheme'
+        # kw.update({key.split(":")[1]: od.get_configspec(key)[key]["default"],})
+        # key = 'drift:horizontal_diffusivity'
+        # kw.update({key.split(":")[1]: od.get_configspec(key)[key]["default"],})
 
         # add defaults for seeding
         kw.update({"radius": 1000,
@@ -188,68 +270,69 @@ class OpenDrift(ParticleTrackingManager):
         kw.update(self.kw)
 
 
-        if self.driftmodel == "Leeway":
-            o.set_config('seed:object_type', kw["object_type"])
+        if self.drift_model == "Leeway":
+            self.o.set_config('seed:object_type', kw["object_type"])
 
-        elif self.driftmodel == "OceanDrift":
+        elif self.drift_model == "OceanDrift":
             pass
 
-        elif self.driftmodel == "LarvalFish":
+        elif self.drift_model == "LarvalFish":
             pass
 
-        elif self.driftmodel == "OpenOil":
+        # elif self.drift_model == "OpenOil":
             # o.set_config('processes:emulsification',  kw["emulsification"])
             # o.set_config('processes:dispersion', kw["dispersion"])
             # o.set_config('processes:evaporation', kw["evaporation"])
-            if kw["wave_entrainment"]:
-                o.set_config('wave_entrainment:entrainment_rate', 'Li et al. (2017)')  # only option
-            o.set_config('wave_entrainment:droplet_size_distribution', kw["wave_entrainment_droplet_size_distribution"])
-            o.set_config('processes:update_oilfilm_thickness', kw["update_oilfilm_thickness"])
-            o.set_config('processes:biodegradation', kw["biodegradation"])
+            # if kw["wave_entrainment"]:
+            #     o.set_config('wave_entrainment:entrainment_rate', 'Li et al. (2017)')  # only option
+            # self.o.set_config('wave_entrainment:droplet_size_distribution', kw["wave_entrainment_droplet_size_distribution"])
+            # self.o.set_config('processes:update_oilfilm_thickness', kw["update_oilfilm_thickness"])
+            # self.o.set_config('processes:biodegradation', kw["biodegradation"])
 
         else:
-            raise ValueError(f"Drifter model {self.driftmodel} is not recognized.")
+            raise ValueError(f"Drifter model {self.drift_model} is not recognized.")
 
-        if self.driftmodel != "Leeway" and self.driftmodel != "LarvalFish":
-            o.set_config('drift:wind_drift_depth', kw["wind_drift_depth"])
+        # if self.drift_model != "Leeway" and self.drift_model != "LarvalFish":
+        #     self.o.set_config('drift:wind_drift_depth', kw["wind_drift_depth"])
 
 
         # Leeway model doesn't have this option built in
-        if self.surface_only and self.driftmodel != "Leeway":
-            o.set_config('drift:truncate_ocean_model_below_m', 0.5)
+        # can't figure out a way to move this earlier
+        if self.surface_only and self.drift_model != "Leeway":
+            self.o.set_config('drift:truncate_ocean_model_below_m', 0.5)
 
         # 2D
-        # Leeway doesn't have this option available
-        if not self.do3D and self.driftmodel != "Leeway":
-            o.disable_vertical_motion()
-        elif self.do3D:
-            o.set_config('drift:vertical_advection', True)
-            o.set_config('drift:vertical_mixing', self.vertical_mixing)
-            if self.vertical_mixing:
-                o.set_config('vertical_mixing:diffusivitymodel', kw["diffusivitymodel"])
-                o.set_config('vertical_mixing:background_diffusivity', 1.2e-5)  # default 1.2e-5
-                o.set_config('environment:fallback:ocean_mixed_layer_thickness', kw["mixed_layer_depth"])
-                o.set_config('vertical_mixing:timestep', kw["vertical_mixing_timestep"]) # seconds
+        # # Leeway doesn't have this option available
+        # if not self.do3D and self.drift_model != "Leeway":
+        #     self.o.disable_vertical_motion()
+        # elif self.do3D:
+        #     self.o.set_config('drift:vertical_advection', True)
+        #     self.o.set_config('drift:vertical_mixing', self.vertical_mixing)
+            # if self.vertical_mixing:
+                # self.o.set_config('vertical_mixing:diffusivitymodel', kw["diffusivitymodel"])
+                # self.o.set_config('vertical_mixing:background_diffusivity', 1.2e-5)  # default 1.2e-5
+                # self.o.set_config('environment:fallback:ocean_mixed_layer_thickness', kw["mixed_layer_depth"])
+                # self.o.set_config('vertical_mixing:timestep', kw["vertical_mixing_timestep"]) # seconds
 
 
-        if self.seed_seafloor:
-            o.set_config('seed:seafloor', True)
+        # if self.seed_seafloor:
+        #     self.o.set_config('seed:seafloor', True)
 
 
-        o.set_config('drift:advection_scheme', kw["advection_scheme"])
-        o.set_config('drift:max_speed', kw["max_speed"])
-        o.set_config('general:use_auto_landmask', kw["use_auto_landmask"])  # use ocean model landmask instead of generic coastline data
-        o.set_config('drift:horizontal_diffusivity', kw["horizontal_diffusivity"])  # m2/s
-        o.set_config('general:coastline_action', self.coastline_action)
+        # self.o.set_config('drift:advection_scheme', kw["advection_scheme"])
+        # self.o.set_config('drift:max_speed', kw["max_speed"])
+        # self.o.set_config('general:use_auto_landmask', kw["use_auto_landmask"])  # use ocean model landmask instead of generic coastline data
+        # self.o.set_config('drift:horizontal_diffusivity', kw["horizontal_diffusivity"])  # m2/s
+        # self.o.set_config('general:coastline_action', self.coastline_action)
 
-        if self.driftmodel != "Leeway":
-            o.set_config('drift:stokes_drift', self.stokes_drift)
-            if self.stokes_drift:
-                o.set_config('drift:use_tabularised_stokes_drift', True)
-                o.set_config('drift:tabularised_stokes_drift_fetch', '25000')  # default
-                o.set_config('drift:stokes_drift_profile', 'Phillips')  # default
+        # if self.drift_model != "Leeway":
+            # self.o.set_config('drift:stokes_drift', self.stokes_drift)
+            # if self.stokes_drift:
+            #     self.o.set_config('drift:use_tabularised_stokes_drift', True)
+            #     self.o.set_config('drift:tabularised_stokes_drift_fetch', '25000')  # default
+            #     self.o.set_config('drift:stokes_drift_profile', 'Phillips')  # default
         
-        self.o = o
+        # self.o = o
         
         # update kw
         self.kw.update(kw)
@@ -325,10 +408,10 @@ class OpenDrift(ParticleTrackingManager):
         # Include model-specific inputs
 
         # can vary by drifter, but leave that for future possible work
-        if self.driftmodel != "LarvalFish":
+        if self.drift_model != "LarvalFish":
             seed_kws.update({"wind_drift_factor": self.kw["wind_drift_factor"]})
 
-        if self.driftmodel == "LarvalFish":
+        if self.drift_model == "LarvalFish":
             seed_kws.update(dict(diameter=self.kw["diameter"], 
                                 neutral_buoyancy_salinity=self.kw["neutral_buoyancy_salinity"],
                                 stage_fraction=self.kw["stage_fraction"],
@@ -336,7 +419,7 @@ class OpenDrift(ParticleTrackingManager):
                                 length=self.kw["length"],
                                 weight=self.kw["weight"],))
 
-        elif self.driftmodel == "OpenOil":
+        elif self.drift_model == "OpenOil":
             seed_kws.update(dict(
                 oil_type=self.kw["oil_type"],
                 m3_per_hour=self.kw["m3_per_hour"],
@@ -398,10 +481,10 @@ class OpenDrift(ParticleTrackingManager):
 
         # dictB has the od_mapping version of the keys of dict2
         # e.g.  'processes:emulsification' instead of 'emulsification'
-        # dictB values are the OpenDrift config parameters with config_od parameters added on top
+        # dictB values are the OpenDriftModel config parameters with config_od parameters added on top
         dictB = {v["od_mapping"]: ({**dict1[v["od_mapping"]], **v} if "od_mapping" in v and v["od_mapping"] in dict1.keys() else {**v}) for k, v in dict2.items() if "od_mapping" in v}
 
-        # dictC is the same as dictB except the names are the PTM/OpenDrift names instead of the 
+        # dictC is the same as dictB except the names are the PTM/OpenDriftModel names instead of the 
         # original OpenDrift names
         dictC = {k: {**dict1[v["od_mapping"]], **v} if "od_mapping" in v and v["od_mapping"] in dict1.keys() else {**v} for k, v in dict2.items()}
         
@@ -429,7 +512,7 @@ class OpenDrift(ParticleTrackingManager):
         # dictB values are the OpenDrift config parameters with config_od parameters added on top
         dictB = {v["od_mapping"]: {**dict1[v["od_mapping"]], **v} if "od_mapping" in v and v["od_mapping"] in dict1.keys() else {**v} for k, v in dict2.items()}
 
-        # dictC is the same as dictB except the names are the PTM/OpenDrift names instead of the 
+        # dictC is the same as dictB except the names are the PTM/OpenDriftModel names instead of the 
         # original OpenDrift names
         dictC = {k: {**dict1[v["od_mapping"]], **v} if "od_mapping" in v and v["od_mapping"] in dict1.keys() else {**v} for k, v in dict2.items()}
 
@@ -580,5 +663,5 @@ class OpenDrift(ParticleTrackingManager):
         return self.o.env.readers['roms native'].__dict__[key]
 
 
-# class LeewayModel(ParticleTrackingManager, OpenDrift):
+# class LeewayModel(ParticleTrackingManager, OpenDriftModel):
 #     def __init__(self)

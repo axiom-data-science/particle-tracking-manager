@@ -10,7 +10,7 @@ import pytest
 def test_add_new_reader():
     """Add a separate reader from the defaults."""
     
-    manager = ptm.OpenDrift()
+    manager = ptm.OpenDriftModel()
     manager.config()
     
     url = xroms.datasets.CLOVER.fetch("ROMS_example_full_grid.nc")
@@ -23,7 +23,7 @@ def test_run():
     """Set up and run."""
 
     seeding_kwargs = dict(lon = -90, lat = 28.7, number=1)
-    manager = ptm.OpenDrift(**seeding_kwargs)
+    manager = ptm.OpenDriftModel(**seeding_kwargs)
     manager.config()
     
     url = xroms.datasets.CLOVER.fetch("ROMS_example_full_grid.nc")

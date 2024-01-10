@@ -119,16 +119,6 @@ do3D:
   description: Drifters move in 3D space.
   ptm_level: 1
 
-coastline_action:
-  default: previous
-  od_mapping: "general:coastline_action"
-  ptm_level: 2
-
-stokes_drift:
-  default: True
-  od_mapping: "drift:stokes_drift"
-  ptm_level: 2
-
 vertical_mixing:
   default: False
   od_mapping: "drift:vertical_mixing"

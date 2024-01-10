@@ -1,4 +1,4 @@
-"""Contains logic for configuring OpenDrift simulations."""
+"""Contains logic for configuring particle tracking simulations."""
 
 
 from pathlib import Path
@@ -54,8 +54,6 @@ class ParticleTrackingManager():
                  surface_only: Optional[bool] = config_ptm["surface_only"]["default"],
                  do3D: bool = config_ptm["do3D"]["default"],
                  vertical_mixing: bool = config_ptm["vertical_mixing"]["default"],
-                 coastline_action: str = config_ptm["coastline_action"]["default"],
-                 stokes_drift: bool = config_ptm["stokes_drift"]["default"],
                  **kw) -> None:
         """Inputs necessary for any particle tracking.
 
@@ -109,7 +107,7 @@ class ParticleTrackingManager():
             If this flag is set to not-None, it overrides do3D to False, vertical_mixing to False, 
             and the z value(s) 0. 
             If True, this flag also turns off reading model output below 0.5m if 
-            driftmodel is not Leeway:
+            drift_model is not Leeway:
             ``o.set_config('drift:truncate_ocean_model_below_m', 0.5)`` to save time.
         do3D : bool, optional
             Set to True to run drifters in 3D, by default False. This is overridden if 
@@ -120,11 +118,6 @@ class ParticleTrackingManager():
         vertical_mixing : bool, optional
             Set to True to include vertical mixing, by default False. This is overridden if 
             ``surface_only==True``.
-        coastline_action : str, optional
-            Action to perform if a drifter hits the coastline, by default "previous". Options
-            are 'stranding', 'previous'.
-        stokes_drift : bool, optional
-            Set to True to turn on Stokes drift, by default True.
         """
         
         # get all named parameters input to ParticleTrackingManager class
@@ -252,6 +245,12 @@ class ParticleTrackingManager():
                 self.__dict__["do3D"] = False
                 self.__dict__["z"] = 0
                 self.__dict__["vertical_mixing"] = False
+
+            # if not 3D turn off vertical_mixing
+            if hasattr(self, "do3D") and not self.do3D:
+                print("turning off vertical_mixing since do3D is False")
+                self.__dict__["vertical_mixing"] = False
+            
         
         # set z to None if seed_seafloor is True
         if name == "seed_seafloor" and value:
@@ -324,8 +323,8 @@ class ParticleTrackingManager():
             if key is not None:
                 self.__setattr__(self, f"{key}", key)
         
-        if self.ocean_model != "TEST" and not self.has_added_reader:
-            raise ValueError("first add reader with `manager.add_reader(**kwargs)`.")
+        # if self.ocean_model != "TEST" and not self.has_added_reader:
+        #     raise ValueError("first add reader with `manager.add_reader(**kwargs)`.")
 
         msg = f"""lon and lat need non-None values. 
                   Update them with e.g. `self.lon=-151` or input to `seed`."""

@@ -108,6 +108,6 @@ if __name__ == "__main__":
     # if args.kwargs["ocean_model"] is None and args.kwargs["start_time"] is None:
     #     raise KeyError("Need to either use a reader or input a start_time to avoid error.")
     
-    ptm.OpenDrift(**args.kwargs).run_all()
+    ptm.OpenDriftModel(**args.kwargs).run_all()
     
     # ptm.ParticleTrackingManager(**args.kwargs).run_all()

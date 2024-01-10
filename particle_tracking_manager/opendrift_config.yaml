@@ -3,12 +3,59 @@
 # with the name in OpenDrift.
 
 
-## OpenOil ##
+diffusivitymodel:
+  default: windspeed_Large1994
+  od_mapping: "vertical_mixing:diffusivitymodel"
+  ptm_level: 3
 
-# processes:emulsification:
-#   default: True
-#   # od_mapping: "processes:emulsification"
-#   ptm_level: 2
+stokes_drift:
+  default: True
+  od_mapping: "drift:stokes_drift"
+  ptm_level: 2
+
+# advection_scheme:
+#   od_mapping: "drift:advection_scheme"
+#   ptm_level: 3
+
+use_auto_landmask:
+  default: False
+  od_mapping: "general:use_auto_landmask"
+  ptm_level: 3
+
+mixed_layer_depth:
+  default: 30
+  od_mapping: "environment:fallback:ocean_mixed_layer_thickness"
+  ptm_level: 3
+
+coastline_action:
+  default: previous
+  od_mapping: "general:coastline_action"
+  ptm_level: 2
+
+max_speed:
+  default: 5
+  od_mapping: "drift:max_speed"
+
+horizontal_diffusivity:
+  default: None
+  od_mapping: "drift:horizontal_diffusivity"
+  ptm_level: 2
+
+
+## OceanDrift ##
+
+wind_drift_depth:
+  default: 0.02
+  od_mapping: "drift:wind_drift_depth"
+  ptm_level: 2
+
+vertical_mixing_timestep:
+  default: 60
+  od_mapping: "vertical_mixing:timestep"
+  ptm_level: 2
+
+
+## OpenOil ##
 
 emulsification:
   default: True
@@ -24,3 +71,21 @@ evaporation:
   default: True
   od_mapping: "processes:evaporation"
   ptm_level: 2
+
+# wave_entrainment:
+#   default: True
+#   od_mapping: "processes:wave_entrainment"
+#   ptm_level: 2
+
+update_oilfilm_thickness:
+  default: True
+  od_mapping: "processes:update_oilfilm_thickness"
+  ptm_level: 2
+
+biodegradation:
+  default: True
+  od_mapping: "processes:biodegradation"
+  ptm_level: 2
+
+# droplet_size_distribution:
+#   default: 
