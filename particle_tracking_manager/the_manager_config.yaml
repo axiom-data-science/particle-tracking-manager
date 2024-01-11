@@ -24,6 +24,14 @@ lat:
   description: Central latitude for seeding drifters.
   ptm_level: 1
 
+number:
+  default: 100
+  # units: seconds
+  # description: Interval between particles updates, in seconds or as timedelta.
+  od_mapping: "seed:number"
+  ptm_level: 1
+
+
 start_time:
   type: datetime.datetime
   default: pd.Timestamp.now()

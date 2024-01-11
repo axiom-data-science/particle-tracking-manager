@@ -39,6 +39,7 @@ class ParticleTrackingManager():
                  lat: Optional[Union[int,float]] = None,
                  z: Union[int,float] = config_ptm["z"]["default"],
                  seed_seafloor: bool = config_ptm["seed_seafloor"]["default"],
+                 number: int = config_ptm["number"]["default"],
                  start_time: Optional[datetime.datetime] = None,
                  run_forward: bool = config_ptm["run_forward"]["default"],
                  time_step: int = config_ptm["time_step"]["default"],
@@ -73,6 +74,8 @@ class ParticleTrackingManager():
         seed_seafloor : bool, optional
             Set to True to seed drifters vertically at the seabed, default is False. If True
             then value of z is set to None and ignored.
+        number : int
+            Number of drifters to simulate. Default is 100.
         start_time : Optional[datetime], optional
             Start time of simulation, as a datetime object, by default None
         run_forward : bool, optional
