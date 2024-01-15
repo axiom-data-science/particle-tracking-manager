@@ -4,7 +4,7 @@ model:
     - opendrift
   default: opendrift
   ptm_level: 1
-  description: Lagrangian model to use for simulation.
+  description: Lagrangian model software to use for simulation.
 
 lon:
   type: float
@@ -26,8 +26,6 @@ lat:
 
 number:
   default: 100
-  # units: seconds
-  # description: Interval between particles updates, in seconds or as timedelta.
   od_mapping: "seed:number"
   ptm_level: 1
 
@@ -113,18 +111,18 @@ ocean_model:
     - CIOFS_now
   default: None
   ptm_level: 1
-  description: Ocean model to drive drifters.
+  description: Name of ocean model to use for driving drifter simulation, by default None. Use None for testing and set up. Otherwise input a string. Options are "NWGOA", "CIOFS", "CIOFS_now". Alternatively keep as None and set up a separate reader (see example in docs).
 
 surface_only:
   type: bool
   default: None
-  description: Set to True to keep drifters at the surface.
+  description: Set to True to keep drifters at the surface, by default None. If this flag is set to not-None, it overrides do3D to False, vertical_mixing to False, and the z value(s) 0. If True, this flag also turns off reading model output below 0.5m if drift_model is not Leeway to save time.
   ptm_level: 1
 
 do3D:
   type: bool
   default: False
-  description: Drifters move in 3D space.
+  description: Set to True to run drifters in 3D, by default False. This is overridden if surface_only==True. If True, vertical advection and mixing are turned on with options for setting diffusivitymodel, background_diffusivity, ocean_mixed_layer_thickness, vertical_mixing_timestep. If False, vertical motion is disabled.
   ptm_level: 1
 
 vertical_mixing:

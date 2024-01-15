@@ -27,16 +27,21 @@ def test_show_config():
     assert "lon" in m.show_config(ptm_level=1).keys() and "log" not in m.show_config(ptm_level=1).keys()
 
 
+def test_surface_only():
+    """Make sure appropriate parameters are set if surface_only is True."""
+    
+    m = ptm.OpenDriftModel(surface_only=True, z=-10)
+    
+
 def test_default_overrides():
     """Make sure input to OpenDriftModel and to PTM are represented as values in config."""
     
     m = ptm.OpenDriftModel(emulsification=False, driftmodel="OpenOil", steps=5)
     
     # the value should be False due to input value
-    assert not m.show_config(key="processes:emulsification")["value"]
-    
-    # value should be what was entered
-    assert m.show_config(key="steps")["value"] == 5
+    # check without running update_config which since want to know initial state
+    assert not m.show_config_model("processes:emulsification")["value"]
+    assert m._config["steps"]["value"] == m.config_ptm["steps"]["value"] == m.show_config_model("steps")["value"] == 5
 
 
 def test_horizontal_diffusivity_logic():

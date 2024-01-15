@@ -2,6 +2,16 @@
 # The od_mapping key in this file is used to map the variable name in PTM
 # with the name in OpenDrift.
 
+drift_model:
+  default: OceanDrift
+  ptm_level: 1
+  type: enum
+    - OceanDrift
+    - LarvalFish
+    - OpenOil
+    - Leeway
+  description: Which model in OpenDrift to use. This corresponds to the type of drift scenario the user wants to run.
+
 
 radius:
   default: 0.0
@@ -34,10 +44,6 @@ stokes_drift:
   default: True
   od_mapping: "drift:stokes_drift"
   ptm_level: 2
-
-# advection_scheme:
-#   od_mapping: "drift:advection_scheme"
-#   ptm_level: 3
 
 use_auto_landmask:
   default: False

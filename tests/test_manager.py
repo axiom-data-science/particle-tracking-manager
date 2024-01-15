@@ -15,12 +15,6 @@ def test_order():
         manager.run()
 
 
-def test_config():
-    """make sure config runs with no ocean model"""
-    manager = ptm.OpenDriftModel()
-    manager.config()
-
-
 def test_seed():
     """make sure seeding works with no ocean model
     
@@ -28,7 +22,6 @@ def test_seed():
     """
 
     manager = ptm.OpenDriftModel(use_auto_landmask=True, number=1)
-    manager.config()
     manager.lon = -151
     manager.lat = 59
     manager.start_time = datetime(2000,1,1)
@@ -43,7 +36,6 @@ def test_seed():
  
     seeding_kwargs = dict(lon = -151, lat = 59, start_time = datetime(2000,1,1))
     manager2 = ptm.OpenDriftModel(use_auto_landmask=True, number=1, ocean_model="test", **seeding_kwargs)
-    manager2.config()
     manager2.has_added_reader = True  # cheat to run test
     manager2.seed()
     
@@ -86,7 +78,6 @@ def test_ocean_model_not_None(mock_reader_metadata):
     mock_reader_metadata.return_value = datetime(2000,1,1)
 
     m = ptm.OpenDriftModel()
-    m.has_run_config = True
     with pytest.raises(AssertionError):
         m.has_added_reader = True
 
@@ -106,9 +97,8 @@ def test_parameter_passing():
                            **seed_kws)
     
     # idealized simulation, provide a fake current
-    m.config()
     m.o.set_config('environment:fallback:y_sea_water_velocity', 1)
-    
+
     # seed
     m.seed()
     
@@ -116,7 +106,7 @@ def test_parameter_passing():
     m.run()
     
     # check time_step across access points
-    assert m.o.time_step.seconds == ts == m.time_step == m.show_config(key="time_step")["value"]
+    assert m.o.time_step.seconds == ts == m.time_step == m.show_config_model(key="time_step")["value"]
     
     # check diff model
     assert m.show_config(key='diffusivitymodel')["value"] == diffmodel

@@ -24,6 +24,8 @@ To install from PyPI:
    :hidden:
    :caption: Examples and demos
 
+   configuration
+
 
 .. toctree::
    :maxdepth: 3
