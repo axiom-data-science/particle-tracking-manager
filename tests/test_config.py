@@ -36,7 +36,7 @@ def test_surface_only():
 def test_default_overrides():
     """Make sure input to OpenDriftModel and to PTM are represented as values in config."""
     
-    m = ptm.OpenDriftModel(emulsification=False, driftmodel="OpenOil", steps=5)
+    m = ptm.OpenDriftModel(emulsification=False, drift_model="OpenOil", steps=5)
     
     # the value should be False due to input value
     # check without running update_config which since want to know initial state

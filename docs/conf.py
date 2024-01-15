@@ -70,7 +70,7 @@ nb_custom_formats = {
 
 # https://myst-nb.readthedocs.io/en/v0.9.0/use/execute.html
 # jupyter_execute_notebooks = "off"
-nb_execution_mode = "auto"
+nb_execution_mode = "cache"
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]

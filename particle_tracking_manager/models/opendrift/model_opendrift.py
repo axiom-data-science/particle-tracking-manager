@@ -5,15 +5,19 @@ import pathlib
 import pandas as pd
 import yaml
 
-from opendrift.readers import reader_ROMS_native
+# from opendrift.readers import reader_ROMS_native
+# using my own version of ROMS reader
+from .reader_ROMS_native import Reader
 from opendrift.models.oceandrift import OceanDrift
 from opendrift.models.larvalfish import LarvalFish
 from opendrift.models.leeway import Leeway
 from opendrift.models.oceandrift import OceanDrift
 from opendrift.models.openoil import OpenOil
 
-from .cli import is_None
-from .the_manager import ParticleTrackingManager
+from ...cli import is_None
+from ...the_manager import ParticleTrackingManager
+# from .cli import is_None
+# from .the_manager import ParticleTrackingManager
 
 
 # Read OpenDrift configuration information
@@ -171,6 +175,10 @@ class OpenDriftModel(ParticleTrackingManager):
         model = "opendrift"
 
         super().__init__(model, **kw)
+        
+        # Extra keyword parameters are not currently allowed so they might be a typo
+        if len(self.kw) > 0:
+            raise KeyError(f"Unknown input parameter(s) {self.kw} input.")
 
         if self.log == "low":
             self.loglevel = 20
@@ -346,14 +354,14 @@ class OpenDriftModel(ParticleTrackingManager):
                 oceanmodel_lon0_360 = False
                 loc = "http://xpublish-ciofs.srv.axds.co/datasets/ciofs_hindcast/zarr/"
                 kwargs_xarray = dict(engine="zarr", chunks={"ocean_time":1})
-                reader = reader_ROMS_native.Reader(loc, kwargs_xarray=kwargs_xarray)
+                reader = Reader(loc, kwargs_xarray=kwargs_xarray)
             elif self.ocean_model == "CIOFS_now":
                 pass
                 # loc = "http://xpublish-ciofs.srv.axds.co/datasets/ciofs_hindcast/zarr/"
                 # kwargs_xarray = dict(engine="zarr", chunks={"ocean_time":1})
-                # reader = reader_ROMS_native.Reader(loc, kwargs_xarray=kwargs_xarray) 
+                # reader = Reader(loc, kwargs_xarray=kwargs_xarray) 
             
-            reader = reader_ROMS_native.Reader(loc, kwargs_xarray=kwargs_xarray)
+            reader = Reader(loc, kwargs_xarray=kwargs_xarray)
             self.o.add_reader([reader])
             self.reader = reader
             # can find reader at manager.o.env.readers['roms native']      
@@ -394,8 +402,9 @@ class OpenDriftModel(ParticleTrackingManager):
         
         # drop non-OpenDrift parameters now so they aren't brought into simulation (they mess up the write step)
         full_config = copy.deepcopy(self._config)  # save
-        self.o._config = copy.deepcopy(self.show_config(substring=":"))  # only OpenDrift config
+        config_input_to_opendrift = {k: full_config[k] for k in self._config_orig.keys()}
         
+        self.o._config = config_input_to_opendrift  # only OpenDrift config
         self.o.run(
             time_step=timedir*self.time_step,
             steps=self.steps,
@@ -407,6 +416,10 @@ class OpenDriftModel(ParticleTrackingManager):
     @property
     def _config(self):
         """Surface the model configuration."""
+        
+        # save for reinstatement when running the drifters
+        if not hasattr(self, "_config_orig"):
+            self._config_orig = copy.deepcopy(self.o._config)
         
         return self.o._config
     

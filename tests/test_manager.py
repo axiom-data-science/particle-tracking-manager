@@ -42,7 +42,7 @@ def test_seed():
     assert manager.o.elements_scheduled.__dict__ == manager2.o.elements_scheduled.__dict__
 
 
-@mock.patch("particle_tracking_manager.model_opendrift.OpenDriftModel.reader_metadata")
+@mock.patch("particle_tracking_manager.models.opendrift.model_opendrift.OpenDriftModel.reader_metadata")
 def test_lon_check(mock_reader_metadata):
     """Test longitude check that is run when variable and reader are set."""
     
@@ -56,7 +56,7 @@ def test_lon_check(mock_reader_metadata):
         m.has_added_reader = True
 
 
-@mock.patch("particle_tracking_manager.model_opendrift.OpenDriftModel.reader_metadata")
+@mock.patch("particle_tracking_manager.models.opendrift.model_opendrift.OpenDriftModel.reader_metadata")
 def test_start_time_check(mock_reader_metadata):
     """Test start_time check that is run when variable and reader are set."""
     
@@ -70,7 +70,7 @@ def test_start_time_check(mock_reader_metadata):
         m.has_added_reader = True
 
 
-@mock.patch("particle_tracking_manager.model_opendrift.OpenDriftModel.reader_metadata")
+@mock.patch("particle_tracking_manager.models.opendrift.model_opendrift.OpenDriftModel.reader_metadata")
 def test_ocean_model_not_None(mock_reader_metadata):
     """Test that ocean_model can't be None."""
     
@@ -89,7 +89,6 @@ def test_parameter_passing():
     diffmodel = "windspeed_Sundby1983"
     use_auto_landmask = True
     
-    # use_auto_landmask makes example run faster
     seed_kws = dict(lon=4.0, lat=60.0, radius=5000, number=100, start_time=datetime(2015, 9, 22, 6, 0, 0))
     m = ptm.OpenDriftModel(use_auto_landmask=use_auto_landmask, time_step=ts, 
                            duration=timedelta(hours=10),
@@ -113,3 +112,10 @@ def test_parameter_passing():
     
     # check use_auto_landmask coming through
     assert m.show_config(key='use_auto_landmask')["value"] == use_auto_landmask
+
+
+def test_keyword_parameters():
+    """Make sure unknown parameters are not input."""
+    
+    with pytest.raises(KeyError):
+        m = ptm.OpenDriftModel(incorrect_key="test")

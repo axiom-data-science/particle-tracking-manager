@@ -1,6 +1,6 @@
 """Particle Tracking Manager."""
 
-from .model_opendrift import OpenDriftModel
+from .models.opendrift.model_opendrift import OpenDriftModel
 from .the_manager import ParticleTrackingManager
 
 import cmocean

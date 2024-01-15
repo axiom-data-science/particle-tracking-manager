@@ -13,17 +13,18 @@ Installation
 
 To install from conda-forge:
 
-  >>> conda install -c conda-forge xroms
+  >>> conda install -c conda-forge particle-tracking-manager
 
 To install from PyPI:
 
-  >>> pip install xroms
+  >>> pip install particle-tracking-manager
 
 .. toctree::
    :maxdepth: 3
    :hidden:
    :caption: Examples and demos
 
+   quick_start
    configuration
 
 

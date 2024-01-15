@@ -1,4 +1,4 @@
-name: particle-tracking-manager_docs
+name: ptm_docs
 channels:
   - conda-forge
   - nodefaults
@@ -9,6 +9,7 @@ dependencies:
    - aiohttp
    - numpy
    - xarray
+   - xroms
    # These are needed for the docs themselves
    - furo
    - jupytext

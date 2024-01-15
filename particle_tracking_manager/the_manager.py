@@ -179,7 +179,7 @@ class ParticleTrackingManager():
                 # move longitude to be 0 to 360 for this model
                 # this is not a user-defined option
                 if -180 < self.lon < 0:
-                    self.lon += 360
+                    self.__dict__["lon"] += 360
 
         if name == "surface_only" and value: 
             print("overriding values for `do3D`, `z`, and `vertical_mixing` because `surface_only` True")

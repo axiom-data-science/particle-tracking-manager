@@ -1,7 +1,6 @@
 """Test realistic scenarios, which are slower."""
 
 import xroms
-from opendrift.readers import reader_ROMS_native
 import particle_tracking_manager as ptm
 import pytest
 
