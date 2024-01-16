@@ -425,14 +425,14 @@ class OpenDriftModel(ParticleTrackingManager):
                 oceanmodel_lon0_360 = False
                 loc = "http://xpublish-ciofs.srv.axds.co/datasets/ciofs_hindcast/zarr/"
                 kwargs_xarray = dict(engine="zarr", chunks={"ocean_time": 1})
-                reader = Reader(loc, kwargs_xarray=kwargs_xarray)
+                reader = Reader(filename=loc, kwargs_xarray=kwargs_xarray)
             elif self.ocean_model == "CIOFS_now":
                 pass
                 # loc = "http://xpublish-ciofs.srv.axds.co/datasets/ciofs_hindcast/zarr/"
                 # kwargs_xarray = dict(engine="zarr", chunks={"ocean_time":1})
                 # reader = Reader(loc, kwargs_xarray=kwargs_xarray)
 
-            reader = Reader(loc, kwargs_xarray=kwargs_xarray)
+            reader = Reader(filename=loc, kwargs_xarray=kwargs_xarray)
             self.o.add_reader([reader])
             self.reader = reader
             # can find reader at manager.o.env.readers['roms native']
