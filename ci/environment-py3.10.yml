@@ -17,4 +17,4 @@ dependencies:
     - codecov
     - pytest-cov
     - coverage[toml]
-    - xroms  # can't be found on conda-forge for CI
+    # - xroms  # can't be found on conda-forge for CI, but don't need since in runslow tests?
