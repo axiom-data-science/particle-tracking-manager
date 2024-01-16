@@ -15,7 +15,7 @@ kernelspec:
 
 +++
 
-The simplest way to run `particle-tracking-manager` is to choose a built-in ocean model and select a location to initialize drifters, then use the built-in defaults for everything else (including start time which defaults to the first time step in the model output). You can do this interacting with the software as a Python library or using a command line interface.
+The simplest way to run `particle-tracking-manager` is to choose a built-in ocean model and select a location to initialize drifters, then use the built-in defaults for everything else (including start time which defaults to the first time step in the model output). You can do this interacting with the software as a Python library or using a command line interface. 
 
 Alternatively, you can run the package with new model output by inputting the necessary information into the `Manager`.
 
@@ -88,6 +88,28 @@ m.seed()
 m.run()
 ```
 
-```{code-cell} ipython3
+## Ways to Get Information
 
+Check drifter initialization properties:
+
+```
+m.initial_drifters
+```
+
+Look at reader/ocean model properties:
+
+```
+m.reader
+```
+
+Get reader/ocean model properties (gathered metadata about model):
+
+```
+m.reader_metadata(key)
+```
+
+Show configuration details — many more details on this in {doc}`configuration`:
+
+```
+m.show_config()
 ```

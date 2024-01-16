@@ -10,10 +10,11 @@ dependencies:
   - opendrift
   - scipy
   - xarray
-  - xroms
+  # - xroms
   ##############
   - pytest
   - pip:
     - codecov
     - pytest-cov
     - coverage[toml]
+    - xroms  # can't be found on conda-forge for CI

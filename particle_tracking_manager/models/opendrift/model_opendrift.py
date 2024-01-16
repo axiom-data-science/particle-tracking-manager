@@ -1,6 +1,7 @@
 """Using OpenDrift for particle tracking."""
 import copy
 import datetime
+import logging
 import pathlib
 
 import pandas as pd
@@ -41,6 +42,9 @@ ciofs_end_time = datetime.datetime(2023, 1, 1, 0, 0, 0)
 nwgoa_end_time = datetime.datetime(2009, 1, 1, 0, 0, 0)
 overall_start_time = datetime.datetime(1999, 1, 1, 0, 0, 0)
 overall_end_time = ciofs_operational_end_time
+
+        
+# logger = logging.getLogger("opendrift")
 
 
 # @copydocstring( ParticleTrackingManager )
@@ -271,7 +275,7 @@ class OpenDriftModel(ParticleTrackingManager):
                 self, "horizontal_diffusivity"
             ):
 
-                print(
+                self.logger.info(
                     "overriding horizontal_diffusivity parameter with one tuned to reader model"
                 )
 
@@ -296,7 +300,7 @@ class OpenDriftModel(ParticleTrackingManager):
                 and self.horizontal_diffusivity is None
             ):
 
-                print(
+                self.logger.info(
                     "changing horizontal_diffusivity parameter from None to 0.0. Otherwise set it to a specific value."
                 )
 
@@ -311,7 +315,7 @@ class OpenDriftModel(ParticleTrackingManager):
                 "CIOFS_now",
             ]:
 
-                print(
+                self.logger.info(
                     "overriding horizontal_diffusivity parameter with one tuned to reader model"
                 )
 
@@ -341,7 +345,7 @@ class OpenDriftModel(ParticleTrackingManager):
                 "CIOFS_now",
             ]:
 
-                print(
+                self.logger.info(
                     "changing horizontal_diffusivity parameter from None to 0.0. Otherwise set it to a specific value."
                 )
 
@@ -367,7 +371,7 @@ class OpenDriftModel(ParticleTrackingManager):
             and hasattr(self, "o")
         ):
             if self.surface_only and self.drift_model != "Leeway":
-                print("Truncating model output below 0.5 m.")
+                self.logger.info("Truncating model output below 0.5 m.")
                 self.o.set_config("drift:truncate_ocean_model_below_m", 0.5)
             elif (
                 not self.surface_only
@@ -375,7 +379,7 @@ class OpenDriftModel(ParticleTrackingManager):
                 and self.show_config(key="drift:truncate_ocean_model_below_m")["value"]
                 is not None
             ):
-                print("Un-truncating model output below 0.5 m.")
+                self.logger.info("Un-truncating model output below 0.5 m.")
                 self.o.set_config("drift:truncate_ocean_model_below_m", None)
 
         # Leeway doesn't have this option available

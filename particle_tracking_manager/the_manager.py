@@ -3,6 +3,7 @@
 
 # from docstring_inheritance import NumpyDocstringInheritanceMeta
 import datetime
+import logging
 import pathlib
 import warnings
 
@@ -142,6 +143,8 @@ class ParticleTrackingManager:
         sig = signature(ParticleTrackingManager)
 
         self.config_ptm = config_ptm
+        
+        self.logger = logging.getLogger(model)
 
         # Set all attributes which will trigger some checks and changes in __setattr__
         # these will also update "value" in the config dict
@@ -198,7 +201,7 @@ class ParticleTrackingManager:
                     self.__dict__["lon"] += 360
 
         if name == "surface_only" and value:
-            print(
+            self.logger.info(
                 "overriding values for `do3D`, `z`, and `vertical_mixing` because `surface_only` True"
             )
             self.do3D = False
@@ -208,7 +211,7 @@ class ParticleTrackingManager:
         # in case any of these are reset by user after surface_only is already set
         if name in ["do3D", "z", "vertical_mixing"]:
             if hasattr(self, "surface_only") and self.surface_only:
-                print(
+                self.logger.info(
                     "overriding values for `do3D`, `z`, and `vertical_mixing` because `surface_only` True"
                 )
                 if name == "do3D":
@@ -222,19 +225,19 @@ class ParticleTrackingManager:
 
             # if not 3D turn off vertical_mixing
             if hasattr(self, "do3D") and not self.do3D:
-                print("turning off vertical_mixing since do3D is False")
+                self.logger.info("turning off vertical_mixing since do3D is False")
                 self.__dict__["vertical_mixing"] = False
                 self.config_ptm["vertical_mixing"]["value"] = False
                 # self.vertical_mixing = False  # this is recursive
 
         # set z to None if seed_seafloor is True
         if name == "seed_seafloor" and value:
-            print("setting z to None since being seeded at seafloor")
+            self.logger.info("setting z to None since being seeded at seafloor")
             self.z = None
 
         # in case z is changed back after initialization
         if name == "z" and value is not None and hasattr(self, "seed_seafloor"):
-            print(
+            self.logger.info(
                 "setting `seed_seafloor` to False since now setting a non-None z value"
             )
             self.seed_seafloor = False
@@ -260,7 +263,7 @@ class ParticleTrackingManager:
 
         # use reader start time if not otherwise input
         if name == "has_added_reader" and value and self.start_time is None:
-            print("setting reader start_time as simulation start_time")
+            self.logger.info("setting reader start_time as simulation start_time")
             self.start_time = self.reader_metadata("start_time")
 
         # if reader, lon, and lat set, check inputs
