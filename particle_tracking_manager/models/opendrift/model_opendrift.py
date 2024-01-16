@@ -35,14 +35,6 @@ for key in config_model.keys():
     if "default" in config_model[key] and is_None(config_model[key]["default"]):
         config_model[key]["default"] = None
 
-
-ciofs_operational_start_time = datetime.datetime(2021, 8, 31, 19, 0, 0)
-ciofs_operational_end_time = (pd.Timestamp.now() + pd.Timedelta("48H")).to_pydatetime()
-ciofs_end_time = datetime.datetime(2023, 1, 1, 0, 0, 0)
-nwgoa_end_time = datetime.datetime(2009, 1, 1, 0, 0, 0)
-overall_start_time = datetime.datetime(1999, 1, 1, 0, 0, 0)
-overall_end_time = ciofs_operational_end_time
-
         
 # logger = logging.getLogger("opendrift")
 

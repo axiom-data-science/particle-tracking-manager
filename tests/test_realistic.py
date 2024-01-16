@@ -1,7 +1,6 @@
 """Test realistic scenarios, which are slower."""
 
 import pytest
-import xroms
 
 import particle_tracking_manager as ptm
 
@@ -9,6 +8,8 @@ import particle_tracking_manager as ptm
 @pytest.mark.slow
 def test_add_new_reader():
     """Add a separate reader from the defaults."""
+
+    import xroms
 
     manager = ptm.OpenDriftModel()
 
@@ -21,6 +22,7 @@ def test_add_new_reader():
 def test_run():
     """Set up and run."""
 
+    import xroms
     seeding_kwargs = dict(lon=-90, lat=28.7, number=1)
     manager = ptm.OpenDriftModel(**seeding_kwargs)
 

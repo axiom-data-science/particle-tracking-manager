@@ -31,6 +31,14 @@ for key in config_ptm.keys():
         config_ptm[key]["default"] = None
 
 
+ciofs_operational_start_time = datetime.datetime(2021, 8, 31, 19, 0, 0)
+ciofs_operational_end_time = (pd.Timestamp.now() + pd.Timedelta("48H")).to_pydatetime()
+ciofs_end_time = datetime.datetime(2023, 1, 1, 0, 0, 0)
+nwgoa_end_time = datetime.datetime(2009, 1, 1, 0, 0, 0)
+overall_start_time = datetime.datetime(1999, 1, 1, 0, 0, 0)
+overall_end_time = ciofs_operational_end_time
+
+
 class ParticleTrackingManager:
     """Manager class that controls particle tracking model."""
 
@@ -191,6 +199,17 @@ class ParticleTrackingManager:
         if name == "ocean_model" and value is not None:
             self.__dict__[name] = value.upper()
             self.config_ptm["ocean_model"]["value"] = value.upper()
+
+        # check start_time relative to ocean_model selection
+        if name in ["ocean_model", "start_time"]:
+            if hasattr(self, "start_time") and self.start_time is not None and \
+               hasattr(self, "ocean_model") and self.ocean_model is not None:
+                if value == "NWGOA":
+                    assert overall_start_time <= value <= nwgoa_end_time
+                elif value == "CIOFS":
+                    assert overall_start_time <= value <= ciofs_end_time
+                elif value == "CIOFS_NOW":
+                    assert ciofs_operational_start_time <= value <= ciofs_operational_end_time
 
         # deal with if input longitudes need to be shifted due to model
         if name == "oceanmodel_lon0_360" and value:
