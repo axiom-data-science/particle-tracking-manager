@@ -4,7 +4,7 @@
 
 Configuration parameters are shown in `m.show_config()` for:
 
-* the specified `drift_model` (from `m._config` which for OpenDriftModel points to `m.o._config`) 
+* the specified `drift_model` (from `m._config` which for OpenDriftModel points to `m.o._config`)
 * configuration added from `ParticleTrackingManager`  (`config_ptm`)
 * configuration added from `OpenDriftModel` (as would also be true with any model included in the future) (`config_model`). This configuration includes parameters that point to configuration parameters from a different `drift_model` than a given instance of `OpenDriftModel` was initialized with, which leads to these parameters being present in `m.show_config()`. The following example shows a `Manager` `m` initialized with `drift_model=="OceanDrift"` but when queried for emulsification, the translated PTM parameter name for the OpenDrift parameter `emulsification`, or `processes:emulsification` itself, they both show the configuration information added from OpenDriftModel:
 
@@ -25,17 +25,17 @@ m.show_config(key="emulsification")
 
 {'type': 'bool',
  'default': True,
- 'description': 'Surface oil is emulsified, i.e. water droplets are mixed into oil due to wave mixing, with resulting increas of viscosity.',
+ 'description': 'Surface oil is emulsified, i.e. water droplets are mixed into oil due to wave mixing, with resulting increase of viscosity.',
  'level': 2,
  'value': True,
  'od_mapping': 'processes:emulsification',
  'ptm_level': 2}
- 
+
 m.show_config(key="processes:emulsification")
 
 {'type': 'bool',
  'default': True,
- 'description': 'Surface oil is emulsified, i.e. water droplets are mixed into oil due to wave mixing, with resulting increas of viscosity.',
+ 'description': 'Surface oil is emulsified, i.e. water droplets are mixed into oil due to wave mixing, with resulting increase of viscosity.',
  'level': 2,
  'value': True,
  'od_mapping': 'processes:emulsification',

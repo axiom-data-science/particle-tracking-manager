@@ -14,3 +14,8 @@ Manager for particle tracking simulations.
 --------
 
 <p><small>Project based on the <a target="_blank" href="https://github.com/jbusecke/cookiecutter-science-project">cookiecutter science project template</a>.</small></p>
+
+
+To install packages to run pre-commit:
+
+    mamba install --file requirements-dev.txt

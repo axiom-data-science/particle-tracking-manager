@@ -2,7 +2,9 @@
 
 import argparse
 import ast
+
 from datetime import datetime
+
 import pandas as pd
 
 import particle_tracking_manager as ptm
@@ -36,7 +38,7 @@ def is_None(s):
 
 def is_datestr(s):
     """Check if string is actually a datestring."""
-    
+
     try:
         out = pd.Timestamp(s)
         assert not pd.isnull(out)
@@ -74,12 +76,12 @@ class ParseKwargs(argparse.Action):
 # def main():
 if __name__ == "__main__":
     """Parser method.
-    
+
     Include all inputs
-    
+
     Example
     -------
-    
+
     >>> python cli.py lon=-151 lat=59 use_auto_landmask=True start_time=2000-1-1
     """
 
@@ -100,14 +102,14 @@ if __name__ == "__main__":
         if value in ["True", "False"]
     }
     args.kwargs.update(to_bool)
-    
+
     # # set default
     # if "model" not in args:
     #     args.kwargs["model"] = "opendrift"
-    
+
     # if args.kwargs["ocean_model"] is None and args.kwargs["start_time"] is None:
     #     raise KeyError("Need to either use a reader or input a start_time to avoid error.")
-    
+
     ptm.OpenDriftModel(**args.kwargs).run_all()
-    
+
     # ptm.ParticleTrackingManager(**args.kwargs).run_all()
