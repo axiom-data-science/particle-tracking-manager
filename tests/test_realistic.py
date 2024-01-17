@@ -23,6 +23,7 @@ def test_run():
     """Set up and run."""
 
     import xroms
+
     seeding_kwargs = dict(lon=-90, lat=28.7, number=1)
     manager = ptm.OpenDriftModel(**seeding_kwargs)
 

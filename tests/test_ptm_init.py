@@ -1,9 +1,14 @@
 """From Co-pilot"""
 
 import unittest
+
 from datetime import datetime, timedelta
+
 import particle_tracking_manager as ptm
+
+
 # from ptm.the_manager import ParticleTrackingManager
+
 
 class TestParticleTrackingManager(unittest.TestCase):
     def setUp(self):
@@ -74,5 +79,6 @@ class TestParticleTrackingManager(unittest.TestCase):
         self.ptm.end_time = end_time
         self.assertEqual(self.ptm.end_time, end_time)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

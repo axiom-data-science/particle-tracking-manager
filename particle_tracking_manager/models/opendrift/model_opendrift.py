@@ -35,7 +35,7 @@ for key in config_model.keys():
     if "default" in config_model[key] and is_None(config_model[key]["default"]):
         config_model[key]["default"] = None
 
-        
+
 # logger = logging.getLogger("opendrift")
 
 

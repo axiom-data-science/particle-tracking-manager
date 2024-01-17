@@ -151,7 +151,7 @@ class ParticleTrackingManager:
         sig = signature(ParticleTrackingManager)
 
         self.config_ptm = config_ptm
-        
+
         self.logger = logging.getLogger(model)
 
         # Set all attributes which will trigger some checks and changes in __setattr__
@@ -202,14 +202,22 @@ class ParticleTrackingManager:
 
         # check start_time relative to ocean_model selection
         if name in ["ocean_model", "start_time"]:
-            if hasattr(self, "start_time") and self.start_time is not None and \
-               hasattr(self, "ocean_model") and self.ocean_model is not None:
+            if (
+                hasattr(self, "start_time")
+                and self.start_time is not None
+                and hasattr(self, "ocean_model")
+                and self.ocean_model is not None
+            ):
                 if value == "NWGOA":
                     assert overall_start_time <= value <= nwgoa_end_time
                 elif value == "CIOFS":
                     assert overall_start_time <= value <= ciofs_end_time
                 elif value == "CIOFS_NOW":
-                    assert ciofs_operational_start_time <= value <= ciofs_operational_end_time
+                    assert (
+                        ciofs_operational_start_time
+                        <= value
+                        <= ciofs_operational_end_time
+                    )
 
         # deal with if input longitudes need to be shifted due to model
         if name == "oceanmodel_lon0_360" and value:
