@@ -2,10 +2,7 @@ from datetime import datetime
 from unittest import mock
 
 import numpy as np
-import pandas as pd
-import pytest
 import xarray as xr
-import xroms
 
 import particle_tracking_manager as ptm
 
