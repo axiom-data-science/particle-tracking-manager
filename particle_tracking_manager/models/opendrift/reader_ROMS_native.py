@@ -43,6 +43,8 @@ class Reader(BaseReader, StructuredReader):
         kwargs_xarray=None,
     ):
         """Initialize ROMS model reader."""
+        
+        import pdb; pdb.set_trace()
 
         if filename is None:
             raise ValueError("Need filename as argument to constructor")

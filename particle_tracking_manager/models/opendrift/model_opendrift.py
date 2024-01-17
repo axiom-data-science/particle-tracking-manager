@@ -410,11 +410,12 @@ class OpenDriftModel(ParticleTrackingManager):
 
         if loc is not None and self.ocean_model is None:
             self.ocean_model = "user_input"
-
+        # import pdb; pdb.set_trace()
         if self.ocean_model.upper() == "TEST":
-            oceanmodel_lon0_360 = True
-            loc = "test"
-            kwargs_xarray = dict()
+            pass
+            # oceanmodel_lon0_360 = True
+            # loc = "test"
+            # kwargs_xarray = dict()
 
         elif self.ocean_model is not None or loc is not None:
             if self.ocean_model == "NWGOA":
