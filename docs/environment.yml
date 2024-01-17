@@ -8,8 +8,8 @@ dependencies:
    - adios_db
    - aiohttp
    - numpy
+   - particle-tracking-manager
    - xarray
-   - xroms
    # These are needed for the docs themselves
    - furo
    - jupytext
