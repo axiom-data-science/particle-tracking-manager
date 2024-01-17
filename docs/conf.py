@@ -35,7 +35,7 @@ project = "particle-tracking-manager"
 copyright = "2023-, axiom-data-science"
 author = "axiom-data-science"
 
-release = imversion("particle_tracking_manager")
+release = imversion("particle-tracking-manager")
 # for example take major/minor
 version = ".".join(release.split(".")[:2])
 
