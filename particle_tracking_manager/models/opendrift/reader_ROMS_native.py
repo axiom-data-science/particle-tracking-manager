@@ -253,7 +253,7 @@ class Reader(BaseReader, StructuredReader):
             )
 
         # For NWGOA, need to calculate wetdry mask from a variable
-        if "wetdry_mask_rho" not in self.Dataset:
+        if "wetdry_mask_rho" not in self.Dataset and "zeta" in self.Dataset.data_vars:
             self.Dataset["wetdry_mask_rho"] = (~self.Dataset.zeta.isnull()).astype(int)
 
         for var in list(self.ROMS_variable_mapping):  # Remove unused variables
