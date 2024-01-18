@@ -48,9 +48,15 @@ class ParticleTrackingManager:
         Name of Lagrangian model package to use for drifter tracking. Only option
         currently is "opendrift".
     lon : Optional[Union[int,float]], optional
-        Longitude of center of initial drifter locations, by default None
+        Longitude of center of initial drifter locations, by default None. Use with `seed_flag="elements"`.
     lat : Optional[Union[int,float]], optional
-        Latitude of center of initial drifter locations, by default None
+        Latitude of center of initial drifter locations, by default None. Use with `seed_flag="elements"`.
+    wkt : Optional[str], optional
+        WKT string defining polygon for seeding drifters, by default None. Use with `seed_flag="wkt"`.
+    geojson : Optional[dict], optional
+        GeoJSON object defining polygon for seeding drifters, by default None. Use with `seed_flag="geojson"`.
+    seed_flag : str, optional
+        Flag for seeding drifters. Options are "elements", "wkt", "geojson". Default is "elements".
     z : Union[int,float], optional
         Depth of initial drifter locations, by default 0 but taken from the
         default in the model. Values are overridden if
@@ -125,6 +131,9 @@ class ParticleTrackingManager:
         model: str,
         lon: Optional[Union[int, float]] = None,
         lat: Optional[Union[int, float]] = None,
+        wkt: Optional[str] = None,
+        geojson: Optional[dict] = None,
+        seed_flag: str = config_ptm["seed_flag"]["default"],
         z: Optional[Union[int, float]] = config_ptm["z"]["default"],
         seed_seafloor: bool = config_ptm["seed_seafloor"]["default"],
         number: int = config_ptm["number"]["default"],
@@ -323,9 +332,10 @@ class ParticleTrackingManager:
         # if self.ocean_model != "TEST" and not self.has_added_reader:
         #     raise ValueError("first add reader with `manager.add_reader(**kwargs)`.")
 
-        msg = f"""lon and lat need non-None values.
-                  Update them with e.g. `self.lon=-151` or input to `seed`."""
-        assert self.lon is not None and self.lat is not None
+        if self.seed_flag == "elements" and self.lon is None and self.lat is None:
+            msg = f"""lon and lat need non-None values.
+                    Update them with e.g. `self.lon=-151` or input to `seed`."""
+            raise KeyError(msg)
 
         msg = f"""z needs a non-None value.
                   Please update it with e.g. `self.z=-10` or input to `seed`."""

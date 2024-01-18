@@ -1,6 +1,7 @@
 """Using OpenDrift for particle tracking."""
 import copy
 import datetime
+import json
 import logging
 import pathlib
 
@@ -451,22 +452,39 @@ class OpenDriftModel(ParticleTrackingManager):
     def run_seed(self):
         """Seed drifters for model."""
 
-        # # SHOULD THIS BE MOVED ELSEWHERE??
-        # if self.start_time is None and hasattr(self.o, "reader"):
-        #     self.start_time = self.o.reader.start_time
-
-        # add additional seed parameters
         seed_kws = {
-            "lon": self.lon,
-            "lat": self.lat,
             "time": self.start_time,
-            "radius": self.radius,
-            "radius_type": self.radius_type,
             "z": self.z,
         }
 
+        if self.seed_flag == "elements":
+            # add additional seed parameters
+            seed_kws.update(
+                {
+                    "lon": self.lon,
+                    "lat": self.lat,
+                    "radius": self.radius,
+                    "radius_type": self.radius_type,
+                }
+            )
+
+            self.o.seed_elements(**seed_kws)
+
+        elif self.seed_flag == "wkt":
+
+            self.o.seed_from_wkt(self.wkt, **seed_kws)
+
+        elif self.seed_flag == "geojson":
+
+            # seed_kws.update(self.show_config(prefix="seed:"))
+            self.geojson["properties"] = seed_kws
+            json_string_dumps = json.dumps(self.geojson)
+            self.o.seed_from_geojson(json_string_dumps)
+
+        else:
+            raise ValueError(f"seed_flag {self.seed_flag} not recognized.")
+
         self.seed_kws = seed_kws
-        self.o.seed_elements(**seed_kws)
         self.initial_drifters = self.o.elements_scheduled
 
     def run_drifters(self):
