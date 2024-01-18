@@ -424,5 +424,27 @@ class ParticleTrackingManager:
         pass
 
     def query_reader(self):
-        """Overwrite method in model."""
+        """define in child class."""
+        pass
+
+    def all_export_variables(self):
+        """Output list of all possible export variables.
+
+        define in child class.
+        """
+        pass
+
+    def export_variables(self):
+        """Output list of all actual export variables.
+
+        define in child class.
+        """
+        pass
+
+    @property
+    def outfile_name(self):
+        """Output file name.
+
+        define in child class.
+        """
         pass

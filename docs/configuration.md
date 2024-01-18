@@ -2,6 +2,8 @@
 
 ## Configuration Overview
 
+Where possible, configuration information includes items like default, input range or enum options, description, units, and value, and the configuration can be queried as demonstrated in these docs to get that information.
+
 Configuration parameters are shown in `m.show_config()` for:
 
 * the specified `drift_model` (from `m._config` which for OpenDriftModel points to `m.o._config`)
@@ -130,7 +132,13 @@ m.show_config("seed:oil_type")
 
 ## Specific Configuration Options
 
-### Ocean Model
+This section is split into two: first options that are available to all models (thus are handled in the Manager) and those for `OpenDriftModel` (the only model option currently).
+
+This is not currently a comprehensive list but a place where extra details are included that might not be clear or available elsewhere. For more information look at the configuration information (previous section) and the docstrings for each class.
+
+### Manager options, available to all models
+
+#### Ocean Model
 
 Setting up an ocean model is also referred to as `add_reader()`.
 
@@ -185,8 +193,43 @@ m = ptm.OpenDriftModel(lon=4.0, lat=60.0, start_time=datetime(2015, 9, 22, 6),
 m.run_all()
 ```
 
+### OpenDriftModel options
 
-### How to modify details for Stokes Drift
+#### Drift model
+
+Though `OpenDrift` has more models available, the currently wrapped `drift_model` options in PTM are:
+
+* OceanDrift: physics-only scenario (default)
+* Leeway: scenario for Search and Rescue of various objects at the surface
+* OpenOil: oil spill scenarios
+* LarvalFish: scenario for fish eggs and larvae that can grow
+
+Set these with e.g.:
+
+```
+m = ptm.OpenDriftModel(drift_model="OpenOil")
+```
+
+This selection sets some of the configuration details and export variables that are relevant for the simulation.
+
+
+#### Export Variables
+
+All possible variables will be exported by default into the outfiles and available in memory (`m.o.history` and `m.o.history_metadata` or `m.o.get_property(<key>)` for `OpenDriftModel`).
+
+The full list of possible variables to be exported is available with
+
+```
+m.all_export_variables()
+```
+
+To limit the variables saved in the export file, input a list of just the variables that you want to save, keeping in mind that `['lon', 'lat', 'ID', 'status']` will also be included regardless. For example:
+```
+m = ptm.OpenDriftModel(export_variables=[])
+```
+
+
+#### How to modify details for Stokes Drift
 
 Turn on (on by default):
 
@@ -220,7 +263,7 @@ m.show_config(key='drift:tabularised_stokes_drift_fetch')
 ```
 
 
-### Vertical Mixing
+#### Vertical Mixing
 
 The user can change the background diffusivity with
 
