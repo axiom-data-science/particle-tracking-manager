@@ -12,6 +12,11 @@ drift_model:
     - Leeway
   description: Which model in OpenDrift to use. This corresponds to the type of drift scenario the user wants to run.
 
+export_variables:
+  default: ["z"]
+  ptm_level: 1
+  type: list
+  description: List of variables to export. Options available with `m.all_export_variables` for a given `drift_model`. ['lon', 'lat', 'ID', 'status'] will always be exported.
 
 radius:
   default: 0.0

@@ -4,6 +4,8 @@ import datetime
 import logging
 import pathlib
 
+from typing import Optional
+
 import pandas as pd
 import yaml
 
@@ -49,6 +51,8 @@ class OpenDriftModel(ParticleTrackingManager):
     ----------
     drift_model : str, optional
         Options: "OceanDrift", "LarvalFish", "OpenOil", "Leeway", by default "OceanDrift"
+    export_variables : list, optional
+        List of variables to export, by default None. See PTM docs for options.
     radius : int, optional
         Radius around each lon-lat pair, within which particles will be randomly seeded. This is used by function `seed_elements`.
     radius_type : str
@@ -134,6 +138,7 @@ class OpenDriftModel(ParticleTrackingManager):
     def __init__(
         self,
         drift_model: str = config_model["drift_model"]["default"],
+        export_variables: str = config_model["export_variables"]["default"],
         radius: int = config_model["radius"]["default"],
         radius_type: str = config_model["radius_type"]["default"],
         horizontal_diffusivity: float = config_model["horizontal_diffusivity"][
@@ -482,6 +487,7 @@ class OpenDriftModel(ParticleTrackingManager):
         self.o.run(
             time_step=timedir * self.time_step,
             steps=self.steps,
+            export_variables=self.export_variables,
             outfile=f"output-results_{datetime.datetime.utcnow():%Y-%m-%dT%H%M:%SZ}.nc",
         )
 
@@ -576,6 +582,22 @@ class OpenDriftModel(ParticleTrackingManager):
         self._config.update(dictB)
         # this step brings other model config (plus additions from mapped parameter config) into the overall config
         self._config.update(dictC)
+
+    def all_export_variables(self):
+        """Output list of all possible export variables."""
+
+        vars = (
+            list(self.o.elements.variables.keys())
+            + ["trajectory", "time"]
+            + list(self.o.required_variables.keys())
+        )
+
+        return vars
+
+    def export_variables(self):
+        """Output list of all actual export variables."""
+
+        return self.o.export_variables
 
     def get_configspec(self, prefix, substring, level, ptm_level):
         """Copied from OpenDrift, then modified."""
@@ -705,3 +727,9 @@ class OpenDriftModel(ParticleTrackingManager):
         if not self.has_added_reader:
             raise ValueError("reader has not been added yet.")
         return self.o.env.readers["roms native"].__dict__[key]
+
+    @property
+    def outfile_name(self):
+        """Output file name."""
+
+        return self.o.outfile_name
