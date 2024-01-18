@@ -30,8 +30,8 @@ Run directly from the Lagrangian model you want to use, which will inherit from 
 ```
 import particle_tracking_manager as ptm
 
-manager = ptm.OpenDriftModel(ocean_model="NWGOA", lon=-151, lat=59)
-manager.run_all()
+m = ptm.OpenDriftModel(ocean_model="NWGOA", lon=-151, lat=59)
+m.run_all()
 ```
 
 +++
