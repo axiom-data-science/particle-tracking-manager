@@ -34,6 +34,8 @@ m = ptm.OpenDriftModel(ocean_model="NWGOA", lon=-151, lat=59)
 m.run_all()
 ```
 
+Then find results in file `m.outfile_name`.
+
 +++
 
 ## Command Line Interface
@@ -43,6 +45,8 @@ The equivalent for the set up above is:
 ```
 python particle_tracking_manager/cli.py lon=-151 lat=59 ocean_model=NWGOA
 ```
+
+`m.outfile_name` is printed to the screen after the command has been run.
 
 +++
 
