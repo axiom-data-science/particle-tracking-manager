@@ -8,6 +8,5 @@ API
    :toctree: generated/
    :recursive:
 
-   cli
-   model_opendrift
    the_manager
+   models.opendrift.model_opendrift

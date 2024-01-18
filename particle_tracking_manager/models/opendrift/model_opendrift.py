@@ -41,7 +41,95 @@ for key in config_model.keys():
 
 # @copydocstring( ParticleTrackingManager )
 class OpenDriftModel(ParticleTrackingManager):
-    """Open drift particle tracking model."""
+    """Open drift particle tracking model.
+
+    Defaults all come from config_model configuration file.
+
+    Parameters
+    ----------
+    drift_model : str, optional
+        Options: "OceanDrift", "LarvalFish", "OpenOil", "Leeway", by default "OceanDrift"
+    radius : int, optional
+        Radius around each lon-lat pair, within which particles will be randomly seeded. This is used by function `seed_elements`.
+    radius_type : str
+        If 'gaussian' (default), the radius is the standard deviation in x-y-directions. If 'uniform', elements are spread evenly and always inside a circle with the given radius. This is used by function `seed_elements`.
+
+    horizontal_diffusivity : float
+        Horizontal diffusivity is None by default but will be set to a grid-dependent value for known ocean_model values. This is calculated as 0.1 m/s sub-gridscale velocity that is missing from the model output and multiplied by an estimate of the horizontal grid resolution. This leads to a larger value for NWGOA which has a larger value for mean horizontal grid resolution (lower resolution). If the user inputs their own ocean_model information, they can input their own horizontal_diffusivity value. A user can use a built-in ocean_model and the overwrite the horizontal_diffusivity value to 0.
+    use_auto_landmask : bool
+        Set as True to use general landmask instead of that from ocean_model.
+        Use for testing primarily. Default is False.
+    diffusivitymodel : str
+        Algorithm/source used for profile of vertical diffusivity. Environment means that diffusivity is acquired from readers or environment constants/fallback. Turned on if ``vertical_mixing==True``.
+    stokes_drift : bool, optional
+        Set to True to turn on Stokes drift, by default True. This enables 3 settings in OpenDrift:
+
+        * o.set_config('drift:use_tabularised_stokes_drift', True)
+        * o.set_config('drift:tabularised_stokes_drift_fetch', '25000')  # default
+        * o.set_config('drift:stokes_drift_profile', 'Phillips')  # default
+
+        The latter two configurations are not additionally set in OpenDriftModel since they are already the default once stokes_drift is True.
+    mixed_layer_depth : float
+        Fallback value for ocean_mixed_layer_thickness if not available from any reader.
+    coastline_action : str, optional
+        Action to perform if a drifter hits the coastline, by default "previous". Options
+        are 'stranding', 'previous'.
+    max_speed : int
+        Typical maximum speed of elements, used to estimate reader buffer size.
+    wind_drift_factor : float
+        Elements at surface are moved with this fraction of the wind vector, in addition to currents and Stokes drift.
+    wind_drift_depth : float
+        The direct wind drift (windage) is linearly decreasing from the surface value (wind_drift_factor) until 0 at this depth.
+    vertical_mixing_timestep : float
+        Time step used for inner loop of vertical mixing.
+    object_type: str = config_model["object_type"]["default"],
+        Leeway object category for this simulation.
+
+    diameter : float
+        Seeding value of diameter.
+    neutral_buoyancy_salinity : float
+        Seeding value of neutral_buoyancy_salinity.
+    stage_fraction : float
+        Seeding value of stage_fraction.
+    hatched : float
+        Seeding value of hatched.
+    length : float
+        Seeding value of length.
+    weight : float
+        Seeding value of weight.
+
+    oil_type : str
+        Oil type to be used for the simulation, from the NOAA ADIOS database.
+    m3_per_hour : float
+        The amount (volume) of oil released per hour (or total amount if release is instantaneous).
+    oil_film_thickness : float
+        Seeding value of oil_film_thickness.
+    droplet_size_distribution : str
+        Droplet size distribution used for subsea release.
+    droplet_diameter_mu : float
+        The mean diameter of oil droplet for a subsea release, used in normal/lognormal distributions.
+    droplet_diameter_sigma : float
+        The standard deviation in diameter of oil droplet for a subsea release, used in normal/lognormal distributions.
+    droplet_diameter_min_subsea : float
+        The minimum diameter of oil droplet for a subsea release, used in uniform distribution.
+    droplet_diameter_max_subsea : float
+        The maximum diameter of oil droplet for a subsea release, used in uniform distribution.
+    emulsification : bool
+        Surface oil is emulsified, i.e. water droplets are mixed into oil due to wave mixing, with resulting increase of viscosity.
+    dispersion : bool
+        Oil is removed from simulation (dispersed), if entrained as very small droplets.
+    evaporation : bool
+        Surface oil is evaporated.
+    update_oilfilm_thickness : bool
+        Oil film thickness is calculated at each time step. The alternative is that oil film thickness is kept constant with value provided at seeding.
+    biodegradation : bool
+        Oil mass is biodegraded (eaten by bacteria).
+
+    Notes
+    -----
+    Docs available for more initialization options with ``ptm.ParticleTrackingManager?``
+
+    """
 
     def __init__(
         self,
@@ -96,95 +184,7 @@ class OpenDriftModel(ParticleTrackingManager):
         biodegradation: bool = config_model["biodegradation"]["default"],
         **kw,
     ) -> None:
-        """Inputs for OpenDrift model.
-
-        Defaults all come from config_model configuration file.
-
-        Parameters
-        ----------
-        drift_model : str, optional
-            Options: "OceanDrift", "LarvalFish", "OpenOil", "Leeway", by default "OceanDrift"
-        radius : int, optional
-            Radius around each lon-lat pair, within which particles will be randomly seeded. This is used by function `seed_elements`.
-        radius_type : str
-            If 'gaussian' (default), the radius is the standard deviation in x-y-directions. If 'uniform', elements are spread evenly and always inside a circle with the given radius. This is used by function `seed_elements`.
-
-        horizontal_diffusivity : float
-            Horizontal diffusivity is None by default but will be set to a grid-dependent value for known ocean_model values. This is calculated as 0.1 m/s sub-gridscale velocity that is missing from the model output and multiplied by an estimate of the horizontal grid resolution. This leads to a larger value for NWGOA which has a larger value for mean horizontal grid resolution (lower resolution). If the user inputs their own ocean_model information, they can input their own horizontal_diffusivity value. A user can use a built-in ocean_model and the overwrite the horizontal_diffusivity value to 0.
-        use_auto_landmask : bool
-            Set as True to use general landmask instead of that from ocean_model.
-            Use for testing primarily. Default is False.
-        diffusivitymodel : str
-            Algorithm/source used for profile of vertical diffusivity. Environment means that diffusivity is acquired from readers or environment constants/fallback. Turned on if ``vertical_mixing==True``.
-        stokes_drift : bool, optional
-            Set to True to turn on Stokes drift, by default True. This enables 3 settings in OpenDrift:
-
-            * o.set_config('drift:use_tabularised_stokes_drift', True)
-            * o.set_config('drift:tabularised_stokes_drift_fetch', '25000')  # default
-            * o.set_config('drift:stokes_drift_profile', 'Phillips')  # default
-
-            The latter two configurations are not additionally set in OpenDriftModel since they are already the default once stokes_drift is True.
-        mixed_layer_depth : float
-            Fallback value for ocean_mixed_layer_thickness if not available from any reader.
-        coastline_action : str, optional
-            Action to perform if a drifter hits the coastline, by default "previous". Options
-            are 'stranding', 'previous'.
-        max_speed : int
-            Typical maximum speed of elements, used to estimate reader buffer size.
-        wind_drift_factor : float
-            Elements at surface are moved with this fraction of the wind vector, in addition to currents and Stokes drift.
-        wind_drift_depth : float
-            The direct wind drift (windage) is linearly decreasing from the surface value (wind_drift_factor) until 0 at this depth.
-        vertical_mixing_timestep : float
-            Time step used for inner loop of vertical mixing.
-        object_type: str = config_model["object_type"]["default"],
-            Leeway object category for this simulation.
-
-        diameter : float
-            Seeding value of diameter.
-        neutral_buoyancy_salinity : float
-            Seeding value of neutral_buoyancy_salinity.
-        stage_fraction : float
-            Seeding value of stage_fraction.
-        hatched : float
-            Seeding value of hatched.
-        length : float
-            Seeding value of length.
-        weight : float
-            Seeding value of weight.
-
-        oil_type : str
-            Oil type to be used for the simulation, from the NOAA ADIOS database.
-        m3_per_hour : float
-            The amount (volume) of oil released per hour (or total amount if release is instantaneous).
-        oil_film_thickness : float
-            Seeding value of oil_film_thickness.
-        droplet_size_distribution : str
-            Droplet size distribution used for subsea release.
-        droplet_diameter_mu : float
-            The mean diameter of oil droplet for a subsea release, used in normal/lognormal distributions.
-        droplet_diameter_sigma : float
-            The standard deviation in diameter of oil droplet for a subsea release, used in normal/lognormal distributions.
-        droplet_diameter_min_subsea : float
-            The minimum diameter of oil droplet for a subsea release, used in uniform distribution.
-        droplet_diameter_max_subsea : float
-            The maximum diameter of oil droplet for a subsea release, used in uniform distribution.
-        emulsification : bool
-            Surface oil is emulsified, i.e. water droplets are mixed into oil due to wave mixing, with resulting increase of viscosity.
-        dispersion : bool
-            Oil is removed from simulation (dispersed), if entrained as very small droplets.
-        evaporation : bool
-            Surface oil is evaporated.
-        update_oilfilm_thickness : bool
-            Oil film thickness is calculated at each time step. The alternative is that oil film thickness is kept constant with value provided at seeding.
-        biodegradation : bool
-            Oil mass is biodegraded (eaten by bacteria).
-
-        Notes
-        -----
-        Docs available for more initialization options with ``ptm.ParticleTrackingManager?``
-
-        """
+        """Inputs for OpenDrift model."""
 
         model = "opendrift"
 
@@ -626,15 +626,19 @@ class OpenDriftModel(ParticleTrackingManager):
             prefix to search config for, only for OpenDrift parameters (not PTM).
         level : int, list, optional
             Limit search by level:
+
             * CONFIG_LEVEL_ESSENTIAL = 1
             * CONFIG_LEVEL_BASIC = 2
             * CONFIG_LEVEL_ADVANCED = 3
+
             e.g. 1, [1,2], [1,2,3]
         ptm_level : int, list, optional
             Limit search by level:
+
             * Surface to user = 1
             * Medium surface to user = 2
             * Surface but bury = 3
+
             e.g. 1, [1,2], [1,2,3]. To access all PTM parameters search for
             `ptm_level=[1,2,3]`.
         substring : str, optional

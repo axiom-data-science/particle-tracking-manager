@@ -40,7 +40,77 @@ overall_end_time = ciofs_operational_end_time
 
 
 class ParticleTrackingManager:
-    """Manager class that controls particle tracking model."""
+    """Manager class that controls particle tracking model.
+
+    Parameters
+    ----------
+    model : str
+        Name of Lagrangian model package to use for drifter tracking. Only option
+        currently is "opendrift".
+    lon : Optional[Union[int,float]], optional
+        Longitude of center of initial drifter locations, by default None
+    lat : Optional[Union[int,float]], optional
+        Latitude of center of initial drifter locations, by default None
+    z : Union[int,float], optional
+        Depth of initial drifter locations, by default 0 but taken from the
+        default in the model. Values are overridden if
+        ``surface_only==True`` to 0 and to the seabed if ``seed_seafloor`` is True.
+    seed_seafloor : bool, optional
+        Set to True to seed drifters vertically at the seabed, default is False. If True
+        then value of z is set to None and ignored.
+    number : int
+        Number of drifters to simulate. Default is 100.
+    start_time : Optional[datetime], optional
+        Start time of simulation, as a datetime object, by default None
+    run_forward : bool, optional
+        True to run forward in time, False to run backward, by default True
+    time_step : int, optional
+        Time step in seconds, options >0, <86400 (1 day in seconds), by default 3600
+    time_step_output : int, optional
+        How often to output model output, in seconds. Should be a multiple of time_step.
+        By default will take the value of time_step (this change occurs in the model).
+    steps : int, optional
+        Number of time steps to run in simulation. Options >0.
+        steps, end_time, or duration must be input by user. By default steps is 3 and
+        duration and end_time are None.
+    duration : Optional[datetime.timedelta], optional
+        Length of simulation to run, as positive-valued timedelta object, in hours,
+        such as ``timedelta(hours=48)``.
+        steps, end_time, or duration must be input by user. By default steps is 3 and
+        duration and end_time are None.
+    end_time : Optional[datetime], optional
+        Datetime at which to end simulation, as positive-valued datetime object.
+        steps, end_time, or duration must be input by user. By default steps is 3 and
+        duration and end_time are None.
+    log : str, optional
+        Options are "low" and "high" verbosity for log, by default "low"
+    ocean_model : Optional[str], optional
+        Name of ocean model to use for driving drifter simulation, by default None.
+        Use None for testing and set up. Otherwise input a string.
+        Options are: "NWGOA", "CIOFS", "CIOFS_now".
+        Alternatively keep as None and set up a separate reader (see example in docs).
+    surface_only : bool, optional
+        Set to True to keep drifters at the surface, by default None.
+        If this flag is set to not-None, it overrides do3D to False, vertical_mixing to False,
+        and the z value(s) 0.
+        If True, this flag also turns off reading model output below 0.5m if
+        drift_model is not Leeway:
+        ``o.set_config('drift:truncate_ocean_model_below_m', 0.5)`` to save time.
+    do3D : bool, optional
+        Set to True to run drifters in 3D, by default False. This is overridden if
+        ``surface_only==True``. If True, vertical advection and mixing are turned on with
+        options for setting ``diffusivitymodel``, ``background_diffusivity``,
+        ``ocean_mixed_layer_thickness``, ``vertical_mixing_timestep``. If False,
+        vertical motion is disabled.
+    vertical_mixing : bool, optional
+        Set to True to include vertical mixing, by default False. This is overridden if
+        ``surface_only==True``.
+
+    Notes
+    -----
+    Configuration happens at initialization time for the child model. There is currently
+    no separate configuration step.
+    """
 
     ocean_model: str
     lon: Union[int, float]
@@ -73,77 +143,7 @@ class ParticleTrackingManager:
         vertical_mixing: bool = config_ptm["vertical_mixing"]["default"],
         **kw,
     ) -> None:
-        """Inputs necessary for any particle tracking.
-
-        Parameters
-        ----------
-        model : str
-            Name of Lagrangian model package to use for drifter tracking. Only option
-            currently is "opendrift".
-        lon : Optional[Union[int,float]], optional
-            Longitude of center of initial drifter locations, by default None
-        lat : Optional[Union[int,float]], optional
-            Latitude of center of initial drifter locations, by default None
-        z : Union[int,float], optional
-            Depth of initial drifter locations, by default 0 but taken from the
-            default in the model. Values are overridden if
-            ``surface_only==True`` to 0 and to the seabed if ``seed_seafloor`` is True.
-        seed_seafloor : bool, optional
-            Set to True to seed drifters vertically at the seabed, default is False. If True
-            then value of z is set to None and ignored.
-        number : int
-            Number of drifters to simulate. Default is 100.
-        start_time : Optional[datetime], optional
-            Start time of simulation, as a datetime object, by default None
-        run_forward : bool, optional
-            True to run forward in time, False to run backward, by default True
-        time_step : int, optional
-            Time step in seconds, options >0, <86400 (1 day in seconds), by default 3600
-        time_step_output : int, optional
-            How often to output model output, in seconds. Should be a multiple of time_step.
-            By default will take the value of time_step (this change occurs in the model).
-        steps : int, optional
-            Number of time steps to run in simulation. Options >0.
-            steps, end_time, or duration must be input by user. By default steps is 3 and
-            duration and end_time are None.
-        duration : Optional[datetime.timedelta], optional
-            Length of simulation to run, as positive-valued timedelta object, in hours,
-            such as ``timedelta(hours=48)``.
-            steps, end_time, or duration must be input by user. By default steps is 3 and
-            duration and end_time are None.
-        end_time : Optional[datetime], optional
-            Datetime at which to end simulation, as positive-valued datetime object.
-            steps, end_time, or duration must be input by user. By default steps is 3 and
-            duration and end_time are None.
-        log : str, optional
-            Options are "low" and "high" verbosity for log, by default "low"
-        ocean_model : Optional[str], optional
-            Name of ocean model to use for driving drifter simulation, by default None.
-            Use None for testing and set up. Otherwise input a string.
-            Options are: "NWGOA", "CIOFS", "CIOFS_now".
-            Alternatively keep as None and set up a separate reader (see example in docs).
-        surface_only : bool, optional
-            Set to True to keep drifters at the surface, by default None.
-            If this flag is set to not-None, it overrides do3D to False, vertical_mixing to False,
-            and the z value(s) 0.
-            If True, this flag also turns off reading model output below 0.5m if
-            drift_model is not Leeway:
-            ``o.set_config('drift:truncate_ocean_model_below_m', 0.5)`` to save time.
-        do3D : bool, optional
-            Set to True to run drifters in 3D, by default False. This is overridden if
-            ``surface_only==True``. If True, vertical advection and mixing are turned on with
-            options for setting ``diffusivitymodel``, ``background_diffusivity``,
-            ``ocean_mixed_layer_thickness``, ``vertical_mixing_timestep``. If False,
-            vertical motion is disabled.
-        vertical_mixing : bool, optional
-            Set to True to include vertical mixing, by default False. This is overridden if
-            ``surface_only==True``.
-
-        Notes
-        -----
-        Configuration happens at initialization time for the child model. There is currently
-        no separate configuration step.
-        """
+        """Inputs necessary for any particle tracking."""
 
         # get all named parameters input to ParticleTrackingManager class
         from inspect import signature

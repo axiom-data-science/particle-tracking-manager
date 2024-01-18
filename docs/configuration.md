@@ -130,7 +130,7 @@ m.show_config("seed:oil_type")
 
 ## Specific Configuration Options
 
-### Ocean model
+### Ocean Model
 
 Setting up an ocean model is also referred to as `add_reader()`.
 

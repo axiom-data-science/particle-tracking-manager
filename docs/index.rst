@@ -9,15 +9,13 @@ Welcome to particle-tracking-manager's documentation!
 Installation
 ------------
 
-(soon)
-
 To install from conda-forge:
 
-  >>> conda install -c conda-forge particle-tracking-manager
+   conda install -c conda-forge particle-tracking-manager
 
 To install from PyPI:
 
-  >>> pip install particle-tracking-manager
+   pip install particle-tracking-manager
 
 .. toctree::
    :maxdepth: 3
@@ -33,6 +31,7 @@ To install from PyPI:
    :hidden:
    :caption: Developer docs
 
+   api
    whats_new
    GitHub repository <https://github.com/axiom-data-science/particle-tracking-manager>
 
