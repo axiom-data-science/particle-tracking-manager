@@ -138,10 +138,6 @@ This is not currently a comprehensive list but a place where extra details are i
 
 ### Manager options, available to all models
 
-#### Start time
-
-Can input your start time as interpretable string, datetime object, or pandas Timestamp.
-
 #### Ocean Model
 
 Setting up an ocean model is also referred to as `add_reader()`.

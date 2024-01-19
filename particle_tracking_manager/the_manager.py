@@ -51,10 +51,12 @@ class ParticleTrackingManager:
         Longitude of center of initial drifter locations, by default None. Use with `seed_flag="elements"`.
     lat : Optional[Union[int,float]], optional
         Latitude of center of initial drifter locations, by default None. Use with `seed_flag="elements"`.
+    wkt : Optional[str], optional
+        WKT string defining polygon for seeding drifters, by default None. Use with `seed_flag="wkt"`.
     geojson : Optional[dict], optional
         GeoJSON object defining polygon for seeding drifters, by default None. Use with `seed_flag="geojson"`.
     seed_flag : str, optional
-        Flag for seeding drifters. Options are "elements", "geojson". Default is "elements".
+        Flag for seeding drifters. Options are "elements", "wkt", "geojson". Default is "elements".
     z : Union[int,float], optional
         Depth of initial drifter locations, by default 0 but taken from the
         default in the model. Values are overridden if
@@ -64,8 +66,8 @@ class ParticleTrackingManager:
         then value of z is set to None and ignored.
     number : int
         Number of drifters to simulate. Default is 100.
-    start_time : Optional[str,datetime.datetime,pd.Timestamp], optional
-        Start time of simulation, by default None
+    start_time : Optional[datetime], optional
+        Start time of simulation, as a datetime object, by default None
     run_forward : bool, optional
         True to run forward in time, False to run backward, by default True
     time_step : int, optional
@@ -129,12 +131,13 @@ class ParticleTrackingManager:
         model: str,
         lon: Optional[Union[int, float]] = None,
         lat: Optional[Union[int, float]] = None,
+        wkt: Optional[str] = None,
         geojson: Optional[dict] = None,
         seed_flag: str = config_ptm["seed_flag"]["default"],
         z: Optional[Union[int, float]] = config_ptm["z"]["default"],
         seed_seafloor: bool = config_ptm["seed_seafloor"]["default"],
         number: int = config_ptm["number"]["default"],
-        start_time: Optional[Union[str, datetime.datetime, pd.Timestamp]] = None,
+        start_time: Optional[datetime.datetime] = None,
         run_forward: bool = config_ptm["run_forward"]["default"],
         time_step: int = config_ptm["time_step"]["default"],
         time_step_output: Optional[int] = config_ptm["time_step_output"]["default"],
@@ -200,13 +203,6 @@ class ParticleTrackingManager:
             assert (
                 -90 <= value <= 90
             ), "Latitude needs to be between -90 and 90 degrees."
-
-        if value is not None and name == "start_time":
-            if isinstance(value, (str, datetime.datetime, pd.Timestamp)):
-                self.__dict__[name] = pd.Timestamp(value)
-                self.config_ptm[name]["value"] = pd.Timestamp(value)
-            else:
-                raise TypeError("start_time must be a string, datetime, or Timestamp.")
 
         # make sure ocean_model name uppercase
         if name == "ocean_model" and value is not None:
@@ -336,27 +332,15 @@ class ParticleTrackingManager:
         # if self.ocean_model != "TEST" and not self.has_added_reader:
         #     raise ValueError("first add reader with `manager.add_reader(**kwargs)`.")
 
-        # have this check here so that all parameters aren't required until seeding
         if self.seed_flag == "elements" and self.lon is None and self.lat is None:
-            msg = f"""lon and lat need non-None values if using `seed_flag="elements"`.
+            msg = f"""lon and lat need non-None values.
                     Update them with e.g. `self.lon=-151` or input to `seed`."""
-            raise KeyError(msg)
-        elif self.seed_flag == "geojson" and self.geojson is None:
-            msg = f"""geojson need non-None value if using `seed_flag="geojson"`."""
             raise KeyError(msg)
 
         msg = f"""z needs a non-None value.
                   Please update it with e.g. `self.z=-10` or input to `seed`."""
         if not self.seed_seafloor:
             assert self.z is not None, msg
-
-        if self.ocean_model is not None and not self.has_added_reader:
-            self.add_reader()
-
-        if self.start_time is None:
-            raise KeyError(
-                "first add reader with `manager.add_reader(**kwargs)` or input a start_time."
-            )
 
         self.run_seed()
         self.has_run_seeding = True

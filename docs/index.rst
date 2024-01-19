@@ -23,7 +23,6 @@ To install from PyPI:
    :caption: Examples and demos
 
    quick_start
-   more_examples
    configuration
 
 
