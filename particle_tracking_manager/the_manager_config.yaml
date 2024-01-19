@@ -24,12 +24,6 @@ lat:
   description: Central latitude for seeding drifters. Only used if `seed_flag=="elements"`.
   ptm_level: 1
 
-wkt:
-  type: str
-  default: None
-  description: WKT string describing a polygon within which to seed drifters. To use this parameter, also have `seed_flag=="wkt"`. If None, seed drifters at or around a single point defined by lon and lat along with seed_flag=="elements".
-  ptm_level: 1
-
 geojson:
   type: geojson
   default: None
@@ -40,11 +34,10 @@ seed_flag:
   type: enum
   enum:
     - elements
-    - wkt
     - geojson
   default: elements
   ptm_level: 1
-  description: Method for seeding drifters. Options are "elements", "wkt", or "geojson". If "elements", seed drifters at or around a single point defined by lon and lat. If "wkt", seed drifters within a polygon described by a WKT string. If "geojson", seed drifters within a polygon described by a GeoJSON object.
+  description: Method for seeding drifters. Options are "elements" or "geojson". If "elements", seed drifters at or around a single point defined by lon and lat. If "geojson", seed drifters within a polygon described by a GeoJSON object.
 
 number:
   default: 100
