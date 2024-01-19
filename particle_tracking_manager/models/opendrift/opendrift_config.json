@@ -1,0 +1,180 @@
+{
+    "drift_model": {
+        "default": "OceanDrift",
+        "ptm_level": 1,
+        "type": "enum - OceanDrift - LarvalFish - OpenOil - Leeway",
+        "description": "Which model in OpenDrift to use. This corresponds to the type of drift scenario the user wants to run."
+    },
+    "export_variables": {
+        "default": [
+            "z"
+        ],
+        "ptm_level": 1,
+        "type": "list",
+        "description": "List of variables to export. Options available with `m.all_export_variables` for a given `drift_model`. ['lon', 'lat', 'ID', 'status'] will always be exported."
+    },
+    "radius": {
+        "default": 0.0,
+        "ptm_level": 1,
+        "type": "float",
+        "min": 0.0,
+        "max": 1000000,
+        "units": "m",
+        "description": "Radius around each lon-lat pair, within which particles will be randomly seeded. This is used by function `seed_elements`."
+    },
+    "radius_type": {
+        "default": "gaussian",
+        "ptm_level": 1,
+        "type": "enum - gaussian - uniform",
+        "description": "If 'gaussian' (default), the radius is the standard deviation in x-y-directions. If 'uniform', elements are spread evenly and always inside a circle with the given radius. This is used by function `seed_elements`."
+    },
+    "wind_drift_factor": {
+        "default": 0.02,
+        "ptm_level": 1,
+        "od_mapping": "seed:wind_drift_factor"
+    },
+    "diffusivitymodel": {
+        "default": "windspeed_Large1994",
+        "od_mapping": "vertical_mixing:diffusivitymodel",
+        "ptm_level": 3
+    },
+    "stokes_drift": {
+        "default": true,
+        "od_mapping": "drift:stokes_drift",
+        "ptm_level": 2
+    },
+    "use_auto_landmask": {
+        "default": false,
+        "od_mapping": "general:use_auto_landmask",
+        "ptm_level": 3
+    },
+    "mixed_layer_depth": {
+        "default": 30,
+        "od_mapping": "environment:fallback:ocean_mixed_layer_thickness",
+        "ptm_level": 3
+    },
+    "coastline_action": {
+        "default": "previous",
+        "od_mapping": "general:coastline_action",
+        "ptm_level": 2
+    },
+    "max_speed": {
+        "default": 5,
+        "od_mapping": "drift:max_speed"
+    },
+    "horizontal_diffusivity": {
+        "default": "None",
+        "od_mapping": "drift:horizontal_diffusivity",
+        "ptm_level": 2
+    },
+    "wind_drift_depth": {
+        "default": 0.02,
+        "od_mapping": "drift:wind_drift_depth",
+        "ptm_level": 2
+    },
+    "vertical_mixing_timestep": {
+        "default": 60,
+        "od_mapping": "vertical_mixing:timestep",
+        "ptm_level": 2
+    },
+    "object_type": {
+        "default": "Person-in-water (PIW), unknown state (mean values)",
+        "od_mapping": "seed:object_type",
+        "ptm_level": 1
+    },
+    "diameter": {
+        "default": 0.0014,
+        "od_mapping": "seed:diameter",
+        "ptm_level": 2
+    },
+    "neutral_buoyancy_salinity": {
+        "default": 31.25,
+        "od_mapping": "seed:neutral_buoyancy_salinity",
+        "ptm_level": 2
+    },
+    "stage_fraction": {
+        "default": 0.0,
+        "od_mapping": "seed:stage_fraction",
+        "ptm_level": 2
+    },
+    "hatched": {
+        "default": 0,
+        "od_mapping": "seed:hatched",
+        "ptm_level": 2
+    },
+    "length": {
+        "default": 0,
+        "od_mapping": "seed:length",
+        "ptm_level": 2
+    },
+    "weight": {
+        "default": 0.08,
+        "od_mapping": "seed:weight",
+        "ptm_level": 2
+    },
+    "oil_type": {
+        "default": "GENERIC MEDIUM CRUDE",
+        "od_mapping": "seed:oil_type",
+        "ptm_level": 1
+    },
+    "m3_per_hour": {
+        "default": 1,
+        "od_mapping": "seed:m3_per_hour",
+        "ptm_level": 2
+    },
+    "oil_film_thickness": {
+        "default": 1,
+        "od_mapping": "seed:oil_film_thickness",
+        "ptm_level": 2
+    },
+    "droplet_size_distribution": {
+        "default": "uniform",
+        "od_mapping": "seed:droplet_size_distribution",
+        "ptm_level": 2
+    },
+    "droplet_diameter_mu": {
+        "default": 0.001,
+        "od_mapping": "seed:droplet_diameter_mu",
+        "ptm_level": 2
+    },
+    "droplet_diameter_sigma": {
+        "default": 0.0005,
+        "od_mapping": "seed:droplet_diameter_sigma",
+        "ptm_level": 2
+    },
+    "droplet_diameter_min_subsea": {
+        "default": 0.0005,
+        "od_mapping": "seed:droplet_diameter_min_subsea",
+        "ptm_level": 2
+    },
+    "droplet_diameter_max_subsea": {
+        "default": 0.005,
+        "od_mapping": "seed:droplet_diameter_max_subsea",
+        "ptm_level": 2
+    },
+    "emulsification": {
+        "default": true,
+        "od_mapping": "processes:emulsification",
+        "ptm_level": 2
+    },
+    "dispersion": {
+        "default": true,
+        "od_mapping": "processes:dispersion",
+        "ptm_level": 2
+    },
+    "evaporation": {
+        "default": true,
+        "od_mapping": "processes:evaporation",
+        "ptm_level": 2
+    },
+    "update_oilfilm_thickness": {
+        "default": true,
+        "od_mapping": "processes:update_oilfilm_thickness",
+        "ptm_level": 2
+    },
+    "biodegradation": {
+        "default": true,
+        "od_mapping": "processes:biodegradation",
+        "ptm_level": 2
+    }
+}

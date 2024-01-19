@@ -1,0 +1,171 @@
+{
+    "model": {
+        "type": "enum",
+        "enum": [
+            "opendrift"
+        ],
+        "default": "opendrift",
+        "ptm_level": 1,
+        "description": "Lagrangian model software to use for simulation."
+    },
+    "lon": {
+        "type": "float",
+        "default": -151.0,
+        "min": -180,
+        "max": 180,
+        "units": "degrees_east",
+        "description": "Central longitude for seeding drifters. Only used if `seed_flag==\"elements\"`.",
+        "ptm_level": 1
+    },
+    "lat": {
+        "type": "float",
+        "default": 58.0,
+        "min": -90,
+        "max": 90,
+        "units": "degrees_north",
+        "description": "Central latitude for seeding drifters. Only used if `seed_flag==\"elements\"`.",
+        "ptm_level": 1
+    },
+    "wkt": {
+        "type": "str",
+        "default": "None",
+        "description": "WKT string describing a polygon within which to seed drifters. To use this parameter, also have `seed_flag==\"wkt\"`. If None, seed drifters at or around a single point defined by lon and lat along with seed_flag==\"elements\".",
+        "ptm_level": 1
+    },
+    "geojson": {
+        "type": "geojson",
+        "default": "None",
+        "description": "GeoJSON describing a polygon within which to seed drifters. To use this parameter, also have `seed_flag==\"geojson\"`. If None, seed drifters at or around a single point defined by lon and lat along with seed_flag==\"elements\".",
+        "ptm_level": 1
+    },
+    "seed_flag": {
+        "type": "enum",
+        "enum": [
+            "elements",
+            "wkt",
+            "geojson"
+        ],
+        "default": "elements",
+        "ptm_level": 1,
+        "description": "Method for seeding drifters. Options are \"elements\", \"wkt\", or \"geojson\". If \"elements\", seed drifters at or around a single point defined by lon and lat. If \"wkt\", seed drifters within a polygon described by a WKT string. If \"geojson\", seed drifters within a polygon described by a GeoJSON object."
+    },
+    "number": {
+        "default": 100,
+        "od_mapping": "seed:number",
+        "ptm_level": 1
+    },
+    "start_time": {
+        "type": "datetime.datetime",
+        "default": "pd.Timestamp.now()",
+        "min": "datetime.datetime(1999,1,1)",
+        "max": "pd.Timestamp.now() + pd.Timedelta(\"48H\")",
+        "units": "time",
+        "description": "Start time for drifter simulation.",
+        "ptm_level": 1
+    },
+    "run_forward": {
+        "type": "bool",
+        "default": true,
+        "description": "Run forward in time.",
+        "ptm_level": 1
+    },
+    "time_step": {
+        "type": [
+            "float",
+            "datetime.timedelta"
+        ],
+        "default": 3600,
+        "min": 1,
+        "max": 86400,
+        "units": "seconds",
+        "description": "Interval between particles updates, in seconds or as timedelta.",
+        "ptm_level": 1
+    },
+    "time_step_output": {
+        "type": [
+            "float",
+            "datetime.timedelta"
+        ],
+        "default": "None",
+        "min": 1,
+        "max": 604800,
+        "units": "seconds",
+        "description": "Time step at which element properties are stored and eventually written to file.",
+        "ptm_level": 2
+    },
+    "steps": {
+        "type": "int",
+        "default": 3,
+        "min": 1,
+        "max": 10000,
+        "units": "None",
+        "description": "Maximum number of steps. End of simulation will be start_time + steps*time_step. steps, end_time, or duration must be input by user.",
+        "ptm_level": 1
+    },
+    "duration": {
+        "type": "datetime.timedelta",
+        "default": "None",
+        "min": "None",
+        "max": "None",
+        "units": "None",
+        "description": "The length of the simulation. steps, end_time, or duration must be input by user.",
+        "ptm_level": 1
+    },
+    "end_time": {
+        "type": "datetime.datetime",
+        "default": "None",
+        "min": "None",
+        "max": "None",
+        "units": "None",
+        "description": "The end of the simulation. steps, end_time, or duration must be input by user.",
+        "ptm_level": 1
+    },
+    "log": {
+        "type": "enum",
+        "enum": [
+            "low",
+            "high"
+        ],
+        "default": "low",
+        "ptm_level": 2,
+        "description": "Log verbosity"
+    },
+    "ocean_model": {
+        "type": "enum",
+        "enum": [
+            "NWGOA",
+            "CIOFS",
+            "CIOFS_now"
+        ],
+        "default": "None",
+        "ptm_level": 1,
+        "description": "Name of ocean model to use for driving drifter simulation, by default None. Use None for testing and set up. Otherwise input a string. Options are \"NWGOA\", \"CIOFS\", \"CIOFS_now\". Alternatively keep as None and set up a separate reader (see example in docs)."
+    },
+    "surface_only": {
+        "type": "bool",
+        "default": "None",
+        "description": "Set to True to keep drifters at the surface, by default None. If this flag is set to not-None, it overrides do3D to False, vertical_mixing to False, and the z value(s) 0. If True, this flag also turns off reading model output below 0.5m if drift_model is not Leeway to save time.",
+        "ptm_level": 1
+    },
+    "do3D": {
+        "type": "bool",
+        "default": false,
+        "description": "Set to True to run drifters in 3D, by default False. This is overridden if surface_only==True. If True, vertical advection and mixing are turned on with options for setting diffusivitymodel, background_diffusivity, ocean_mixed_layer_thickness, vertical_mixing_timestep. If False, vertical motion is disabled.",
+        "ptm_level": 1
+    },
+    "vertical_mixing": {
+        "default": false,
+        "od_mapping": "drift:vertical_mixing",
+        "ptm_level": 1
+    },
+    "z": {
+        "default": 0,
+        "od_mapping": "seed:z",
+        "ptm_level": 1
+    },
+    "seed_seafloor": {
+        "default": false,
+        "od_mapping": "seed:seafloor",
+        "ptm_level": 2
+    }
+}

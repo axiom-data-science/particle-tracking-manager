@@ -28,10 +28,10 @@ from .reader_ROMS_native import Reader
 
 
 # Read OpenDrift configuration information
-loc = pathlib.Path(__file__).parent / pathlib.Path("opendrift_config.yaml")
+loc = pathlib.Path(__file__).parent / pathlib.Path("opendrift_config.json")
 with open(loc, "r") as f:
-    # Load the YAML file into a Python object
-    config_model = yaml.safe_load(f)
+    # Load the JSON file into a Python object
+    config_model = json.load(f)
 
 # convert "None"s to Nones
 for key in config_model.keys():
@@ -453,7 +453,7 @@ class OpenDriftModel(ParticleTrackingManager):
         """Seed drifters for model."""
 
         seed_kws = {
-            "time": self.start_time,
+            "time": self.start_time.to_pydatetime(),
             "z": self.z,
         }
 
@@ -476,7 +476,8 @@ class OpenDriftModel(ParticleTrackingManager):
 
         elif self.seed_flag == "geojson":
 
-            # seed_kws.update(self.show_config(prefix="seed:"))
+            # geojson needs string representation of time
+            seed_kws["time"] = self.start_time.isoformat()
             self.geojson["properties"] = seed_kws
             json_string_dumps = json.dumps(self.geojson)
             self.o.seed_from_geojson(json_string_dumps)
