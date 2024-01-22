@@ -2,13 +2,7 @@
 import copy
 import datetime
 import json
-import logging
 import pathlib
-
-from typing import Optional
-
-import pandas as pd
-import yaml
 
 from opendrift.models.larvalfish import LarvalFish
 from opendrift.models.leeway import Leeway
