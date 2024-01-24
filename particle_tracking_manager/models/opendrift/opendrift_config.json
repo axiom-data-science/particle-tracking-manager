@@ -9,7 +9,7 @@
         "default": [
             "z"
         ],
-        "ptm_level": 1,
+        "ptm_level": 2,
         "type": "list",
         "description": "List of variables to export. Options available with `m.all_export_variables` for a given `drift_model`. ['lon', 'lat', 'ID', 'status'] will always be exported."
     },
@@ -24,7 +24,7 @@
     },
     "radius_type": {
         "default": "gaussian",
-        "ptm_level": 1,
+        "ptm_level": 2,
         "type": "enum - gaussian - uniform",
         "description": "If 'gaussian' (default), the radius is the standard deviation in x-y-directions. If 'uniform', elements are spread evenly and always inside a circle with the given radius. This is used by function `seed_elements`."
     },
@@ -41,7 +41,7 @@
     "stokes_drift": {
         "default": true,
         "od_mapping": "drift:stokes_drift",
-        "ptm_level": 2
+        "ptm_level": 1
     },
     "use_auto_landmask": {
         "default": false,
@@ -56,7 +56,7 @@
     "coastline_action": {
         "default": "previous",
         "od_mapping": "general:coastline_action",
-        "ptm_level": 2
+        "ptm_level": 1
     },
     "max_speed": {
         "default": 5,
@@ -65,7 +65,7 @@
     "horizontal_diffusivity": {
         "default": "None",
         "od_mapping": "drift:horizontal_diffusivity",
-        "ptm_level": 2
+        "ptm_level": 1
     },
     "wind_drift_depth": {
         "default": 0.02,
@@ -120,7 +120,7 @@
     "m3_per_hour": {
         "default": 1,
         "od_mapping": "seed:m3_per_hour",
-        "ptm_level": 2
+        "ptm_level": 1
     },
     "oil_film_thickness": {
         "default": 1,
@@ -155,26 +155,26 @@
     "emulsification": {
         "default": true,
         "od_mapping": "processes:emulsification",
-        "ptm_level": 2
+        "ptm_level": 1
     },
     "dispersion": {
         "default": true,
         "od_mapping": "processes:dispersion",
-        "ptm_level": 2
+        "ptm_level": 1
     },
     "evaporation": {
         "default": true,
         "od_mapping": "processes:evaporation",
-        "ptm_level": 2
+        "ptm_level": 1
     },
     "update_oilfilm_thickness": {
         "default": true,
         "od_mapping": "processes:update_oilfilm_thickness",
-        "ptm_level": 2
+        "ptm_level": 1
     },
     "biodegradation": {
         "default": true,
         "od_mapping": "processes:biodegradation",
-        "ptm_level": 2
+        "ptm_level": 1
     }
 }
