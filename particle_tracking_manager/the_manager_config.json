@@ -113,16 +113,6 @@
         "description": "The end of the simulation. steps, end_time, or duration must be input by user.",
         "ptm_level": 1
     },
-    "log": {
-        "type": "enum",
-        "enum": [
-            "low",
-            "high"
-        ],
-        "default": "low",
-        "ptm_level": 2,
-        "description": "Log verbosity"
-    },
     "ocean_model": {
         "type": "enum",
         "enum": [

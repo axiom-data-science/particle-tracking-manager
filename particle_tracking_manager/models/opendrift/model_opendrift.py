@@ -2,6 +2,7 @@
 import copy
 import datetime
 import json
+import logging
 import pathlib
 
 from opendrift.models.larvalfish import LarvalFish
@@ -127,6 +128,8 @@ class OpenDriftModel(ParticleTrackingManager):
         Oil film thickness is calculated at each time step. The alternative is that oil film thickness is kept constant with value provided at seeding.
     biodegradation : bool
         Oil mass is biodegraded (eaten by bacteria).
+    log : str, optional
+        Options are "low" and "high" verbosity for log, by default "low"
 
     Notes
     -----
@@ -134,6 +137,8 @@ class OpenDriftModel(ParticleTrackingManager):
 
     """
 
+    logger: logging.Logger
+    log: str
     vertical_mixing_timestep: float
     diffusivitymodel: str
     mixed_layer_depth: float
@@ -195,23 +200,20 @@ class OpenDriftModel(ParticleTrackingManager):
             "default"
         ],
         biodegradation: bool = config_model["biodegradation"]["default"],
+        log: str = config_model["log"]["default"],
         **kw,
     ) -> None:
         """Inputs for OpenDrift model."""
 
         model = "opendrift"
 
-        super().__init__(model, **kw)
-
-        # Extra keyword parameters are not currently allowed so they might be a typo
-        if len(self.kw) > 0:
-            raise KeyError(f"Unknown input parameter(s) {self.kw} input.")
-
-        if self.log == "low":
+        if log == "low":
             self.loglevel = 20
-        elif self.log == "high":
+        elif log == "high":
             self.loglevel = 0
 
+        # need drift_model defined for the log to work properly for both manager and model
+        # so do this before super initialization
         self.drift_model = drift_model
 
         # do this right away so I can query the object
@@ -231,6 +233,16 @@ class OpenDriftModel(ParticleTrackingManager):
             raise ValueError(f"Drifter model {self.drift_model} is not recognized.")
 
         self.o = o
+
+        self.__dict__["logger"] = logging.getLogger(
+            model
+        )  # use this syntax to avoid __setattr__
+
+        super().__init__(model, **kw)
+
+        # Extra keyword parameters are not currently allowed so they might be a typo
+        if len(self.kw) > 0:
+            raise KeyError(f"Unknown input parameter(s) {self.kw} input.")
 
         # Note that you can see configuration possibilities for a given model with
         # o.list_configspec()

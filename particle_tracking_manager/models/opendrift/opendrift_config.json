@@ -188,5 +188,15 @@
         "default": true,
         "od_mapping": "processes:biodegradation",
         "ptm_level": 1
+    },
+    "log": {
+        "type": "enum",
+        "enum": [
+            "low",
+            "high"
+        ],
+        "default": "low",
+        "ptm_level": 2,
+        "description": "Log verbosity"
     }
 }

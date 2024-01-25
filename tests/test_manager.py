@@ -100,6 +100,8 @@ def test_parameter_passing():
     ts = 2 * 3600
     diffmodel = "windspeed_Sundby1983"
     use_auto_landmask = True
+    vertical_mixing = True
+    do3D = True
 
     seed_kws = dict(
         lon=4.0,
@@ -113,6 +115,8 @@ def test_parameter_passing():
         time_step=ts,
         duration=timedelta(hours=10),
         diffusivitymodel=diffmodel,
+        vertical_mixing=vertical_mixing,
+        do3D=do3D,
         **seed_kws
     )
 
