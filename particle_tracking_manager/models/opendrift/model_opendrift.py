@@ -2,6 +2,7 @@
 import copy
 import datetime
 import json
+import logging
 import pathlib
 
 from opendrift.models.larvalfish import LarvalFish
@@ -55,6 +56,10 @@ class OpenDriftModel(ParticleTrackingManager):
 
     horizontal_diffusivity : float
         Horizontal diffusivity is None by default but will be set to a grid-dependent value for known ocean_model values. This is calculated as 0.1 m/s sub-gridscale velocity that is missing from the model output and multiplied by an estimate of the horizontal grid resolution. This leads to a larger value for NWGOA which has a larger value for mean horizontal grid resolution (lower resolution). If the user inputs their own ocean_model information, they can input their own horizontal_diffusivity value. A user can use a built-in ocean_model and the overwrite the horizontal_diffusivity value to 0.
+    current_uncertainty : float
+        Add gaussian perturbation with this standard deviation to current components at each time step.
+    wind_uncertainty : float
+        Add gaussian perturbation with this standard deviation to wind components at each time step.
     use_auto_landmask : bool
         Set as True to use general landmask instead of that from ocean_model.
         Use for testing primarily. Default is False.
@@ -69,7 +74,7 @@ class OpenDriftModel(ParticleTrackingManager):
 
         The latter two configurations are not additionally set in OpenDriftModel since they are already the default once stokes_drift is True.
     mixed_layer_depth : float
-        Fallback value for ocean_mixed_layer_thickness if not available from any reader.
+        Fallback value for ocean_mixed_layer_thickness if not available from any reader. This is used in the calculation of vertical diffusivity.
     coastline_action : str, optional
         Action to perform if a drifter hits the coastline, by default "previous". Options
         are 'stranding', 'previous'.
@@ -123,12 +128,23 @@ class OpenDriftModel(ParticleTrackingManager):
         Oil film thickness is calculated at each time step. The alternative is that oil film thickness is kept constant with value provided at seeding.
     biodegradation : bool
         Oil mass is biodegraded (eaten by bacteria).
+    log : str, optional
+        Options are "low" and "high" verbosity for log, by default "low"
 
     Notes
     -----
     Docs available for more initialization options with ``ptm.ParticleTrackingManager?``
 
     """
+
+    logger: logging.Logger
+    log: str
+    vertical_mixing_timestep: float
+    diffusivitymodel: str
+    mixed_layer_depth: float
+    wind_drift_factor: float
+    wind_drift_depth: float
+    stokes_drift: bool
 
     def __init__(
         self,
@@ -139,6 +155,8 @@ class OpenDriftModel(ParticleTrackingManager):
         horizontal_diffusivity: float = config_model["horizontal_diffusivity"][
             "default"
         ],
+        current_uncertainty: float = config_model["current_uncertainty"]["default"],
+        wind_uncertainty: float = config_model["wind_uncertainty"]["default"],
         use_auto_landmask: bool = config_model["use_auto_landmask"]["default"],
         diffusivitymodel: str = config_model["diffusivitymodel"]["default"],
         stokes_drift: bool = config_model["stokes_drift"]["default"],
@@ -182,23 +200,20 @@ class OpenDriftModel(ParticleTrackingManager):
             "default"
         ],
         biodegradation: bool = config_model["biodegradation"]["default"],
+        log: str = config_model["log"]["default"],
         **kw,
     ) -> None:
         """Inputs for OpenDrift model."""
 
         model = "opendrift"
 
-        super().__init__(model, **kw)
-
-        # Extra keyword parameters are not currently allowed so they might be a typo
-        if len(self.kw) > 0:
-            raise KeyError(f"Unknown input parameter(s) {self.kw} input.")
-
-        if self.log == "low":
+        if log == "low":
             self.loglevel = 20
-        elif self.log == "high":
+        elif log == "high":
             self.loglevel = 0
 
+        # need drift_model defined for the log to work properly for both manager and model
+        # so do this before super initialization
         self.drift_model = drift_model
 
         # do this right away so I can query the object
@@ -218,6 +233,16 @@ class OpenDriftModel(ParticleTrackingManager):
             raise ValueError(f"Drifter model {self.drift_model} is not recognized.")
 
         self.o = o
+
+        self.__dict__["logger"] = logging.getLogger(
+            model
+        )  # use this syntax to avoid __setattr__
+
+        super().__init__(model, **kw)
+
+        # Extra keyword parameters are not currently allowed so they might be a typo
+        if len(self.kw) > 0:
+            raise KeyError(f"Unknown input parameter(s) {self.kw} input.")
 
         # Note that you can see configuration possibilities for a given model with
         # o.list_configspec()
@@ -385,6 +410,74 @@ class OpenDriftModel(ParticleTrackingManager):
         elif name == "do3D" and value:
             self.o.set_config("drift:vertical_advection", True)
 
+        # Make sure vertical_mixing_timestep equal to default value if vertical_mixing False
+        # same for diffusivitymodel and mixed_layer_depth
+        if hasattr(self, "vertical_mixing") and not self.vertical_mixing:
+            if (
+                hasattr(self, "vertical_mixing_timestep")
+                and self.vertical_mixing_timestep
+                != self.show_config(key="vertical_mixing_timestep")["default"]
+            ):
+                self.logger.info(
+                    "`vertical_mixing_timestep` is not used if `vertical_mixing` is False, resetting value to default and not using."
+                )
+                self.vertical_mixing_timestep = self.show_config(
+                    key="vertical_mixing_timestep"
+                )["default"]
+            if (
+                hasattr(self, "diffusivitymodel")
+                and self.diffusivitymodel
+                != self.show_config(key="diffusivitymodel")["default"]
+            ):
+                self.logger.info(
+                    "`diffusivitymodel` is not used if `vertical_mixing` is False, resetting value to default and not using."
+                )
+                self.diffusivitymodel = self.show_config(key="diffusivitymodel")[
+                    "default"
+                ]
+            if (
+                hasattr(self, "mixed_layer_depth")
+                and self.mixed_layer_depth
+                != self.show_config(key="mixed_layer_depth")["default"]
+            ):
+                self.logger.info(
+                    "`mixed_layer_depth` is not used if `vertical_mixing` is False, resetting value to default and not using."
+                )
+                self.mixed_layer_depth = self.show_config(key="mixed_layer_depth")[
+                    "default"
+                ]
+
+        # make sure user isn't try to use Leeway and "wind_drift_factor", "stokes_drift",
+        # "wind_drift_depth" at the same time
+        if self.drift_model == "Leeway":
+            if (
+                hasattr(self, "wind_drift_factor")
+                and self.wind_drift_factor
+                != self.show_config(key="wind_drift_factor")["default"]
+            ):
+                self.logger.info(
+                    "wind_drift_factor cannot be used with Leeway model, resetting value to default and not using."
+                )
+                self.wind_drift_factor = self.show_config(key="wind_drift_factor")[
+                    "default"
+                ]
+            if (
+                hasattr(self, "wind_drift_depth")
+                and self.wind_drift_depth
+                != self.show_config(key="wind_drift_depth")["default"]
+            ):
+                self.logger.info(
+                    "wind_drift_depth cannot be used with Leeway model, resetting value to default and not using."
+                )
+                self.wind_drift_depth = self.show_config(key="wind_drift_depth")[
+                    "default"
+                ]
+            if hasattr(self, "stokes_drift") and self.stokes_drift:
+                self.logger.info(
+                    "stokes_drift cannot be used with Leeway model, changing to False."
+                )
+                self.stokes_drift = False
+
         self._update_config()
 
     def run_add_reader(
@@ -463,10 +556,6 @@ class OpenDriftModel(ParticleTrackingManager):
             )
 
             self.o.seed_elements(**seed_kws)
-
-        elif self.seed_flag == "wkt":
-
-            self.o.seed_from_wkt(self.wkt, **seed_kws)
 
         elif self.seed_flag == "geojson":
 
@@ -612,7 +701,7 @@ class OpenDriftModel(ParticleTrackingManager):
 
         return self.o.export_variables
 
-    def get_configspec(self, prefix, substring, level, ptm_level):
+    def get_configspec(self, prefix, substring, excludestring, level, ptm_level):
         """Copied from OpenDrift, then modified."""
 
         if not isinstance(level, list) and level is not None:
@@ -624,7 +713,7 @@ class OpenDriftModel(ParticleTrackingManager):
         configspec = {
             k: v
             for (k, v) in self._config.items()
-            if k.startswith(prefix) and substring in k
+            if k.startswith(prefix) and substring in k and excludestring not in k
         }
 
         if level is not None:
@@ -647,7 +736,13 @@ class OpenDriftModel(ParticleTrackingManager):
         return configspec
 
     def show_config_model(
-        self, key=None, prefix="", level=None, ptm_level=None, substring=""
+        self,
+        key=None,
+        prefix="",
+        level=None,
+        ptm_level=None,
+        substring="",
+        excludestring="excludestring",
     ) -> dict:
         """Show configuring for the drift model selected in configuration.
 
@@ -678,6 +773,8 @@ class OpenDriftModel(ParticleTrackingManager):
             `ptm_level=[1,2,3]`.
         substring : str, optional
             If input, show configuration that contains that substring.
+        excludestring : str, optional
+            configuration parameters are not shown if they contain this string.
 
         Examples
         --------
@@ -723,7 +820,11 @@ class OpenDriftModel(ParticleTrackingManager):
             prefix = key
 
         output = self.get_configspec(
-            prefix=prefix, level=level, ptm_level=ptm_level, substring=substring
+            prefix=prefix,
+            level=level,
+            ptm_level=ptm_level,
+            substring=substring,
+            excludestring=excludestring,
         )
 
         if key is not None:

@@ -73,8 +73,7 @@ class ParseKwargs(argparse.Action):
             getattr(namespace, self.dest)[key] = value
 
 
-# def main():
-if __name__ == "__main__":
+def main():
     """Parser method.
 
     Include all inputs

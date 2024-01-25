@@ -40,13 +40,13 @@ Then find results in file `m.outfile_name`.
 
 ## Command Line Interface
 
-The equivalent for the set up above is:
+The equivalent for the set up above for using the command line is:
 
 ```
-python particle_tracking_manager/cli.py lon=-151 lat=59 ocean_model=NWGOA
+ptm lon=-151 lat=59 ocean_model=NWGOA
 ```
 
-`m.outfile_name` is printed to the screen after the command has been run.
+`m.outfile_name` is printed to the screen after the command has been run. `ptm` is installed as an entry point with `particle-tracking-manager`.
 
 +++
 

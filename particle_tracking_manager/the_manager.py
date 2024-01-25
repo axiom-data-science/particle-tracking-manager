@@ -82,8 +82,6 @@ class ParticleTrackingManager:
         Datetime at which to end simulation, as positive-valued datetime object.
         steps, end_time, or duration must be input by user. By default steps is 3 and
         duration and end_time are None.
-    log : str, optional
-        Options are "low" and "high" verbosity for log, by default "low"
     ocean_model : Optional[str], optional
         Name of ocean model to use for driving drifter simulation, by default None.
         Use None for testing and set up. Otherwise input a string.
@@ -112,13 +110,13 @@ class ParticleTrackingManager:
     no separate configuration step.
     """
 
+    logger: logging.Logger
     ocean_model: str
     lon: Union[int, float]
     lat: Union[int, float]
     surface_only: Optional[bool]
     z: Optional[Union[int, float]]
     start_time: Optional[datetime.datetime]
-    log: str
 
     def __init__(
         self,
@@ -138,7 +136,6 @@ class ParticleTrackingManager:
         duration: Optional[datetime.timedelta] = config_ptm["duration"]["default"],
         end_time: Optional[datetime.datetime] = config_ptm["end_time"]["default"],
         # universal inputs
-        log: str = config_ptm["log"]["default"],
         ocean_model: Optional[str] = config_ptm["ocean_model"]["default"],
         surface_only: Optional[bool] = config_ptm["surface_only"]["default"],
         do3D: bool = config_ptm["do3D"]["default"],
@@ -153,8 +150,6 @@ class ParticleTrackingManager:
         sig = signature(ParticleTrackingManager)
 
         self.config_ptm = config_ptm
-
-        self.logger = logging.getLogger(model)
 
         # Set all attributes which will trigger some checks and changes in __setattr__
         # these will also update "value" in the config dict
@@ -179,7 +174,11 @@ class ParticleTrackingManager:
         self.__dict__[name] = value
 
         # create/update "value" keyword in config to keep it up to date
-        if name != "config_ptm" and name in self.config_ptm.keys():
+        if (
+            name != "config_ptm"
+            and hasattr(self, "config_ptm")
+            and name in self.config_ptm.keys()
+        ):
             self.config_ptm[name]["value"] = value
 
         # create/update "value" keyword in model config to keep it up to date
@@ -260,7 +259,12 @@ class ParticleTrackingManager:
                 self.config_ptm[name]["value"] = value
 
             # if not 3D turn off vertical_mixing
-            if hasattr(self, "do3D") and not self.do3D:
+            if (
+                hasattr(self, "do3D")
+                and not self.do3D
+                and hasattr(self, "vertical_mixing")
+                and self.vertical_mixing
+            ):
                 self.logger.info("turning off vertical_mixing since do3D is False")
                 self.__dict__["vertical_mixing"] = False
                 self.config_ptm["vertical_mixing"]["value"] = False
