@@ -129,6 +129,11 @@ Show configuration for a single key:
 m.show_config("seed:oil_type")
 ```
 
+Show all possible inputs to PTM:
+```
+m.show_config(ptm_level=[1,2,3], excludestring=":").keys()
+```
+
 
 ## Specific Configuration Options
 
@@ -263,10 +268,22 @@ m.show_config(key='drift:tabularised_stokes_drift_fetch')
 ```
 
 
-#### Vertical Mixing
+#### Implicit Mixing
+
+##### Vertical Mixing
 
 The user can change the background diffusivity with
 
 ```
 m.o.set_config('vertical_mixing:background_diffusivity', 1.2e-5)  # default 1.2e-5
 ```
+
+
+##### Horizontal Diffusivity
+
+The user can add horizontal diffusivity which is time-step independent diffusion. In `PTM` (not `OpenDrift`) this is calculated as an estimated 0.1 m/s sub-gridscale velocity that is missing from the model output and multiplied by an estimate of the horizontal grid resolution. This leads to a larger value for NWGOA which has a larger value for mean horizontal grid resolution (lower resolution). If the user inputs their own ocean_model information, they can input their own `horizontal_diffusivity` value. Also a user can use a built-in ocean_model and the overwrite the `horizontal_diffusivity` value to 0.
+
+
+##### Additional Uncertainty
+
+One can also add time-step-dependent uncertainty to the currents and winds with `current_uncertainty` and `wind_uncertainty`, respectively.
