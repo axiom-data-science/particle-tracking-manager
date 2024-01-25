@@ -67,6 +67,18 @@
         "od_mapping": "drift:horizontal_diffusivity",
         "ptm_level": 1
     },
+    "current_uncertainty": {
+        "default": 0,
+        "value": 0,
+        "od_mapping": "drift:current_uncertainty",
+        "ptm_level": 1
+    },
+    "wind_uncertainty": {
+        "default": 0,
+        "value": 0,
+        "od_mapping": "drift:wind_uncertainty",
+        "ptm_level": 1
+    },
     "wind_drift_depth": {
         "default": 0.02,
         "od_mapping": "drift:wind_drift_depth",

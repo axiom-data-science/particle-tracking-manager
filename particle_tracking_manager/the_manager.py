@@ -260,7 +260,12 @@ class ParticleTrackingManager:
                 self.config_ptm[name]["value"] = value
 
             # if not 3D turn off vertical_mixing
-            if hasattr(self, "do3D") and not self.do3D:
+            if (
+                hasattr(self, "do3D")
+                and not self.do3D
+                and hasattr(self, "vertical_mixing")
+                and self.vertical_mixing
+            ):
                 self.logger.info("turning off vertical_mixing since do3D is False")
                 self.__dict__["vertical_mixing"] = False
                 self.config_ptm["vertical_mixing"]["value"] = False
