@@ -16,6 +16,20 @@ Manager for particle tracking simulations.
 <p><small>Project based on the <a target="_blank" href="https://github.com/jbusecke/cookiecutter-science-project">cookiecutter science project template</a>.</small></p>
 
 
+# Installation
+
+Install with
+
+    pip install particle-tracking-manager
+
+or
+
+    conda install -c conda-forge particle-tracking-manager
+
+To install environment from github repo after cloning repo:
+
+    conda env create -f environment.yml
+
 To install packages to run pre-commit:
 
     mamba install --file requirements-dev.txt
