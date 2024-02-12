@@ -12,11 +12,12 @@ dependencies:
   - xarray
   # - xroms
   ##############
+  - codecov
+  - pytest-cov
+  - coverage
+  - pip
   - pytest
   - pip:
-    - codecov
-    - pytest-cov
-    - coverage[toml]
     - git+https://github.com/OpenDrift/opendrift
     - git+https://github.com/fsspec/kerchunk
     # - xroms  # can't be found on conda-forge for CI, but don't need since in runslow tests?
