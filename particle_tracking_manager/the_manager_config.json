@@ -124,6 +124,12 @@
         "ptm_level": 1,
         "description": "Name of ocean model to use for driving drifter simulation, by default None. Use None for testing and set up. Otherwise input a string. Options are \"NWGOA\", \"CIOFS\", \"CIOFS_now\". Alternatively keep as None and set up a separate reader (see example in docs)."
     },
+    "ocean_model_local": {
+        "type": "bool",
+        "default": false,
+        "ptm_level": 3,
+        "description": "Set to True to use local version of known `ocean_model` instead of remote version."
+    },
     "surface_only": {
         "type": "bool",
         "default": "None",

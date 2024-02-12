@@ -47,6 +47,17 @@ def is_datestr(s):
         return False
 
 
+def is_deltastr(s):
+    """Check if string is actually a Timedelta."""
+
+    try:
+        out = pd.Timedelta(s)
+        assert not pd.isnull(out)
+        return True
+    except (ValueError, AssertionError):
+        return False
+
+
 # https://sumit-ghosh.com/articles/parsing-dictionary-key-value-pairs-kwargs-argparse-python/
 class ParseKwargs(argparse.Action):
     """With can user can input dicts on CLI."""
@@ -70,6 +81,8 @@ class ParseKwargs(argparse.Action):
                 value = None
             elif is_datestr(value):
                 value = pd.Timestamp(value)
+            elif is_deltastr(value):
+                value = pd.Timedelta(value)
             getattr(namespace, self.dest)[key] = value
 
 
