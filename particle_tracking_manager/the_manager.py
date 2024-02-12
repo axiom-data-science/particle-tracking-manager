@@ -72,21 +72,35 @@ class ParticleTrackingManager:
     steps : int, optional
         Number of time steps to run in simulation. Options >0.
         steps, end_time, or duration must be input by user. By default steps is 3 and
-        duration and end_time are None.
+        duration and end_time are None. Only one of steps, end_time, or duration can be
+        non-None at initialization time. If one of steps, end_time, or duration is input
+        later, it will be used to overwrite the three parameters according to that newest
+        parameter.
     duration : Optional[datetime.timedelta], optional
         Length of simulation to run, as positive-valued timedelta object, in hours,
         such as ``timedelta(hours=48)``.
         steps, end_time, or duration must be input by user. By default steps is 3 and
-        duration and end_time are None.
+        duration and end_time are None. For CLI, input duration as a pandas Timedelta
+        string like "48h" for 48 hours. Only one of steps, end_time, or duration can be
+        non-None at initialization time. If one of steps, end_time, or duration is input
+        later, it will be used to overwrite the three parameters according to that newest
+        parameter.
+
     end_time : Optional[datetime], optional
         Datetime at which to end simulation, as positive-valued datetime object.
         steps, end_time, or duration must be input by user. By default steps is 3 and
-        duration and end_time are None.
+        duration and end_time are None. Only one of steps, end_time, or duration can be
+        non-None at initialization time. If one of steps, end_time, or duration is input
+        later, it will be used to overwrite the three parameters according to that newest
+        parameter.
+
     ocean_model : Optional[str], optional
         Name of ocean model to use for driving drifter simulation, by default None.
         Use None for testing and set up. Otherwise input a string.
         Options are: "NWGOA", "CIOFS", "CIOFS_now".
         Alternatively keep as None and set up a separate reader (see example in docs).
+    ocean_model_local : Optional, bool
+        Set to True to use local version of known `ocean_model` instead of remote version.
     surface_only : bool, optional
         Set to True to keep drifters at the surface, by default None.
         If this flag is set to not-None, it overrides do3D to False, vertical_mixing to False,
@@ -103,6 +117,12 @@ class ParticleTrackingManager:
     vertical_mixing : bool, optional
         Set to True to include vertical mixing, by default False. This is overridden if
         ``surface_only==True``.
+    use_static_masks : bool, optional
+        Set to True to use static masks ocean_model output when ROMS wetdry masks are available, by default False.
+        This is relevant for all of the available known models. If you want to use static masks
+        with a user-input ocean_model, you can drop the wetdry_mask_rho etc variables from the
+        dataset before inputting to PTM. Setting this to True may save computation time but
+        will be less accurate, especially in the tidal flat regions of the model.
 
     Notes
     -----
@@ -117,6 +137,11 @@ class ParticleTrackingManager:
     surface_only: Optional[bool]
     z: Optional[Union[int, float]]
     start_time: Optional[datetime.datetime]
+    steps: Optional[int]
+    time_step: int
+    duration: Optional[datetime.timedelta]
+    end_time: Optional[datetime.datetime]
+    timedir: int
 
     def __init__(
         self,
@@ -137,9 +162,11 @@ class ParticleTrackingManager:
         end_time: Optional[datetime.datetime] = config_ptm["end_time"]["default"],
         # universal inputs
         ocean_model: Optional[str] = config_ptm["ocean_model"]["default"],
+        ocean_model_local: Optional[bool] = config_ptm["ocean_model_local"]["default"],
         surface_only: Optional[bool] = config_ptm["surface_only"]["default"],
         do3D: bool = config_ptm["do3D"]["default"],
         vertical_mixing: bool = config_ptm["vertical_mixing"]["default"],
+        use_static_masks: bool = config_ptm["use_static_masks"]["default"],
         **kw,
     ) -> None:
         """Inputs necessary for any particle tracking."""
@@ -150,6 +177,14 @@ class ParticleTrackingManager:
         sig = signature(ParticleTrackingManager)
 
         self.config_ptm = config_ptm
+
+        # check this here for initialization since later they will be set
+        if steps is not None:
+            assert duration is None and end_time is None
+        if duration is not None:
+            assert steps is None and end_time is None
+        if end_time is not None:
+            assert steps is None and duration is None
 
         # Set all attributes which will trigger some checks and changes in __setattr__
         # these will also update "value" in the config dict
@@ -301,11 +336,6 @@ class ParticleTrackingManager:
                 rlat = self.reader_metadata("lat")
                 assert rlat.min() < self.lat < rlat.max()
 
-        # use reader start time if not otherwise input
-        if name == "has_added_reader" and value and self.start_time is None:
-            self.logger.info("setting reader start_time as simulation start_time")
-            self.start_time = self.reader_metadata("start_time")
-
         # if reader, lon, and lat set, check inputs
         if name == "has_added_reader" and value and self.start_time is not None:
 
@@ -315,6 +345,120 @@ class ParticleTrackingManager:
         # if reader, lon, and lat set, check inputs
         if name == "has_added_reader" and value:
             assert self.ocean_model is not None
+
+        # define time direction
+        if name == "run_forward":
+            if value:
+                self.__dict__["timedir"] = 1
+            else:
+                self.__dict__["timedir"] = -1
+
+        # calculate other simulation-length parameters when one is input
+        # this way whichever parameter is input last overwrites the other parameters
+        # that could have been input earlier
+        # def end_time_from_steps():
+        #     return self.start_time + self.timedir * self.steps * datetime.timedelta(
+        #         seconds=self.time_step
+        #     )
+        # def end_time_from_duration():
+        #     return self.start_time + self.timedir * self.duration
+
+        # if start_time is defined, then steps, duration, and end_time can be calculated
+        # (one of those has to also have been defined)
+        if (
+            name == "start_time"
+            and value is not None
+            and hasattr(self, "steps")
+            and hasattr(self, "duration")
+            and hasattr(self, "end_time")
+        ):
+
+            if (
+                self.steps is not None
+                and self.duration is None
+                and self.end_time is None
+            ):
+                self.logger.info(
+                    "Setting end_time and duration from steps now that start_time is defined"
+                )
+                assert self.start_time is not None
+                self.__dict__[
+                    "end_time"
+                ] = self.start_time + self.timedir * self.steps * datetime.timedelta(
+                    seconds=self.time_step
+                )
+                assert self.end_time is not None
+                self.__dict__["duration"] = abs(self.end_time - self.start_time)
+
+            elif (
+                self.duration is not None
+                and self.steps is None
+                and self.end_time is None
+            ):
+                self.logger.info(
+                    "Setting end_time and steps from duration now that start_time is defined"
+                )
+                assert self.start_time is not None
+                self.__dict__["end_time"] = (
+                    self.start_time + self.timedir * self.duration
+                )
+                self.__dict__["steps"] = self.duration / datetime.timedelta(
+                    seconds=self.time_step
+                )
+
+            elif (
+                self.end_time is not None
+                and self.steps is None
+                and self.duration is None
+            ):
+                self.logger.info(
+                    "Setting duration and steps from end_time now that start_time is defined"
+                )
+                assert self.start_time is not None
+                self.__dict__["duration"] = abs(self.end_time - self.start_time)
+                assert self.duration is not None
+                self.__dict__["steps"] = self.duration / datetime.timedelta(
+                    seconds=self.time_step
+                )
+
+            else:
+                self.logger.info(
+                    """"You seem to be overwriting start_time after defining steps, duration, and end_time
+                                 which will not update steps, duration, and end_time unless you additionally redefine
+                                 one of those parameters."""
+                )
+
+        if name in ["steps", "duration", "end_time"] and self.start_time is not None:
+
+            if name == "steps" and value is not None:
+                self.logger.info("Setting end_time and duration from steps")
+                assert self.steps is not None
+                self.__dict__[
+                    "end_time"
+                ] = self.start_time + self.timedir * self.steps * datetime.timedelta(
+                    seconds=self.time_step
+                )
+                assert self.end_time is not None
+                self.__dict__["duration"] = abs(self.end_time - self.start_time)
+
+            elif name == "duration" and value is not None:
+                self.logger.info("Setting end_time and steps from duration")
+                assert self.duration is not None
+                self.__dict__["end_time"] = (
+                    self.start_time + self.timedir * self.duration
+                )
+                self.__dict__["steps"] = self.duration / datetime.timedelta(
+                    seconds=self.time_step
+                )
+
+            elif name == "end_time" and value is not None:
+                self.logger.info("Setting duration and steps from end_time")
+                assert self.end_time is not None
+                self.__dict__["duration"] = abs(self.end_time - self.start_time)
+                assert self.duration is not None
+                self.__dict__["steps"] = self.duration / datetime.timedelta(
+                    seconds=self.time_step
+                )
 
     def add_reader(self, **kwargs):
         """Here is where the model output is opened."""
@@ -373,23 +517,6 @@ class ParticleTrackingManager:
             or self.duration is not None
             or self.end_time is not None
         )
-
-        if self.run_forward:
-            timedir = 1
-        else:
-            timedir = -1
-
-        if self.steps is not None:
-            self.end_time = self.start_time + timedir * self.steps * datetime.timedelta(
-                seconds=self.time_step
-            )
-            self.duration = abs(self.end_time - self.start_time)
-        elif self.duration is not None:
-            self.end_time = self.start_time + timedir * self.duration
-            self.steps = self.duration / datetime.timedelta(seconds=self.time_step)
-        elif self.end_time is not None:
-            self.duration = abs(self.end_time - self.start_time)
-            self.steps = self.duration / datetime.timedelta(seconds=self.time_step)
 
         self.run_drifters()
         self.has_run = True

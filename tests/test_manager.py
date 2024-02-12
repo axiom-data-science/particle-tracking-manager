@@ -114,6 +114,7 @@ def test_parameter_passing():
         use_auto_landmask=use_auto_landmask,
         time_step=ts,
         duration=timedelta(hours=10),
+        steps=None,
         diffusivitymodel=diffmodel,
         vertical_mixing=vertical_mixing,
         do3D=do3D,

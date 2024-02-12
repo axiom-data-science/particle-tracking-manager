@@ -1,6 +1,7 @@
 """Test realistic scenarios, which are slower."""
 
 import pytest
+import xarray as xr
 
 import particle_tracking_manager as ptm
 
@@ -14,8 +15,8 @@ def test_add_new_reader():
     manager = ptm.OpenDriftModel()
 
     url = xroms.datasets.CLOVER.fetch("ROMS_example_full_grid.nc")
-    reader_kwargs = dict(loc=url, kwargs_xarray={})
-    manager.add_reader(**reader_kwargs)
+    ds = xr.open_dataset(url, decode_times=False)
+    manager.add_reader(ds=ds)
 
 
 @pytest.mark.slow
@@ -28,8 +29,8 @@ def test_run():
     manager = ptm.OpenDriftModel(**seeding_kwargs)
 
     url = xroms.datasets.CLOVER.fetch("ROMS_example_full_grid.nc")
-    reader_kwargs = dict(loc=url, kwargs_xarray={})
-    manager.add_reader(**reader_kwargs)
+    ds = xr.open_dataset(url, decode_times=False)
+    manager.add_reader(ds=ds)
     # can find reader at manager.o.env.readers['roms native']
 
     manager.start_time = manager.o.env.readers["roms native"].start_time
