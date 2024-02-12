@@ -7,6 +7,9 @@ dependencies:
   # - adios_db
   - aiohttp
   - numpy
+  - cartopy
+  - gdal
+  - libgdal
     #- opendrift
   - scipy
   - xarray
