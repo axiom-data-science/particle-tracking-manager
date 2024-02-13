@@ -53,13 +53,13 @@ class Reader(BaseReader, StructuredReader):
             # as this leads to trouble with linearNDFast interpolation
             # 'mask_rho': 'land_binary_mask',
             # 'mask_psi': 'land_binary_mask',
-            "wetdry_mask_rho": "land_binary_mask",
+            # "wetdry_mask_rho": "land_binary_mask",
             "h": "sea_floor_depth_below_sea_level",
             "zeta": "sea_surface_height",
             "u": "x_sea_water_velocity",
             "v": "y_sea_water_velocity",
-            "u_eastward": "x_sea_water_velocity",  # for NWGOA but not CIOFS
-            "v_northward": "y_sea_water_velocity",
+            # "u_eastward": "x_sea_water_velocity",  # for NWGOA but not CIOFS
+            # "v_northward": "y_sea_water_velocity",
             "w": "upward_sea_water_velocity",
             "temp": "sea_water_temperature",
             "salt": "sea_water_salinity",
@@ -78,14 +78,14 @@ class Reader(BaseReader, StructuredReader):
             "vwnd": "y_wind",
             "uwind": "x_wind",
             "vwind": "y_wind",
-            # CIOFS but these are east/north too
-            # will be rotated
-            "Uwind": "x_wind",
-            "Vwind": "y_wind",
-            # NWGOA, there are east/north oriented and will not be rotated
-            # because "east" "north" in variable names
-            "Uwind_eastward": "x_wind",
-            "Vwind_northward": "y_wind",
+            # # CIOFS but these are east/north too
+            # # will be rotated
+            # "Uwind": "x_wind",
+            # "Vwind": "y_wind",
+            # # NWGOA, there are east/north oriented and will not be rotated
+            # # because "east" "north" in variable names
+            # "Uwind_eastward": "x_wind",
+            # "Vwind_northward": "y_wind",
         }
 
         # Add user provided variable mappings
@@ -254,6 +254,7 @@ class Reader(BaseReader, StructuredReader):
 
         # For NWGOA, need to calculate wetdry mask from a variable
         if "wetdry_mask_rho" not in self.Dataset and "zeta" in self.Dataset.data_vars:
+            logger.info("Using zeta to calculate wetdry_mask_rho")
             self.Dataset["wetdry_mask_rho"] = (~self.Dataset.zeta.isnull()).astype(int)
 
         for var in list(self.ROMS_variable_mapping):  # Remove unused variables

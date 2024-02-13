@@ -59,7 +59,7 @@
         "ptm_level": 1
     },
     "max_speed": {
-        "default": 5,
+        "default": 2,
         "od_mapping": "drift:max_speed"
     },
     "horizontal_diffusivity": {

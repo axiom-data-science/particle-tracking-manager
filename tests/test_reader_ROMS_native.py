@@ -4,9 +4,10 @@ from unittest import mock
 import numpy as np
 import xarray as xr
 
-import particle_tracking_manager as ptm
+# from particle_tracking_manager.models.opendrift.reader_ROMS_native import Reader
+from opendrift.readers import reader_ROMS_native
 
-from particle_tracking_manager.models.opendrift.reader_ROMS_native import Reader
+import particle_tracking_manager as ptm
 
 
 # @mock.patch("xarray.open_mfdataset")
@@ -30,7 +31,7 @@ def test_init(mock_dataset):
 
     mock_dataset.return_value = ds
 
-    reader = Reader(filename="test")
+    reader = reader_ROMS_native.Reader(filename=ds, name="test_model")
 
 
 # @pytest.mark.slow

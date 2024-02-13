@@ -5,17 +5,19 @@ import json
 import logging
 import pathlib
 
+# using my own version of ROMS reader
+# from .reader_ROMS_native import Reader
+import pandas as pd
+import xarray as xr
+
 from opendrift.models.larvalfish import LarvalFish
 from opendrift.models.leeway import Leeway
 from opendrift.models.oceandrift import OceanDrift
 from opendrift.models.openoil import OpenOil
+from opendrift.readers import reader_ROMS_native
 
 from ...cli import is_None
 from ...the_manager import ParticleTrackingManager
-
-# from opendrift.readers import reader_ROMS_native
-# using my own version of ROMS reader
-from .reader_ROMS_native import Reader
 
 
 # from .cli import is_None
@@ -482,51 +484,209 @@ class OpenDriftModel(ParticleTrackingManager):
 
     def run_add_reader(
         self,
-        loc=None,
-        kwargs_xarray=None,
+        ds=None,
         oceanmodel_lon0_360=False,
+        standard_name_mapping=None,
     ):
         """Might need to cache this if its still slow locally.
 
         Parameters
         ----------
-        loc : str
-            Location of ocean model output, if user wants to input unknown reader information.
-        kwargs_xarray : dict
-            Keywords for reading in ocean model output with xarray, if user wants to input unknown reader information.
+        ds : xr.Dataset, optional
+            Previously-opened Dataset containing ocean model output, if user wants to input
+            unknown reader information.
         oceanmodel_lon0_360 : bool
             True if ocean model longitudes span 0 to 360 instead of -180 to 180.
+        standard_name_mapping : dict
+            Mapping of model variable names to standard names.
         """
 
-        # ocean_model = self.ocean_model
-        kwargs_xarray = kwargs_xarray or {}
+        standard_name_mapping = standard_name_mapping or {}
 
-        if loc is not None and self.ocean_model is None:
+        if ds is not None:
             self.ocean_model = "user_input"
-        # import pdb; pdb.set_trace()
+
         if self.ocean_model.upper() == "TEST":
             pass
             # oceanmodel_lon0_360 = True
             # loc = "test"
             # kwargs_xarray = dict()
 
-        elif self.ocean_model is not None or loc is not None:
+        elif self.ocean_model is not None or ds is not None:
+            if self.ocean_model_local:
+                self.logger.info(
+                    f"Using local output for ocean_model {self.ocean_model}"
+                )
+            else:
+                self.logger.info(
+                    f"Using remote output for ocean_model {self.ocean_model}"
+                )
+
             if self.ocean_model == "NWGOA":
                 oceanmodel_lon0_360 = True
-                loc = "http://xpublish-nwgoa.srv.axds.co/datasets/nwgoa_all/zarr/"
-                kwargs_xarray = dict(engine="zarr", chunks={"ocean_time": 1})
+
+                standard_name_mapping = {
+                    "wetdry_mask_rho": "land_binary_mask",
+                    "mask_rho": "fake_name",  # do this to overwrite the hard-wired mask names
+                    "mask_psi": "fake_name",
+                    "u_eastward": "x_sea_water_velocity",
+                    "v_northward": "y_sea_water_velocity",
+                    # NWGOA, there are east/north oriented and will not be rotated
+                    # because "east" "north" in variable names
+                    "Uwind_eastward": "x_wind",
+                    "Vwind_northward": "y_wind",
+                }
+
+                # MODIFY THIS ACCORDING TO REQUIRED VARIABLES FROM OPENDRIFT READER?
+                # remove all other grid masks because variables are all on rho grid
+                drop_vars = [
+                    "aice",
+                    "hice",
+                    "hraw",
+                    "salt",
+                    "snow_thick",
+                    "temp",
+                    "uice_eastward",
+                    "vice_northward",
+                    "w",
+                    "mask_psi",
+                    "mask_rho",
+                    "mask_u",
+                    "mask_v",
+                ]
+
+                if self.use_static_masks:
+                    # remove wetdry_mask_rho so it isn't detected, add static mask_rho
+                    standard_name_mapping.pop("wetdry_mask_rho")
+                    standard_name_mapping.update({"mask_rho": "land_binary_mask"})
+
+                    # retain mask_rho instead of dropping it
+                    drop_vars.remove("mask_rho")
+
+                # if local
+                if self.ocean_model_local:
+
+                    loc = "/mnt/depot/data/packrat/prod/aoos/nwgoa/processed/nwgoa_kerchunk.parq"
+                    ds = xr.open_dataset(
+                        loc,
+                        engine="kerchunk",
+                        chunks={},
+                        drop_variables=drop_vars,
+                        decode_times=False,
+                    )
+
+                # otherwise remote
+                else:
+                    loc = "http://xpublish-nwgoa.srv.axds.co/datasets/nwgoa_all/zarr/"
+                    ds = xr.open_zarr(loc, chunks={}, drop_variables=drop_vars)
+
+                if not self.use_static_masks:
+                    # For NWGOA, need to calculate wetdry mask from a variable
+                    ds["wetdry_mask_rho"] = (~ds.zeta.isnull()).astype(int)
+
             elif self.ocean_model == "CIOFS":
                 oceanmodel_lon0_360 = False
-                loc = "http://xpublish-ciofs.srv.axds.co/datasets/ciofs_hindcast/zarr/"
-                kwargs_xarray = dict(engine="zarr", chunks={"ocean_time": 1})
-                reader = Reader(filename=loc, kwargs_xarray=kwargs_xarray)
-            elif self.ocean_model == "CIOFS_now":
-                pass
-                # loc = "http://xpublish-ciofs.srv.axds.co/datasets/ciofs_hindcast/zarr/"
-                # kwargs_xarray = dict(engine="zarr", chunks={"ocean_time":1})
-                # reader = Reader(loc, kwargs_xarray=kwargs_xarray)
 
-            reader = Reader(filename=loc, kwargs_xarray=kwargs_xarray)
+                standard_name_mapping = {
+                    "wetdry_mask_rho": "land_binary_mask",
+                    "mask_rho": "fake_name",
+                    "mask_psi": "fake_name",
+                }
+
+                # MODIFY THIS ACCORDING TO REQUIRED VARIABLES FROM OPENDRIFT READER?
+                drop_vars = [
+                    "salt",
+                    "temp",
+                    "wetdry_mask_psi",
+                    "zeta",
+                    "w",
+                    "mask_rho",
+                    "mask_u",
+                    "mask_v",
+                    "mask_psi",
+                ]
+
+                if self.use_static_masks:
+                    # remove wetdry_mask_rho so it isn't detected, add static mask_rho
+                    standard_name_mapping.pop("wetdry_mask_rho")
+                    standard_name_mapping.update({"mask_rho": "land_binary_mask"})
+
+                    # retain static masks instead of dropping them
+                    # drop wetdry masks
+                    drop_vars.remove("mask_rho")
+                    drop_vars.remove("mask_u")
+                    drop_vars.remove("mask_v")
+                    drop_vars.remove("mask_psi")
+                    drop_vars += ["wetdry_mask_rho", "wetdry_mask_u", "wetdry_mask_v"]
+
+                # if local
+                if self.ocean_model_local:
+                    loc = "/mnt/vault/ciofs/HINDCAST/ciofs_kerchunk.parq"
+                    ds = xr.open_dataset(
+                        f"simplecache::{loc}",
+                        engine="kerchunk",
+                        chunks={},
+                        drop_variables=drop_vars,
+                        decode_times=False,
+                    )
+
+                # otherwise remote
+                else:
+                    loc = "http://xpublish-ciofs.srv.axds.co/datasets/ciofs_hindcast/zarr/"
+                    ds = xr.open_zarr(loc, chunks={}, drop_variables=drop_vars)
+
+            elif self.ocean_model.upper() == "CIOFS_NOW":
+
+                standard_name_mapping = {
+                    "wetdry_mask_rho": "land_binary_mask",
+                    "mask_rho": "fake_name",
+                    "mask_psi": "fake_name",
+                }
+
+                # if local
+                if self.ocean_model_local:
+                    pass
+                else:
+                    loc = "https://thredds.aoos.org/thredds/dodsC/AWS_CIOFS.nc"
+                    ds = xr.open_dataset(loc, chunks={})
+
+            # use reader start time if not otherwise input
+            if self.start_time is None:
+                self.logger.info("setting reader start_time as simulation start_time")
+                # self.start_time = reader.start_time
+                # convert using pandas instead of netCDF4
+                # units_date = pd.Timestamp('1900-01-01 00:00:00') # DOES THIS MATCH THE OTHER MODELS?
+                units_date = pd.Timestamp(
+                    ds.ocean_time.attrs["units"].split("since ")[1]
+                )
+                self.start_time = units_date + pd.to_timedelta(
+                    ds.ocean_time[0].values, unit="s"
+                )
+                # self.start_time = num2date(ds.ocean_time[0].values, ds.ocean_time.attrs["units"])
+                # self.start_time = pd.Timestamp(ds.ocean_time[0].values).to_pydatetime()
+
+            # narrow model output to simulation time if possible before sending to Reader
+            if self.start_time is not None and self.end_time is not None:
+                start_time_num = (self.start_time - units_date).total_seconds()
+                end_time_num = (self.end_time - units_date).total_seconds()
+                ds = ds.sel(ocean_time=slice(start_time_num, end_time_num))
+                # ds = ds.sel(ocean_time=slice(str(self.start_time), str(self.end_time)))
+                self.logger.info("Narrowed model output to simulation time")
+            else:
+                raise ValueError(
+                    "start_time and end_time must be set to narrow model output to simulation time"
+                )
+
+            reader = reader_ROMS_native.Reader(
+                filename=ds,
+                name=self.ocean_model,
+                standard_name_mapping=standard_name_mapping,
+            )
+
+            # drifter_simulation_start_time
+            # reader = reader_ROMS_native.Reader(filename=loc)
+            # reader = reader_ROMS_native.Reader(filename=loc, kwargs_xarray=kwargs_xarray)
+
             self.o.add_reader([reader])
             self.reader = reader
             # can find reader at manager.o.env.readers['roms native']
