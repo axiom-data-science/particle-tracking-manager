@@ -1,5 +1,15 @@
 # What's New
 
+## v0.6.0 (February 15, 2024)
+
+* is set up to tell `opendrift` ROMS reader to save the interpolator to a cache that is set up the first time it is run. This only works with the newest dev version of `opendrift` at the moment, and the files saved are hundreds of MB, but it speeds up the simulations pretty well (12 to 30 seconds).
+* reworked which variables are dropped in which scenarios for `opendrift` and integrated with using wetdry vs static masks.
+* added package `appdirs` to manage the cache for storing interpolator pickles.
+* fix to CLI so duration input is formatted correctly.
+* can now input `name` to accompany user-input `xarray Dataset` for `ocean_model`.
+* added `ocean_model` "CIOFS_now" local and remote links.
+
+
 ## v0.5.0 (February 12, 2024)
 
 * updated to using version of `opendrift` in which you can input an xarray Dataset directly

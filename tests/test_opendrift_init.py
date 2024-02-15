@@ -2,6 +2,10 @@
 
 import unittest
 
+import numpy as np
+import pandas as pd
+import xarray as xr
+
 from particle_tracking_manager.models.opendrift.model_opendrift import (
     OpenDriftModel,
     config_model,
@@ -89,6 +93,144 @@ class TestOpenDriftModel(unittest.TestCase):
         self.assertEqual(
             self.odm.biodegradation, config_model["biodegradation"]["default"]
         )
+
+
+ds = xr.Dataset(
+    data_vars={
+        "u": (("ocean_time", "Z", "Y", "X"), np.zeros((2, 3, 2, 3))),
+        "v": (("ocean_time", "Z", "Y", "X"), np.zeros((2, 3, 2, 3))),
+        "w": (("ocean_time", "Z", "Y", "X"), np.zeros((2, 3, 2, 3))),
+        "salt": (("ocean_time", "Z", "Y", "X"), np.zeros((2, 3, 2, 3))),
+        "temp": (("ocean_time", "Z", "Y", "X"), np.zeros((2, 3, 2, 3))),
+        "wetdry_mask_rho": (("ocean_time", "Z", "Y", "X"), np.zeros((2, 3, 2, 3))),
+        "mask_rho": (("Y", "X"), np.zeros((2, 3))),
+        "Uwind": (("ocean_time", "Y", "X"), np.zeros((2, 2, 3))),
+        "Vwind": (("ocean_time", "Y", "X"), np.zeros((2, 2, 3))),
+        "Cs_r": (("Z"), np.linspace(-1, 0, 3)),
+        "hc": 16,
+    },
+    coords={
+        "ocean_time": ("ocean_time", [0, 1], {"units": "seconds since 1970-01-01"}),
+        "s_rho": (("Z"), np.linspace(-1, 0, 3)),
+        "lon_rho": (("Y", "X"), np.array([[1, 2, 3], [1, 2, 3]])),
+        "lat_rho": (("Y", "X"), np.array([[1, 1, 1], [2, 2, 2]])),
+    },
+)
+
+
+class TestOpenDriftModel_OceanDrift(unittest.TestCase):
+    def setUp(self):
+        self.model = OpenDriftModel(drift_model="OceanDrift")
+
+    def test_drop_vars_do3D_false(self):
+        self.model.do3D = False
+        self.use_static_masks = False
+        self.model.add_reader(ds=ds)
+        assert self.model.reader.variables == [
+            "x_sea_water_velocity",
+            "y_sea_water_velocity",
+            "land_binary_mask",
+            "x_wind",
+            "y_wind",
+            "wind_speed",
+            "sea_water_speed",
+        ]
+        assert "wetdry_mask_rho" in self.model.reader.Dataset.data_vars
+        assert "mask_rho" not in self.model.reader.Dataset.data_vars
+
+    def test_drop_vars_do3D_true(self):
+        self.model.do3D = True
+        self.model.add_reader(ds=ds)
+        assert self.model.reader.variables == [
+            "x_sea_water_velocity",
+            "y_sea_water_velocity",
+            "upward_sea_water_velocity",
+            "land_binary_mask",
+            "x_wind",
+            "y_wind",
+            "wind_speed",
+            "sea_water_speed",
+        ]
+
+    def test_drop_vars_use_static_masks(self):
+        self.model.do3D = False
+        self.model.use_static_masks = True
+        self.model.add_reader(ds=ds)
+        assert self.model.reader.variables == [
+            "x_sea_water_velocity",
+            "y_sea_water_velocity",
+            "land_binary_mask",
+            "x_wind",
+            "y_wind",
+            "wind_speed",
+            "sea_water_speed",
+        ]
+        assert "mask_rho" in self.model.reader.Dataset.data_vars
+        assert "wetdry_mask_rho" not in self.model.reader.Dataset.data_vars
+
+    def test_drop_vars_no_wind(self):
+        self.model.stokes_drift = False
+        self.model.wind_drift_factor = 0
+        self.model.wind_uncertainty = 0
+        self.model.vertical_mixing = False
+        self.model.add_reader(ds=ds)
+        assert self.model.reader.variables == [
+            "x_sea_water_velocity",
+            "y_sea_water_velocity",
+            "land_binary_mask",
+            "sea_water_speed",
+        ]
+
+
+class TestOpenDriftModel_LarvalFish(unittest.TestCase):
+    def setUp(self):
+        self.model = OpenDriftModel(drift_model="LarvalFish")
+
+    def test_drop_vars_do3D_false(self):
+        self.model.do3D = False
+        self.model.add_reader(ds=ds)
+        assert self.model.reader.variables == [
+            "x_sea_water_velocity",
+            "y_sea_water_velocity",
+            "sea_water_salinity",
+            "sea_water_temperature",
+            "land_binary_mask",
+            "x_wind",
+            "y_wind",
+            "wind_speed",
+            "sea_water_speed",
+        ]
+
+    def test_drop_vars_do3D_true(self):
+        self.model.do3D = True
+        self.model.add_reader(ds=ds)
+        assert self.model.reader.variables == [
+            "x_sea_water_velocity",
+            "y_sea_water_velocity",
+            "upward_sea_water_velocity",
+            "sea_water_salinity",
+            "sea_water_temperature",
+            "land_binary_mask",
+            "x_wind",
+            "y_wind",
+            "wind_speed",
+            "sea_water_speed",
+        ]
+
+    def test_drop_vars_no_wind(self):
+        self.model.stokes_drift = False
+        self.model.wind_drift_factor = 0
+        self.model.wind_uncertainty = 0
+        self.model.vertical_mixing = False
+        self.model.add_reader(ds=ds)
+        assert self.model.reader.variables == [
+            "x_sea_water_velocity",
+            "y_sea_water_velocity",
+            "sea_water_salinity",
+            "sea_water_temperature",
+            "land_binary_mask",
+            "sea_water_speed",
+        ]
 
 
 if __name__ == "__main__":

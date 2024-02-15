@@ -3,7 +3,10 @@ import copy
 import datetime
 import json
 import logging
-import pathlib
+
+from pathlib import Path
+
+import appdirs
 
 # using my own version of ROMS reader
 # from .reader_ROMS_native import Reader
@@ -25,7 +28,7 @@ from ...the_manager import ParticleTrackingManager
 
 
 # Read OpenDrift configuration information
-loc = pathlib.Path(__file__).parent / pathlib.Path("opendrift_config.json")
+loc = Path(__file__).parent / Path("opendrift_config.json")
 with open(loc, "r") as f:
     # Load the JSON file into a Python object
     config_model = json.load(f)
@@ -485,6 +488,7 @@ class OpenDriftModel(ParticleTrackingManager):
     def run_add_reader(
         self,
         ds=None,
+        name=None,
         oceanmodel_lon0_360=False,
         standard_name_mapping=None,
     ):
@@ -495,6 +499,8 @@ class OpenDriftModel(ParticleTrackingManager):
         ds : xr.Dataset, optional
             Previously-opened Dataset containing ocean model output, if user wants to input
             unknown reader information.
+        name : str, optional
+            If ds is input, user can also input name of ocean model, otherwise will be called "user_input".
         oceanmodel_lon0_360 : bool
             True if ocean model longitudes span 0 to 360 instead of -180 to 180.
         standard_name_mapping : dict
@@ -504,7 +510,10 @@ class OpenDriftModel(ParticleTrackingManager):
         standard_name_mapping = standard_name_mapping or {}
 
         if ds is not None:
-            self.ocean_model = "user_input"
+            if name is None:
+                self.ocean_model = "user_input"
+            else:
+                self.ocean_model = name
 
         if self.ocean_model.upper() == "TEST":
             pass
@@ -522,108 +531,132 @@ class OpenDriftModel(ParticleTrackingManager):
                     f"Using remote output for ocean_model {self.ocean_model}"
                 )
 
+            # set drop_vars initial values based on the PTM settings, then add to them for the specific model
+            drop_vars = []
+            # don't need w if not 3D movement
+            if not self.do3D:
+                drop_vars += ["w"]
+                self.logger.info("Dropping vertical velocity (w) because do3D is False")
+            else:
+                self.logger.info("Retaining vertical velocity (w) because do3D is True")
+
+            # don't need winds if stokes drift, wind drift, added wind_uncertainty, and vertical_mixing are off
+            # It's possible that winds aren't required for every OpenOil simulation but seems like
+            # they would usually be required and the cases are tricky to navigate so also skipping for that case.
+            if (
+                not self.stokes_drift
+                and self.wind_drift_factor == 0
+                and self.wind_uncertainty == 0
+                and self.drift_model != "OpenOil"
+                and not self.vertical_mixing
+            ):
+                drop_vars += ["Uwind", "Vwind", "Uwind_eastward", "Vwind_northward"]
+                self.logger.info(
+                    "Dropping wind variables because stokes_drift, wind_drift_factor, wind_uncertainty, and vertical_mixing are all off and drift_model is not 'OpenOil'"
+                )
+            else:
+                self.logger.info(
+                    "Retaining wind variables because stokes_drift, wind_drift_factor, wind_uncertainty, or vertical_mixing are on or drift_model is 'OpenOil'"
+                )
+
+            # only keep salt and temp for LarvalFish or OpenOil
+            if self.drift_model not in ["LarvalFish", "OpenOil"]:
+                drop_vars += ["salt", "temp"]
+                self.logger.info(
+                    "Dropping salt and temp variables because drift_model is not LarvalFish nor OpenOil"
+                )
+            else:
+                self.logger.info(
+                    "Retaining salt and temp variables because drift_model is LarvalFish or OpenOil"
+                )
+
+            # keep some ice variables for OpenOil (though later see if these are used)
+            if self.drift_model != "OpenOil":
+                drop_vars += ["aice", "uice_eastward", "vice_northward"]
+                self.logger.info(
+                    "Dropping ice variables because drift_model is not OpenOil"
+                )
+            else:
+                self.logger.info(
+                    "Retaining ice variables because drift_model is OpenOil"
+                )
+
+            # if using static masks, drop wetdry masks.
+            # if using wetdry masks, drop static masks.
+            if self.use_static_masks:
+                standard_name_mapping.update({"mask_rho": "land_binary_mask"})
+                drop_vars += ["wetdry_mask_rho", "wetdry_mask_u", "wetdry_mask_v"]
+                self.logger.info(
+                    "Dropping wetdry masks because using static masks instead."
+                )
+            else:
+                standard_name_mapping.update({"wetdry_mask_rho": "land_binary_mask"})
+                drop_vars += ["mask_rho", "mask_u", "mask_v", "mask_psi"]
+                self.logger.info(
+                    "Dropping mask_rho, mask_u, mask_v, mask_psi because using wetdry masks instead."
+                )
+
             if self.ocean_model == "NWGOA":
                 oceanmodel_lon0_360 = True
 
-                standard_name_mapping = {
-                    "wetdry_mask_rho": "land_binary_mask",
-                    "mask_rho": "fake_name",  # do this to overwrite the hard-wired mask names
-                    "mask_psi": "fake_name",
-                    "u_eastward": "x_sea_water_velocity",
-                    "v_northward": "y_sea_water_velocity",
-                    # NWGOA, there are east/north oriented and will not be rotated
-                    # because "east" "north" in variable names
-                    "Uwind_eastward": "x_wind",
-                    "Vwind_northward": "y_wind",
-                }
+                standard_name_mapping.update(
+                    {
+                        "u_eastward": "x_sea_water_velocity",
+                        "v_northward": "y_sea_water_velocity",
+                        # NWGOA, there are east/north oriented and will not be rotated
+                        # because "east" "north" in variable names
+                        "Uwind_eastward": "x_wind",
+                        "Vwind_northward": "y_wind",
+                    }
+                )
 
-                # MODIFY THIS ACCORDING TO REQUIRED VARIABLES FROM OPENDRIFT READER?
                 # remove all other grid masks because variables are all on rho grid
-                drop_vars = [
-                    "aice",
+                drop_vars += [
                     "hice",
                     "hraw",
-                    "salt",
                     "snow_thick",
-                    "temp",
-                    "uice_eastward",
-                    "vice_northward",
-                    "w",
-                    "mask_psi",
-                    "mask_rho",
-                    "mask_u",
-                    "mask_v",
                 ]
 
-                if self.use_static_masks:
-                    # remove wetdry_mask_rho so it isn't detected, add static mask_rho
-                    standard_name_mapping.pop("wetdry_mask_rho")
-                    standard_name_mapping.update({"mask_rho": "land_binary_mask"})
+                loc_local = "/mnt/depot/data/packrat/prod/aoos/nwgoa/processed/nwgoa_kerchunk.parq"
+                loc_remote = (
+                    "http://xpublish-nwgoa.srv.axds.co/datasets/nwgoa_all/zarr/"
+                )
 
-                    # retain mask_rho instead of dropping it
-                    drop_vars.remove("mask_rho")
-
-                # if local
-                if self.ocean_model_local:
-
-                    loc = "/mnt/depot/data/packrat/prod/aoos/nwgoa/processed/nwgoa_kerchunk.parq"
-                    ds = xr.open_dataset(
-                        loc,
-                        engine="kerchunk",
-                        chunks={},
-                        drop_variables=drop_vars,
-                        decode_times=False,
-                    )
-
-                # otherwise remote
-                else:
-                    loc = "http://xpublish-nwgoa.srv.axds.co/datasets/nwgoa_all/zarr/"
-                    ds = xr.open_zarr(loc, chunks={}, drop_variables=drop_vars)
-
-                if not self.use_static_masks:
-                    # For NWGOA, need to calculate wetdry mask from a variable
-                    ds["wetdry_mask_rho"] = (~ds.zeta.isnull()).astype(int)
-
-            elif self.ocean_model == "CIOFS":
+            elif "CIOFS" in self.ocean_model:
                 oceanmodel_lon0_360 = False
 
-                standard_name_mapping = {
-                    "wetdry_mask_rho": "land_binary_mask",
-                    "mask_rho": "fake_name",
-                    "mask_psi": "fake_name",
-                }
-
-                # MODIFY THIS ACCORDING TO REQUIRED VARIABLES FROM OPENDRIFT READER?
-                drop_vars = [
-                    "salt",
-                    "temp",
+                drop_vars += [
                     "wetdry_mask_psi",
                     "zeta",
-                    "w",
-                    "mask_rho",
-                    "mask_u",
-                    "mask_v",
-                    "mask_psi",
                 ]
+                if self.ocean_model == "CIOFS":
 
-                if self.use_static_masks:
-                    # remove wetdry_mask_rho so it isn't detected, add static mask_rho
-                    standard_name_mapping.pop("wetdry_mask_rho")
-                    standard_name_mapping.update({"mask_rho": "land_binary_mask"})
+                    loc_local = "/mnt/vault/ciofs/HINDCAST/ciofs_kerchunk.parq"
+                    loc_remote = "http://xpublish-ciofs.srv.axds.co/datasets/ciofs_hindcast/zarr/"
 
-                    # retain static masks instead of dropping them
-                    # drop wetdry masks
-                    drop_vars.remove("mask_rho")
-                    drop_vars.remove("mask_u")
-                    drop_vars.remove("mask_v")
-                    drop_vars.remove("mask_psi")
-                    drop_vars += ["wetdry_mask_rho", "wetdry_mask_u", "wetdry_mask_v"]
+                elif self.ocean_model.upper() == "CIOFS_NOW":
 
-                # if local
+                    loc_local = "/mnt/depot/data/packrat/prod/noaa/coops/ofs/aws_ciofs/processed/aws_ciofs_kerchunk.parq"
+                    loc_remote = "https://thredds.aoos.org/thredds/dodsC/AWS_CIOFS.nc"
+
+            elif self.ocean_model == "USER_INPUT":
+
+                # check for case that self.use_static_masks False (which is the default)
+                # but user input doesn't have wetdry masks
+                # then raise exception and tell user to set use_static_masks True
+                if "wetdry_mask_rho" not in ds.data_vars and not self.use_static_masks:
+                    raise ValueError(
+                        "User input does not have wetdry_mask_rho variable. Set use_static_masks True to use static masks instead."
+                    )
+
+                ds = ds.drop_vars(drop_vars, errors="ignore")
+
+            # if local and not a user-input ds
+            if ds is None:
                 if self.ocean_model_local:
-                    loc = "/mnt/vault/ciofs/HINDCAST/ciofs_kerchunk.parq"
+
                     ds = xr.open_dataset(
-                        f"simplecache::{loc}",
+                        loc_local,
                         engine="kerchunk",
                         chunks={},
                         drop_variables=drop_vars,
@@ -632,64 +665,65 @@ class OpenDriftModel(ParticleTrackingManager):
 
                 # otherwise remote
                 else:
-                    loc = "http://xpublish-ciofs.srv.axds.co/datasets/ciofs_hindcast/zarr/"
-                    ds = xr.open_zarr(loc, chunks={}, drop_variables=drop_vars)
+                    if ".nc" in loc_remote:
+                        ds = xr.open_dataset(
+                            loc_remote, chunks={}, drop_variables=drop_vars
+                        )
+                    else:
+                        ds = xr.open_zarr(
+                            loc_remote, chunks={}, drop_variables=drop_vars
+                        )
 
-            elif self.ocean_model.upper() == "CIOFS_NOW":
-
-                standard_name_mapping = {
-                    "wetdry_mask_rho": "land_binary_mask",
-                    "mask_rho": "fake_name",
-                    "mask_psi": "fake_name",
-                }
-
-                # if local
-                if self.ocean_model_local:
-                    pass
-                else:
-                    loc = "https://thredds.aoos.org/thredds/dodsC/AWS_CIOFS.nc"
-                    ds = xr.open_dataset(loc, chunks={})
+            # For NWGOA, need to calculate wetdry mask from a variable
+            if self.ocean_model == "NWGOA" and not self.use_static_masks:
+                ds["wetdry_mask_rho"] = (~ds.zeta.isnull()).astype(int)
+                ds.drop_vars("zeta", inplace=True)
 
             # use reader start time if not otherwise input
             if self.start_time is None:
                 self.logger.info("setting reader start_time as simulation start_time")
                 # self.start_time = reader.start_time
                 # convert using pandas instead of netCDF4
-                # units_date = pd.Timestamp('1900-01-01 00:00:00') # DOES THIS MATCH THE OTHER MODELS?
                 units_date = pd.Timestamp(
                     ds.ocean_time.attrs["units"].split("since ")[1]
                 )
                 self.start_time = units_date + pd.to_timedelta(
                     ds.ocean_time[0].values, unit="s"
                 )
-                # self.start_time = num2date(ds.ocean_time[0].values, ds.ocean_time.attrs["units"])
-                # self.start_time = pd.Timestamp(ds.ocean_time[0].values).to_pydatetime()
 
             # narrow model output to simulation time if possible before sending to Reader
             if self.start_time is not None and self.end_time is not None:
                 start_time_num = (self.start_time - units_date).total_seconds()
                 end_time_num = (self.end_time - units_date).total_seconds()
                 ds = ds.sel(ocean_time=slice(start_time_num, end_time_num))
-                # ds = ds.sel(ocean_time=slice(str(self.start_time), str(self.end_time)))
                 self.logger.info("Narrowed model output to simulation time")
             else:
                 raise ValueError(
                     "start_time and end_time must be set to narrow model output to simulation time"
                 )
 
+            # save interpolators to save time
+            cache_dir = Path(
+                appdirs.user_cache_dir(
+                    appname="particle-tracking-manager", appauthor="axiom-data-science"
+                )
+            )
+            cache_dir.mkdir(parents=True, exist_ok=True)
+            self.cache_dir = cache_dir
+            self.interpolator_filename = cache_dir / Path(
+                f"{self.ocean_model}_interpolator"
+            )
             reader = reader_ROMS_native.Reader(
                 filename=ds,
                 name=self.ocean_model,
                 standard_name_mapping=standard_name_mapping,
+                save_interpolator=True,
+                interpolator_filename=self.interpolator_filename,
             )
-
-            # drifter_simulation_start_time
-            # reader = reader_ROMS_native.Reader(filename=loc)
-            # reader = reader_ROMS_native.Reader(filename=loc, kwargs_xarray=kwargs_xarray)
 
             self.o.add_reader([reader])
             self.reader = reader
-            # can find reader at manager.o.env.readers['roms native']
+            # can find reader at manager.o.env.readers[self.ocean_model]
 
             self.oceanmodel_lon0_360 = oceanmodel_lon0_360
 
@@ -1000,7 +1034,7 @@ class OpenDriftModel(ParticleTrackingManager):
 
         if not self.has_added_reader:
             raise ValueError("reader has not been added yet.")
-        return self.o.env.readers["roms native"].__dict__[key]
+        return self.o.env.readers[self.ocean_model].__dict__[key]
 
     @property
     def outfile_name(self):

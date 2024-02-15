@@ -79,10 +79,10 @@ class ParseKwargs(argparse.Action):
                 value = float(value)
             elif is_None(value):
                 value = None
-            elif is_datestr(value):
-                value = pd.Timestamp(value)
             elif is_deltastr(value):
                 value = pd.Timedelta(value)
+            elif is_datestr(value):
+                value = pd.Timestamp(value)
             getattr(namespace, self.dest)[key] = value
 
 
