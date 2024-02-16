@@ -20,7 +20,7 @@ from opendrift.models.openoil import OpenOil
 from opendrift.readers import reader_ROMS_native
 
 from ...cli import is_None
-from ...the_manager import ParticleTrackingManager
+from ...the_manager import ParticleTrackingManager, _KNOWN_MODELS
 
 
 # from .cli import is_None
@@ -213,13 +213,13 @@ class OpenDriftModel(ParticleTrackingManager):
         model = "opendrift"
 
         if log == "low":
-            self.loglevel = 20
+            self.__dict__["loglevel"] = 20
         elif log == "high":
-            self.loglevel = 0
+            self.__dict__["loglevel"] = 0
 
         # need drift_model defined for the log to work properly for both manager and model
         # so do this before super initialization
-        self.drift_model = drift_model
+        self.__dict__["drift_model"] = drift_model
 
         # do this right away so I can query the object
         if self.drift_model == "Leeway":
@@ -237,7 +237,7 @@ class OpenDriftModel(ParticleTrackingManager):
         else:
             raise ValueError(f"Drifter model {self.drift_model} is not recognized.")
 
-        self.o = o
+        self.__dict__["o"] = o
 
         self.__dict__["logger"] = logging.getLogger(
             model
@@ -260,12 +260,33 @@ class OpenDriftModel(ParticleTrackingManager):
         from inspect import signature
 
         sig = signature(OpenDriftModel)
-        self.config_model = config_model
+        
+        # initialize all class attributes to None without triggering the __setattr__ method
+        # which does a bunch more stuff
+        for key in sig.parameters.keys():        
+            self.__dict__[key] = None
+
+        self.__dict__["config_model"] = config_model
 
         # Set all attributes which will trigger some checks and changes in __setattr__
         # these will also update "value" in the config dict
         for key in sig.parameters.keys():
             self.__setattr__(key, locals()[key])
+            
+    def calc_known_horizontal_diffusivity(self):
+
+        # dx: approximate horizontal grid resolution (meters), used to calculate horizontal diffusivity
+        if self.ocean_model == "NWGOA":
+            dx = 1500
+        elif "CIOFS" in self.ocean_model:
+            dx = 100
+
+        # horizontal diffusivity is calculated based on the mean horizontal grid resolution
+        # for the model being used.
+        # 0.1 is a guess for the magnitude of velocity being missed in the models, the sub-gridscale velocity
+        sub_gridscale_velocity = 0.1
+        horizontal_diffusivity = sub_gridscale_velocity * dx
+        return horizontal_diffusivity
 
     def __setattr_model__(self, name: str, value) -> None:
         """Implement my own __setattr__ but here to enforce actions."""
@@ -274,7 +295,6 @@ class OpenDriftModel(ParticleTrackingManager):
         # check for type of m.o and drift_model matching to enforce this
         if (
             (name in ["o", "drift_model"])
-            and hasattr(self, "o")
             and (self.drift_model not in str(type(self.o)))
         ):
             raise KeyError(
@@ -283,9 +303,9 @@ class OpenDriftModel(ParticleTrackingManager):
 
         # create/update "value" keyword in config to keep it up to date
         if (
-            hasattr(self, "config_model")
-            and name != "config_model"
-            and name != "config_ptm"
+            self.config_model is not None
+            # and name != "config_model"
+            # and name != "config_ptm"
             and name in self.config_model.keys()
         ):
             self.config_model[name]["value"] = value
@@ -293,37 +313,22 @@ class OpenDriftModel(ParticleTrackingManager):
 
         # if user sets ocean_model and horizontal_diffusivity is set up, overwrite it
         if name == "ocean_model":
-            if value in ["NWGOA", "CIOFS", "CIOFS_now"] and hasattr(
-                self, "horizontal_diffusivity"
-            ):
+
+            if value in _KNOWN_MODELS:
 
                 self.logger.info(
                     "overriding horizontal_diffusivity parameter with one tuned to reader model"
                 )
-
-                # dx: approximate horizontal grid resolution (meters), used to calculate horizontal diffusivity
-                if self.ocean_model == "NWGOA":
-                    dx = 1500
-                elif "CIOFS" in self.ocean_model:
-                    dx = 100
-
-                # horizontal diffusivity is calculated based on the mean horizontal grid resolution
-                # for the model being used.
-                # 0.1 is a guess for the magnitude of velocity being missed in the models, the sub-gridscale velocity
-                sub_gridscale_velocity = 0.1
-                horizontal_diffusivity = sub_gridscale_velocity * dx
-
-                self.horizontal_diffusivity = horizontal_diffusivity
+                
+                self.horizontal_diffusivity = self.calc_known_horizontal_diffusivity()
 
             # if user not using a known ocean_model, change horizontal_diffusivity from None to 0
             # so it has a value. User can subsequently overwrite it too.
-            elif (
-                hasattr(self, "horizontal_diffusivity")
-                and self.horizontal_diffusivity is None
-            ):
+            elif self.horizontal_diffusivity is None:
 
                 self.logger.info(
-                    "changing horizontal_diffusivity parameter from None to 0.0. Otherwise set it to a specific value."
+                    """Since ocean_model is user-input, changing horizontal_diffusivity parameter from None to 0.0. 
+                    You can also set it to a specific value with `m.horizontal_diffusivity=[number]`."""
                 )
 
                 self.horizontal_diffusivity = 0
@@ -331,27 +336,13 @@ class OpenDriftModel(ParticleTrackingManager):
         # if user sets horizontal_diffusivity as None and ocean_model is set, overwrite horizontal_diffusivity
         # if user changes horizontal_diffusivity subsequently without changing model, allow it
         if name == "horizontal_diffusivity" and value is None:
-            if hasattr(self, "ocean_model") and self.ocean_model in [
-                "NWGOA",
-                "CIOFS",
-                "CIOFS_now",
-            ]:
+            if self.ocean_model in _KNOWN_MODELS:
 
                 self.logger.info(
                     "overriding horizontal_diffusivity parameter with one tuned to reader model"
                 )
-
-                # dx: approximate horizontal grid resolution (meters), used to calculate horizontal diffusivity
-                if self.ocean_model == "NWGOA":
-                    dx = 1500
-                elif "CIOFS" in self.ocean_model:
-                    dx = 100
-
-                # horizontal diffusivity is calculated based on the mean horizontal grid resolution
-                # for the model being used.
-                # 0.1 is a guess for the magnitude of velocity being missed in the models, the sub-gridscale velocity
-                sub_gridscale_velocity = 0.1
-                horizontal_diffusivity = sub_gridscale_velocity * dx
+                
+                horizontal_diffusivity = self.calc_known_horizontal_diffusivity()
 
                 # when editing the __dict__ directly have to also update config_model
                 self.__dict__["horizontal_diffusivity"] = horizontal_diffusivity
@@ -361,11 +352,7 @@ class OpenDriftModel(ParticleTrackingManager):
 
             # if user not using a known ocean_model, change horizontal_diffusivity from None to 0
             # so it has a value. User can subsequently overwrite it too.
-            elif hasattr(self, "ocean_model") and self.ocean_model not in [
-                "NWGOA",
-                "CIOFS",
-                "CIOFS_now",
-            ]:
+            elif self.ocean_model not in _KNOWN_MODELS:
 
                 self.logger.info(
                     "changing horizontal_diffusivity parameter from None to 0.0. Otherwise set it to a specific value."
@@ -376,22 +363,14 @@ class OpenDriftModel(ParticleTrackingManager):
 
         # turn on other things if using stokes_drift
         if name == "stokes_drift" and value:
-            if hasattr(self, "drift_model") and self.drift_model != "Leeway":
+            if self.drift_model != "Leeway":
                 self.o.set_config("drift:use_tabularised_stokes_drift", True)
             # self.o.set_config('drift:tabularised_stokes_drift_fetch', '25000')  # default
             # self.o.set_config('drift:stokes_drift_profile', 'Phillips')  # default
 
         # too soon to do this, need to run it later
         # Leeway model doesn't have this option built in
-        if (
-            name == "surface_only"
-            and hasattr(self, "drift_model")
-            and hasattr(self, "o")
-        ) or (
-            name == "drift_model"
-            and hasattr(self, "surface_only")
-            and hasattr(self, "o")
-        ):
+        if name in ["surface_only", "drift_model"]:
             if self.surface_only and self.drift_model != "Leeway":
                 self.logger.info("Truncating model output below 0.5 m.")
                 self.o.set_config("drift:truncate_ocean_model_below_m", 0.5)
@@ -408,7 +387,6 @@ class OpenDriftModel(ParticleTrackingManager):
         if (
             name == "do3D"
             and not value
-            and hasattr(self, "drift_model")
             and self.drift_model != "Leeway"
         ):
             self.o.disable_vertical_motion()
@@ -417,10 +395,9 @@ class OpenDriftModel(ParticleTrackingManager):
 
         # Make sure vertical_mixing_timestep equal to default value if vertical_mixing False
         # same for diffusivitymodel and mixed_layer_depth
-        if hasattr(self, "vertical_mixing") and not self.vertical_mixing:
+        if not self.vertical_mixing:
             if (
-                hasattr(self, "vertical_mixing_timestep")
-                and self.vertical_mixing_timestep
+                self.vertical_mixing_timestep
                 != self.show_config(key="vertical_mixing_timestep")["default"]
             ):
                 self.logger.info(
@@ -430,8 +407,7 @@ class OpenDriftModel(ParticleTrackingManager):
                     key="vertical_mixing_timestep"
                 )["default"]
             if (
-                hasattr(self, "diffusivitymodel")
-                and self.diffusivitymodel
+                self.diffusivitymodel
                 != self.show_config(key="diffusivitymodel")["default"]
             ):
                 self.logger.info(
@@ -441,8 +417,7 @@ class OpenDriftModel(ParticleTrackingManager):
                     "default"
                 ]
             if (
-                hasattr(self, "mixed_layer_depth")
-                and self.mixed_layer_depth
+                self.mixed_layer_depth
                 != self.show_config(key="mixed_layer_depth")["default"]
             ):
                 self.logger.info(
@@ -456,8 +431,7 @@ class OpenDriftModel(ParticleTrackingManager):
         # "wind_drift_depth" at the same time
         if self.drift_model == "Leeway":
             if (
-                hasattr(self, "wind_drift_factor")
-                and self.wind_drift_factor
+                self.wind_drift_factor
                 != self.show_config(key="wind_drift_factor")["default"]
             ):
                 self.logger.info(
@@ -467,8 +441,7 @@ class OpenDriftModel(ParticleTrackingManager):
                     "default"
                 ]
             if (
-                hasattr(self, "wind_drift_depth")
-                and self.wind_drift_depth
+                self.wind_drift_depth
                 != self.show_config(key="wind_drift_depth")["default"]
             ):
                 self.logger.info(
@@ -477,7 +450,7 @@ class OpenDriftModel(ParticleTrackingManager):
                 self.wind_drift_depth = self.show_config(key="wind_drift_depth")[
                     "default"
                 ]
-            if hasattr(self, "stokes_drift") and self.stokes_drift:
+            if self.stokes_drift:
                 self.logger.info(
                     "stokes_drift cannot be used with Leeway model, changing to False."
                 )
@@ -636,6 +609,9 @@ class OpenDriftModel(ParticleTrackingManager):
 
                 elif self.ocean_model.upper() == "CIOFS_NOW":
 
+                    standard_name_mapping.update({"u_eastward": "x_sea_water_velocity",
+                                                  "v_northward": "y_sea_water_velocity"})
+
                     loc_local = "/mnt/depot/data/packrat/prod/noaa/coops/ofs/aws_ciofs/processed/aws_ciofs_kerchunk.parq"
                     loc_remote = "https://thredds.aoos.org/thredds/dodsC/AWS_CIOFS.nc"
 
@@ -678,15 +654,23 @@ class OpenDriftModel(ParticleTrackingManager):
             if self.ocean_model == "NWGOA" and not self.use_static_masks:
                 ds["wetdry_mask_rho"] = (~ds.zeta.isnull()).astype(int)
                 ds.drop_vars("zeta", inplace=True)
+                
+            # For CIOFS_NOW need to rename u/v to have "East" and "North" in the variable names
+            # so they aren't rotated in the ROMS reader (the standard names have to be x/y not east/north)
+            elif self.ocean_model == "CIOFS_NOW":
+                ds = ds.rename_vars({"urot": "u_eastward", "vrot": "v_northward"})
+                # grid = xr.open_dataset("/mnt/vault/ciofs/HINDCAST/nos.ciofs.romsgrid.nc")
+                # ds["angle"] = grid["angle"]
+
+            units_date = pd.Timestamp(
+                ds.ocean_time.attrs["units"].split("since ")[1]
+            )
 
             # use reader start time if not otherwise input
             if self.start_time is None:
                 self.logger.info("setting reader start_time as simulation start_time")
                 # self.start_time = reader.start_time
                 # convert using pandas instead of netCDF4
-                units_date = pd.Timestamp(
-                    ds.ocean_time.attrs["units"].split("since ")[1]
-                )
                 self.start_time = units_date + pd.to_timedelta(
                     ds.ocean_time[0].values, unit="s"
                 )
@@ -794,7 +778,7 @@ class OpenDriftModel(ParticleTrackingManager):
         """Surface the model configuration."""
 
         # save for reinstatement when running the drifters
-        if not hasattr(self, "_config_orig"):
+        if self._config_orig is None:
             self._config_orig = copy.deepcopy(self.o._config)
 
         return self.o._config

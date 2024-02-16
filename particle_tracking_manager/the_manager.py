@@ -13,6 +13,11 @@ import pandas as pd
 
 from .cli import is_None
 
+_KNOWN_MODELS = [
+                "NWGOA",
+                "CIOFS",
+                "CIOFS_NOW",
+            ]
 
 # Read PTM configuration information
 
@@ -176,7 +181,9 @@ class ParticleTrackingManager:
 
         sig = signature(ParticleTrackingManager)
 
-        self.config_ptm = config_ptm
+        self.__dict__["config_ptm"] = config_ptm
+        self.__dict__["config_model"] = None
+        self.__dict__["_config_orig"] = None
 
         # check this here for initialization since later they will be set
         if steps is not None:
@@ -185,16 +192,23 @@ class ParticleTrackingManager:
             assert steps is None and end_time is None
         if end_time is not None:
             assert steps is None and duration is None
+        if steps is None and duration is None and end_time is None:
+            raise ValueError("Exactly one of steps, duration, or end_time must be input and not be None.")
+        
+        # initialize all class attributes to None without triggering the __setattr__ method
+        # which does a bunch more stuff
+        for key in sig.parameters.keys():        
+            self.__dict__[key] = None
+
+        # mode flags
+        self.__dict__["has_added_reader"] = False
+        self.__dict__["has_run_seeding"] = False
+        self.__dict__["has_run"] = False
 
         # Set all attributes which will trigger some checks and changes in __setattr__
         # these will also update "value" in the config dict
         for key in sig.parameters.keys():
             self.__setattr__(key, locals()[key])
-
-        # mode flags
-        self.has_added_reader = False
-        self.has_run_seeding = False
-        self.has_run = False
 
         self.kw = kw
 
@@ -202,22 +216,48 @@ class ParticleTrackingManager:
         """Implement this in model class to add specific __setattr__ there too."""
         pass
 
+    # calculate other simulation-length parameters when one is input
+    # this way whichever parameter is input last overwrites the other parameters
+    # that could have been input earlier
+    def calc_end_time(self):
+        if self.start_time is not None and self.steps is not None:
+            return self.start_time + self.timedir * self.steps * datetime.timedelta(
+                seconds=self.time_step
+            )
+        elif self.start_time is not None and self.duration is not None:
+            return self.start_time + self.timedir * self.duration
+        else:
+            return self.end_time
+        
+    def calc_duration(self):
+        if self.end_time is not None and self.start_time is not None:
+            return abs(self.end_time - self.start_time)
+        else:
+            return self.duration
+    
+    def calc_steps(self):
+        if self.duration is not None and self.start_time is not None:
+            return self.duration / datetime.timedelta(seconds=self.time_step)
+        else:
+            return self.steps
+
     def __setattr__(self, name: str, value) -> None:
         """Implement my own __setattr__ to enforce subsequent actions."""
 
         # create/update class attribute
-        self.__dict__[name] = value
+        # everything is already initialized with None so avoid overwriting 
+        # good values with None here
+        if value is not None:
+            self.__dict__[name] = value
 
         # create/update "value" keyword in config to keep it up to date
         if (
-            name != "config_ptm"
-            and hasattr(self, "config_ptm")
-            and name in self.config_ptm.keys()
+            name in self.config_ptm.keys()
         ):
             self.config_ptm[name]["value"] = value
 
         # create/update "value" keyword in model config to keep it up to date
-        if hasattr(self, "config_model"):  # can't run this until init in model class
+        if self.config_model is not None:  # can't run this until init in model class
             self.__setattr_model__(name, value)
 
         # check longitude when it is set
@@ -246,9 +286,7 @@ class ParticleTrackingManager:
         # check start_time relative to ocean_model selection
         if name in ["ocean_model", "start_time"]:
             if (
-                hasattr(self, "start_time")
-                and self.start_time is not None
-                and hasattr(self, "ocean_model")
+                self.start_time is not None
                 and self.ocean_model is not None
             ):
                 if value == "NWGOA":
@@ -280,7 +318,7 @@ class ParticleTrackingManager:
 
         # in case any of these are reset by user after surface_only is already set
         if name in ["do3D", "z", "vertical_mixing"]:
-            if hasattr(self, "surface_only") and self.surface_only:
+            if self.surface_only:
                 self.logger.info(
                     "overriding values for `do3D`, `z`, and `vertical_mixing` because `surface_only` True"
                 )
@@ -295,9 +333,7 @@ class ParticleTrackingManager:
 
             # if not 3D turn off vertical_mixing
             if (
-                hasattr(self, "do3D")
-                and not self.do3D
-                and hasattr(self, "vertical_mixing")
+                not self.do3D
                 and self.vertical_mixing
             ):
                 self.logger.info("turning off vertical_mixing since do3D is False")
@@ -311,7 +347,7 @@ class ParticleTrackingManager:
             self.z = None
 
         # in case z is changed back after initialization
-        if name == "z" and value is not None and hasattr(self, "seed_seafloor"):
+        if name == "z" and value is not None:
             self.logger.info(
                 "setting `seed_seafloor` to False since now setting a non-None z value"
             )
@@ -324,7 +360,6 @@ class ParticleTrackingManager:
             and self.lon is not None
             and self.lat is not None
             or name in ["lon", "lat"]
-            and hasattr(self, "has_added_reader")
             and self.has_added_reader
             and self.lon is not None
             and self.lat is not None
@@ -353,112 +388,13 @@ class ParticleTrackingManager:
             else:
                 self.__dict__["timedir"] = -1
 
-        # calculate other simulation-length parameters when one is input
-        # this way whichever parameter is input last overwrites the other parameters
-        # that could have been input earlier
-        # def end_time_from_steps():
-        #     return self.start_time + self.timedir * self.steps * datetime.timedelta(
-        #         seconds=self.time_step
-        #     )
-        # def end_time_from_duration():
-        #     return self.start_time + self.timedir * self.duration
-
-        # if start_time is defined, then steps, duration, and end_time can be calculated
-        # (one of those has to also have been defined)
-        if (
-            name == "start_time"
-            and value is not None
-            and hasattr(self, "steps")
-            and hasattr(self, "duration")
-            and hasattr(self, "end_time")
-        ):
-
-            if (
-                self.steps is not None
-                and self.duration is None
-                and self.end_time is None
-            ):
-                self.logger.info(
-                    "Setting end_time and duration from steps now that start_time is defined"
-                )
-                assert self.start_time is not None
-                self.__dict__[
-                    "end_time"
-                ] = self.start_time + self.timedir * self.steps * datetime.timedelta(
-                    seconds=self.time_step
-                )
-                assert self.end_time is not None
-                self.__dict__["duration"] = abs(self.end_time - self.start_time)
-
-            elif (
-                self.duration is not None
-                and self.steps is None
-                and self.end_time is None
-            ):
-                self.logger.info(
-                    "Setting end_time and steps from duration now that start_time is defined"
-                )
-                assert self.start_time is not None
-                self.__dict__["end_time"] = (
-                    self.start_time + self.timedir * self.duration
-                )
-                self.__dict__["steps"] = self.duration / datetime.timedelta(
-                    seconds=self.time_step
-                )
-
-            elif (
-                self.end_time is not None
-                and self.steps is None
-                and self.duration is None
-            ):
-                self.logger.info(
-                    "Setting duration and steps from end_time now that start_time is defined"
-                )
-                assert self.start_time is not None
-                self.__dict__["duration"] = abs(self.end_time - self.start_time)
-                assert self.duration is not None
-                self.__dict__["steps"] = self.duration / datetime.timedelta(
-                    seconds=self.time_step
-                )
-
-            else:
-                self.logger.info(
-                    """"You seem to be overwriting start_time after defining steps, duration, and end_time
-                                 which will not update steps, duration, and end_time unless you additionally redefine
-                                 one of those parameters."""
-                )
-
-        if name in ["steps", "duration", "end_time"] and self.start_time is not None:
-
-            if name == "steps" and value is not None:
-                self.logger.info("Setting end_time and duration from steps")
-                assert self.steps is not None
-                self.__dict__[
-                    "end_time"
-                ] = self.start_time + self.timedir * self.steps * datetime.timedelta(
-                    seconds=self.time_step
-                )
-                assert self.end_time is not None
-                self.__dict__["duration"] = abs(self.end_time - self.start_time)
-
-            elif name == "duration" and value is not None:
-                self.logger.info("Setting end_time and steps from duration")
-                assert self.duration is not None
-                self.__dict__["end_time"] = (
-                    self.start_time + self.timedir * self.duration
-                )
-                self.__dict__["steps"] = self.duration / datetime.timedelta(
-                    seconds=self.time_step
-                )
-
-            elif name == "end_time" and value is not None:
-                self.logger.info("Setting duration and steps from end_time")
-                assert self.end_time is not None
-                self.__dict__["duration"] = abs(self.end_time - self.start_time)
-                assert self.duration is not None
-                self.__dict__["steps"] = self.duration / datetime.timedelta(
-                    seconds=self.time_step
-                )
+        if name in ["start_time", "steps", "duration"]:
+            self.__dict__["end_time"] = self.calc_end_time()
+            self.__dict__["duration"] = self.calc_duration()
+            self.__dict__["steps"] = self.calc_steps()
+        elif name == "end_time":
+            self.__dict__["duration"] = self.calc_duration()
+            self.__dict__["steps"] = self.calc_steps()
 
     def add_reader(self, **kwargs):
         """Here is where the model output is opened."""
@@ -510,6 +446,8 @@ class ParticleTrackingManager:
 
         if not self.has_run_seeding:
             raise KeyError("first run seeding with `manager.seed()`.")
+        
+        self.logger.info(f"start_time: {self.start_time}, end_time: {self.end_time}, steps: {self.steps}, duration: {self.duration}")
 
         # need end time info
         assert (

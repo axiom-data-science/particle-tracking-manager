@@ -1,5 +1,11 @@
 # What's New
 
+## Unreleased
+
+* Now initialize all class attributes with None and removed usage of `hasattr` which simplifies and clarifies some code.
+* Improved handling of `start_time`, `end_time`, `duration`, and `steps` in `manager.py` which fixed a bug in which users couldn't input `start_time` and have the simulation run successfully.
+
+
 ## v0.6.0 (February 15, 2024)
 
 * is set up to tell `opendrift` ROMS reader to save the interpolator to a cache that is set up the first time it is run. This only works with the newest dev version of `opendrift` at the moment, and the files saved are hundreds of MB, but it speeds up the simulations pretty well (12 to 30 seconds).
