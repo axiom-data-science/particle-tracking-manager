@@ -182,7 +182,7 @@ class ParticleTrackingManager:
         sig = signature(ParticleTrackingManager)
 
         self.__dict__["config_ptm"] = config_ptm
-        self.__dict__["config_model"] = None
+        # self.__dict__["config_model"] = None  # previously defined before manager is initialized
         self.__dict__["_config_orig"] = None
 
         # check this here for initialization since later they will be set
@@ -192,8 +192,6 @@ class ParticleTrackingManager:
             assert steps is None and end_time is None
         if end_time is not None:
             assert steps is None and duration is None
-        if steps is None and duration is None and end_time is None:
-            raise ValueError("Exactly one of steps, duration, or end_time must be input and not be None.")
         
         # initialize all class attributes to None without triggering the __setattr__ method
         # which does a bunch more stuff
@@ -255,146 +253,148 @@ class ParticleTrackingManager:
             name in self.config_ptm.keys()
         ):
             self.config_ptm[name]["value"] = value
+            
+        # None of the following checks occur if value is None
+        if value is not None:
 
-        # create/update "value" keyword in model config to keep it up to date
-        if self.config_model is not None:  # can't run this until init in model class
-            self.__setattr_model__(name, value)
+            # create/update "value" keyword in model config to keep it up to date
+            if self.config_model is not None:  # can't run this until init in model class
+                self.__setattr_model__(name, value)
 
-        # check longitude when it is set
-        if value is not None and name == "lon":
-            assert (
-                -180 <= value <= 180
-            ), "Longitude needs to be between -180 and 180 degrees."
+            # check longitude when it is set
+            if name == "lon":
+                assert (
+                    -180 <= value <= 180
+                ), "Longitude needs to be between -180 and 180 degrees."
 
-        if value is not None and name == "lat":
-            assert (
-                -90 <= value <= 90
-            ), "Latitude needs to be between -90 and 90 degrees."
+            if name == "lat":
+                assert (
+                    -90 <= value <= 90
+                ), "Latitude needs to be between -90 and 90 degrees."
 
-        if value is not None and name == "start_time":
-            if isinstance(value, (str, datetime.datetime, pd.Timestamp)):
-                self.__dict__[name] = pd.Timestamp(value)
-                self.config_ptm[name]["value"] = pd.Timestamp(value)
-            else:
-                raise TypeError("start_time must be a string, datetime, or Timestamp.")
+            if name == "start_time":
+                if isinstance(value, (str, datetime.datetime, pd.Timestamp)):
+                    self.__dict__[name] = pd.Timestamp(value)
+                    self.config_ptm[name]["value"] = pd.Timestamp(value)
+                else:
+                    raise TypeError("start_time must be a string, datetime, or Timestamp.")
 
-        # make sure ocean_model name uppercase
-        if name == "ocean_model" and value is not None:
-            self.__dict__[name] = value.upper()
-            self.config_ptm["ocean_model"]["value"] = value.upper()
+            # make sure ocean_model name uppercase
+            if name == "ocean_model":
+                self.__dict__[name] = value.upper()
+                self.config_ptm["ocean_model"]["value"] = value.upper()
 
-        # check start_time relative to ocean_model selection
-        if name in ["ocean_model", "start_time"]:
-            if (
-                self.start_time is not None
-                and self.ocean_model is not None
-            ):
-                if value == "NWGOA":
-                    assert overall_start_time <= value <= nwgoa_end_time
-                elif value == "CIOFS":
-                    assert overall_start_time <= value <= ciofs_end_time
-                elif value == "CIOFS_NOW":
-                    assert (
-                        ciofs_operational_start_time
-                        <= value
-                        <= ciofs_operational_end_time
-                    )
+            # check start_time relative to ocean_model selection
+            if name in ["ocean_model", "start_time"]:
+                if (
+                    self.start_time is not None
+                    and self.ocean_model is not None
+                ):
+                    if value == "NWGOA":
+                        assert overall_start_time <= value <= nwgoa_end_time
+                    elif value == "CIOFS":
+                        assert overall_start_time <= value <= ciofs_end_time
+                    elif value == "CIOFS_NOW":
+                        assert (
+                            ciofs_operational_start_time
+                            <= value
+                            <= ciofs_operational_end_time
+                        )
 
-        # deal with if input longitudes need to be shifted due to model
-        if name == "oceanmodel_lon0_360" and value:
-            if self.ocean_model is not "test" and self.lon is not None:
-                # move longitude to be 0 to 360 for this model
-                # this is not a user-defined option
-                if -180 < self.lon < 0:
-                    self.__dict__["lon"] += 360
+            # deal with if input longitudes need to be shifted due to model
+            if name == "oceanmodel_lon0_360" and value:
+                if self.ocean_model is not "test" and self.lon is not None:
+                    # move longitude to be 0 to 360 for this model
+                    # this is not a user-defined option
+                    if -180 < self.lon < 0:
+                        self.__dict__["lon"] += 360
 
-        if name == "surface_only" and value:
-            self.logger.info(
-                "overriding values for `do3D`, `z`, and `vertical_mixing` because `surface_only` True"
-            )
-            self.do3D = False
-            self.z = 0
-            self.vertical_mixing = False
-
-        # in case any of these are reset by user after surface_only is already set
-        if name in ["do3D", "z", "vertical_mixing"]:
-            if self.surface_only:
+            if name == "surface_only" and value:
                 self.logger.info(
                     "overriding values for `do3D`, `z`, and `vertical_mixing` because `surface_only` True"
                 )
-                if name == "do3D":
-                    value is False
-                if name == "z":
-                    value is 0
-                if name == "vertical_mixing":
-                    value is False
-                self.__dict__[name] = value
-                self.config_ptm[name]["value"] = value
+                self.do3D = False
+                self.z = 0
+                self.vertical_mixing = False
 
-            # if not 3D turn off vertical_mixing
+            # in case any of these are reset by user after surface_only is already set
+            if name in ["do3D", "z", "vertical_mixing"]:
+                if self.surface_only:
+                    self.logger.info(
+                        "overriding values for `do3D`, `z`, and `vertical_mixing` because `surface_only` True"
+                    )
+                    if name == "do3D":
+                        value is False
+                    if name == "z":
+                        value is 0
+                    if name == "vertical_mixing":
+                        value is False
+                    self.__dict__[name] = value
+                    self.config_ptm[name]["value"] = value
+
+                # if not 3D turn off vertical_mixing
+                if (
+                    not self.do3D
+                    and self.vertical_mixing
+                ):
+                    self.logger.info("turning off vertical_mixing since do3D is False")
+                    self.__dict__["vertical_mixing"] = False
+                    self.config_ptm["vertical_mixing"]["value"] = False
+                    # self.vertical_mixing = False  # this is recursive
+
+            # set z to None if seed_seafloor is True
+            if name == "seed_seafloor" and value:
+                self.logger.info("setting z to None since being seeded at seafloor")
+                self.z = None
+
+            # in case z is changed back after initialization
+            if name == "z":
+                self.logger.info(
+                    "setting `seed_seafloor` to False since now setting a non-None z value"
+                )
+                self.seed_seafloor = False
+
+            # if reader, lon, and lat set, check inputs
             if (
-                not self.do3D
-                and self.vertical_mixing
+                name == "has_added_reader"
+                and value
+                and self.lon is not None
+                and self.lat is not None
+                or name in ["lon", "lat"]
+                and self.has_added_reader
+                and self.lon is not None
+                and self.lat is not None
             ):
-                self.logger.info("turning off vertical_mixing since do3D is False")
-                self.__dict__["vertical_mixing"] = False
-                self.config_ptm["vertical_mixing"]["value"] = False
-                # self.vertical_mixing = False  # this is recursive
 
-        # set z to None if seed_seafloor is True
-        if name == "seed_seafloor" and value:
-            self.logger.info("setting z to None since being seeded at seafloor")
-            self.z = None
+                if self.ocean_model != "TEST":
+                    rlon = self.reader_metadata("lon")
+                    assert rlon.min() < self.lon < rlon.max()
+                    rlat = self.reader_metadata("lat")
+                    assert rlat.min() < self.lat < rlat.max()
 
-        # in case z is changed back after initialization
-        if name == "z" and value is not None:
-            self.logger.info(
-                "setting `seed_seafloor` to False since now setting a non-None z value"
-            )
-            self.seed_seafloor = False
+            # if reader, lon, and lat set, check inputs
+            if name == "has_added_reader" and value and self.start_time is not None:
 
-        # if reader, lon, and lat set, check inputs
-        if (
-            name == "has_added_reader"
-            and value
-            and self.lon is not None
-            and self.lat is not None
-            or name in ["lon", "lat"]
-            and self.has_added_reader
-            and self.lon is not None
-            and self.lat is not None
-        ):
+                if self.ocean_model != "TEST":
+                    assert self.reader_metadata("start_time") <= self.start_time
 
-            if self.ocean_model != "TEST":
-                rlon = self.reader_metadata("lon")
-                assert rlon.min() < self.lon < rlon.max()
-                rlat = self.reader_metadata("lat")
-                assert rlat.min() < self.lat < rlat.max()
+            # if reader, lon, and lat set, check inputs
+            if name == "has_added_reader" and value:
+                assert self.ocean_model is not None
 
-        # if reader, lon, and lat set, check inputs
-        if name == "has_added_reader" and value and self.start_time is not None:
-
-            if self.ocean_model != "TEST":
-                assert self.reader_metadata("start_time") <= self.start_time
-
-        # if reader, lon, and lat set, check inputs
-        if name == "has_added_reader" and value:
-            assert self.ocean_model is not None
-
-        # define time direction
-        if name == "run_forward":
-            if value:
-                self.__dict__["timedir"] = 1
-            else:
-                self.__dict__["timedir"] = -1
-
-        if name in ["start_time", "steps", "duration"]:
-            self.__dict__["end_time"] = self.calc_end_time()
-            self.__dict__["duration"] = self.calc_duration()
-            self.__dict__["steps"] = self.calc_steps()
-        elif name == "end_time":
-            self.__dict__["duration"] = self.calc_duration()
-            self.__dict__["steps"] = self.calc_steps()
+            # define time direction
+            if name == "run_forward":
+                if value:
+                    self.__dict__["timedir"] = 1
+                else:
+                    self.__dict__["timedir"] = -1
+            if name in ["start_time", "steps", "duration"] and self.start_time is not None:
+                self.__dict__["end_time"] = self.calc_end_time()
+                self.__dict__["duration"] = self.calc_duration()
+                self.__dict__["steps"] = self.calc_steps()
+            elif name == "end_time" and self.start_time is not None:
+                self.__dict__["duration"] = self.calc_duration()
+                self.__dict__["steps"] = self.calc_steps()
 
     def add_reader(self, **kwargs):
         """Here is where the model output is opened."""

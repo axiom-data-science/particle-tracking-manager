@@ -65,9 +65,13 @@ def test_horizontal_diffusivity_logic():
     assert m.horizontal_diffusivity == 150.0
     m.ocean_model = "CIOFS"
     assert m.horizontal_diffusivity == 10.0
+    
     # or can overwrite it in this order
     m.horizontal_diffusivity = 11
     assert m.horizontal_diffusivity == 11.0
+
+    m.ocean_model = "CIOFS_NOW"
+    assert m.horizontal_diffusivity == 10.0
 
     m = ptm.OpenDriftModel(ocean_model="NWGOA")
     assert m.horizontal_diffusivity == 150.0

@@ -60,7 +60,7 @@ class OpenDriftModel(ParticleTrackingManager):
         If 'gaussian' (default), the radius is the standard deviation in x-y-directions. If 'uniform', elements are spread evenly and always inside a circle with the given radius. This is used by function `seed_elements`.
 
     horizontal_diffusivity : float
-        Horizontal diffusivity is None by default but will be set to a grid-dependent value for known ocean_model values. This is calculated as 0.1 m/s sub-gridscale velocity that is missing from the model output and multiplied by an estimate of the horizontal grid resolution. This leads to a larger value for NWGOA which has a larger value for mean horizontal grid resolution (lower resolution). If the user inputs their own ocean_model information, they can input their own horizontal_diffusivity value. A user can use a built-in ocean_model and the overwrite the horizontal_diffusivity value to 0.
+        Horizontal diffusivity is None by default but will be set to a grid-dependent value for known ocean_model values. This is calculated as 0.1 m/s sub-gridscale velocity that is missing from the model output and multiplied by an estimate of the horizontal grid resolution. This leads to a larger value for NWGOA which has a larger value for mean horizontal grid resolution (lower resolution). If the user inputs their own ocean_model information, they can input their own horizontal_diffusivity value. A user can use a known ocean_model and then overwrite the horizontal_diffusivity value to some value.
     current_uncertainty : float
         Add gaussian perturbation with this standard deviation to current components at each time step.
     wind_uncertainty : float
@@ -210,6 +210,18 @@ class OpenDriftModel(ParticleTrackingManager):
     ) -> None:
         """Inputs for OpenDrift model."""
 
+        # get all named parameters input to ParticleTrackingManager class
+        from inspect import signature
+
+        sig = signature(OpenDriftModel)
+        
+        # initialize all class attributes to None without triggering the __setattr__ method
+        # which does a bunch more stuff
+        for key in sig.parameters.keys():        
+            self.__dict__[key] = None
+
+        self.__dict__["config_model"] = config_model
+
         model = "opendrift"
 
         if log == "low":
@@ -256,18 +268,6 @@ class OpenDriftModel(ParticleTrackingManager):
         # You can check required variables for a model with
         # o.required_variables
 
-        # get all named parameters input to ParticleTrackingManager class
-        from inspect import signature
-
-        sig = signature(OpenDriftModel)
-        
-        # initialize all class attributes to None without triggering the __setattr__ method
-        # which does a bunch more stuff
-        for key in sig.parameters.keys():        
-            self.__dict__[key] = None
-
-        self.__dict__["config_model"] = config_model
-
         # Set all attributes which will trigger some checks and changes in __setattr__
         # these will also update "value" in the config dict
         for key in sig.parameters.keys():
@@ -310,52 +310,35 @@ class OpenDriftModel(ParticleTrackingManager):
         ):
             self.config_model[name]["value"] = value
         self._update_config()
-
-        # if user sets ocean_model and horizontal_diffusivity is set up, overwrite it
-        if name == "ocean_model":
-
-            if value in _KNOWN_MODELS:
-
+        
+        if name in ["ocean_model", "horizontal_diffusivity"]:
+            
+            # just set the value and move on if purposely setting a non-None value 
+            # of horizontal_diffusivity; specifying this for clarity (already set 
+            # value above).
+            if name == "horizontal_diffusivity" and value is not None:
+                self.logger.info(f"Setting horizontal_diffusivity to user-selected value {value}.")
+            
+            # in all other cases that ocean_model is a known model, want to use the 
+            # grid-dependent value
+            elif self.ocean_model in _KNOWN_MODELS:
                 self.logger.info(
                     "overriding horizontal_diffusivity parameter with one tuned to reader model"
                 )
-                
-                self.horizontal_diffusivity = self.calc_known_horizontal_diffusivity()
+
+                hdiff = self.calc_known_horizontal_diffusivity()
+
+                # when editing the __dict__ directly have to also update config_model
+                self.__dict__["horizontal_diffusivity"] = hdiff
+                self.config_model["horizontal_diffusivity"]["value"] = hdiff
 
             # if user not using a known ocean_model, change horizontal_diffusivity from None to 0
             # so it has a value. User can subsequently overwrite it too.
-            elif self.horizontal_diffusivity is None:
+            elif self.ocean_model not in _KNOWN_MODELS and self.horizontal_diffusivity is None:
 
                 self.logger.info(
                     """Since ocean_model is user-input, changing horizontal_diffusivity parameter from None to 0.0. 
                     You can also set it to a specific value with `m.horizontal_diffusivity=[number]`."""
-                )
-
-                self.horizontal_diffusivity = 0
-
-        # if user sets horizontal_diffusivity as None and ocean_model is set, overwrite horizontal_diffusivity
-        # if user changes horizontal_diffusivity subsequently without changing model, allow it
-        if name == "horizontal_diffusivity" and value is None:
-            if self.ocean_model in _KNOWN_MODELS:
-
-                self.logger.info(
-                    "overriding horizontal_diffusivity parameter with one tuned to reader model"
-                )
-                
-                horizontal_diffusivity = self.calc_known_horizontal_diffusivity()
-
-                # when editing the __dict__ directly have to also update config_model
-                self.__dict__["horizontal_diffusivity"] = horizontal_diffusivity
-                self.config_model["horizontal_diffusivity"][
-                    "value"
-                ] = horizontal_diffusivity
-
-            # if user not using a known ocean_model, change horizontal_diffusivity from None to 0
-            # so it has a value. User can subsequently overwrite it too.
-            elif self.ocean_model not in _KNOWN_MODELS:
-
-                self.logger.info(
-                    "changing horizontal_diffusivity parameter from None to 0.0. Otherwise set it to a specific value."
                 )
 
                 self.__dict__["horizontal_diffusivity"] = 0
@@ -751,6 +734,9 @@ class OpenDriftModel(ParticleTrackingManager):
 
     def run_drifters(self):
         """Run the drifters!"""
+
+        if self.steps is None and self.duration is None and self.end_time is None:
+            raise ValueError("Exactly one of steps, duration, or end_time must be input and not be None.")
 
         if self.run_forward:
             timedir = 1

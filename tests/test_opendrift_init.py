@@ -125,6 +125,7 @@ class TestOpenDriftModel_OceanDrift(unittest.TestCase):
     def test_drop_vars_do3D_false(self):
         self.model.do3D = False
         self.use_static_masks = False
+        self.model.steps = 4
         self.model.add_reader(ds=ds)
         assert self.model.reader.variables == [
             "x_sea_water_velocity",
@@ -140,6 +141,7 @@ class TestOpenDriftModel_OceanDrift(unittest.TestCase):
 
     def test_drop_vars_do3D_true(self):
         self.model.do3D = True
+        self.model.steps = 4
         self.model.add_reader(ds=ds)
         assert self.model.reader.variables == [
             "x_sea_water_velocity",
@@ -155,6 +157,7 @@ class TestOpenDriftModel_OceanDrift(unittest.TestCase):
     def test_drop_vars_use_static_masks(self):
         self.model.do3D = False
         self.model.use_static_masks = True
+        self.model.duration = pd.Timedelta("24h")
         self.model.add_reader(ds=ds)
         assert self.model.reader.variables == [
             "x_sea_water_velocity",
@@ -173,6 +176,7 @@ class TestOpenDriftModel_OceanDrift(unittest.TestCase):
         self.model.wind_drift_factor = 0
         self.model.wind_uncertainty = 0
         self.model.vertical_mixing = False
+        self.model.end_time = pd.Timestamp("1970-01-01T02:00")
         self.model.add_reader(ds=ds)
         assert self.model.reader.variables == [
             "x_sea_water_velocity",
@@ -188,6 +192,7 @@ class TestOpenDriftModel_LarvalFish(unittest.TestCase):
 
     def test_drop_vars_do3D_false(self):
         self.model.do3D = False
+        self.model.end_time = pd.Timestamp("1970-01-01T02:00")
         self.model.add_reader(ds=ds)
         assert self.model.reader.variables == [
             "x_sea_water_velocity",
@@ -203,6 +208,7 @@ class TestOpenDriftModel_LarvalFish(unittest.TestCase):
 
     def test_drop_vars_do3D_true(self):
         self.model.do3D = True
+        self.model.duration = pd.Timedelta("1h")
         self.model.add_reader(ds=ds)
         assert self.model.reader.variables == [
             "x_sea_water_velocity",
@@ -222,6 +228,7 @@ class TestOpenDriftModel_LarvalFish(unittest.TestCase):
         self.model.wind_drift_factor = 0
         self.model.wind_uncertainty = 0
         self.model.vertical_mixing = False
+        self.model.steps = 3
         self.model.add_reader(ds=ds)
         assert self.model.reader.variables == [
             "x_sea_water_velocity",
