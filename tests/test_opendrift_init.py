@@ -121,6 +121,23 @@ ds = xr.Dataset(
 def test_input_too_many_end_of_simulation():
     with pytest.raises(AssertionError):
         OpenDriftModel(steps=4, duration=pd.Timedelta("24h"), end_time = pd.Timestamp("1970-01-01T02:00"))
+    
+def test_changing_end_of_simulation():
+    """change end_time, steps, and duration and make sure others are updated accordingly."""
+    
+    m = OpenDriftModel(start_time=pd.Timestamp("2000-1-1"))
+    m.start_time = pd.Timestamp("2000-1-2")
+    m.end_time = pd.Timestamp("2000-1-3")
+    assert m.steps == 24
+    assert m.duration == pd.Timedelta('1 days 00:00:00')
+    
+    m.steps = 48
+    assert m.end_time == pd.Timestamp("2000-1-4")
+    assert m.duration == pd.Timedelta('2 days 00:00:00')
+    
+    m.duration = pd.Timedelta('2 days 12:00:00')
+    assert m.end_time == pd.Timestamp('2000-01-04 12:00:00')
+    assert m.steps == 60
 
 class TestOpenDriftModel_OceanDrift(unittest.TestCase):
     def setUp(self):

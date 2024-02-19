@@ -217,15 +217,27 @@ class ParticleTrackingManager:
     # calculate other simulation-length parameters when one is input
     # this way whichever parameter is input last overwrites the other parameters
     # that could have been input earlier
-    def calc_end_time(self):
-        if self.start_time is not None and self.steps is not None:
+    # also have to check for the special case that start_time is being updated to be the 
+    # initial model output when the reader is set and in that case also need to update 
+    # end_time based on whichever of steps or duration is available.
+    def calc_end_time(self, changed_variable):
+        
+        if changed_variable == "steps" or (self.steps is not None and changed_variable == "start_time"):
             return self.start_time + self.timedir * self.steps * datetime.timedelta(
                 seconds=self.time_step
             )
-        elif self.start_time is not None and self.duration is not None:
+        elif changed_variable == "duration" or (self.duration is not None and changed_variable == "start_time"):
             return self.start_time + self.timedir * self.duration
         else:
             return self.end_time
+        # if self.start_time is not None and self.steps is not None:
+        #     return self.start_time + self.timedir * self.steps * datetime.timedelta(
+        #         seconds=self.time_step
+        #     )
+        # elif self.start_time is not None and self.duration is not None:
+        #     return self.start_time + self.timedir * self.duration
+        # else:
+        #     return self.end_time
         
     def calc_duration(self):
         if self.end_time is not None and self.start_time is not None:
@@ -248,11 +260,11 @@ class ParticleTrackingManager:
         if value is not None:
             self.__dict__[name] = value
 
-        # create/update "value" keyword in config to keep it up to date
-        if (
-            name in self.config_ptm.keys()
-        ):
-            self.config_ptm[name]["value"] = value
+            # create/update "value" keyword in config to keep it up to date
+            if (
+                name in self.config_ptm.keys()
+            ):
+                self.config_ptm[name]["value"] = value
             
         # None of the following checks occur if value is None
         if value is not None:
@@ -388,13 +400,16 @@ class ParticleTrackingManager:
                     self.__dict__["timedir"] = 1
                 else:
                     self.__dict__["timedir"] = -1
-            if name in ["start_time", "steps", "duration"] and self.start_time is not None:
-                self.__dict__["end_time"] = self.calc_end_time()
+
+            if name in ["start_time", "end_time", "steps", "duration"] and self.start_time is not None:
+                # the behavior in calc_end_time changes depending on which variable has been updated
+                self.__dict__["end_time"] = self.calc_end_time(name)
+                # duration and steps are always updated now that start_time and end_time are set
                 self.__dict__["duration"] = self.calc_duration()
                 self.__dict__["steps"] = self.calc_steps()
-            elif name == "end_time" and self.start_time is not None:
-                self.__dict__["duration"] = self.calc_duration()
-                self.__dict__["steps"] = self.calc_steps()
+            # elif name == "end_time" and self.start_time is not None:
+            #     self.__dict__["duration"] = self.calc_duration()
+            #     self.__dict__["steps"] = self.calc_steps()
 
     def add_reader(self, **kwargs):
         """Here is where the model output is opened."""

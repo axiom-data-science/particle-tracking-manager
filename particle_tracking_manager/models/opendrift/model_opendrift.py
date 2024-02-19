@@ -648,7 +648,6 @@ class OpenDriftModel(ParticleTrackingManager):
             units_date = pd.Timestamp(
                 ds.ocean_time.attrs["units"].split("since ")[1]
             )
-
             # use reader start time if not otherwise input
             if self.start_time is None:
                 self.logger.info("setting reader start_time as simulation start_time")
