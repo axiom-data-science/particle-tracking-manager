@@ -4,6 +4,7 @@ import unittest
 
 import numpy as np
 import pandas as pd
+import pytest
 import xarray as xr
 
 from particle_tracking_manager.models.opendrift.model_opendrift import (
@@ -116,12 +117,22 @@ ds = xr.Dataset(
         "lat_rho": (("Y", "X"), np.array([[1, 1, 1], [2, 2, 2]])),
     },
 )
-
+        
+def test_input_too_many_end_of_simulation():
+    with pytest.raises(AssertionError):
+        OpenDriftModel(steps=4, duration=pd.Timedelta("24h"), end_time = pd.Timestamp("1970-01-01T02:00"))
 
 class TestOpenDriftModel_OceanDrift(unittest.TestCase):
     def setUp(self):
         self.model = OpenDriftModel(drift_model="OceanDrift")
 
+    def test_error_no_end_of_simulation(self):
+        self.model.do3D = False
+        self.use_static_masks = False
+        # need to input steps, duration, or end_time but don't here
+        with pytest.raises(ValueError):
+            self.model.add_reader(ds=ds)
+ 
     def test_drop_vars_do3D_false(self):
         self.model.do3D = False
         self.use_static_masks = False
