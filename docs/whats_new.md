@@ -6,6 +6,7 @@
 * Improved handling of `start_time`, `end_time`, `duration`, and `steps` in `manager.py` which fixed a bug in which users couldn't input `start_time` and have the simulation run successfully.
 * simplified handling of `horizontal_diffusivity` in `opendrift` model.
 * user can change `end_time`, `duration`, and `steps` and have the others update accordingly. Tests added to check this.
+* changed known model "CIOFS_now" to "CIOFSOP" to avoid upper/lower issues and include "OP" for "operational".
 
 
 ## v0.6.0 (February 15, 2024)

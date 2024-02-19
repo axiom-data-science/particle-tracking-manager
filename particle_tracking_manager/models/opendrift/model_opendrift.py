@@ -590,7 +590,7 @@ class OpenDriftModel(ParticleTrackingManager):
                     loc_local = "/mnt/vault/ciofs/HINDCAST/ciofs_kerchunk.parq"
                     loc_remote = "http://xpublish-ciofs.srv.axds.co/datasets/ciofs_hindcast/zarr/"
 
-                elif self.ocean_model.upper() == "CIOFS_NOW":
+                elif self.ocean_model.upper() == "CIOFSOP":
 
                     standard_name_mapping.update({"u_eastward": "x_sea_water_velocity",
                                                   "v_northward": "y_sea_water_velocity"})
@@ -638,9 +638,9 @@ class OpenDriftModel(ParticleTrackingManager):
                 ds["wetdry_mask_rho"] = (~ds.zeta.isnull()).astype(int)
                 ds.drop_vars("zeta", inplace=True)
                 
-            # For CIOFS_NOW need to rename u/v to have "East" and "North" in the variable names
+            # For CIOFSOP need to rename u/v to have "East" and "North" in the variable names
             # so they aren't rotated in the ROMS reader (the standard names have to be x/y not east/north)
-            elif self.ocean_model == "CIOFS_NOW":
+            elif self.ocean_model == "CIOFSOP":
                 ds = ds.rename_vars({"urot": "u_eastward", "vrot": "v_northward"})
                 # grid = xr.open_dataset("/mnt/vault/ciofs/HINDCAST/nos.ciofs.romsgrid.nc")
                 # ds["angle"] = grid["angle"]

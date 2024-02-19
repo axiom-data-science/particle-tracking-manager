@@ -16,7 +16,7 @@ from .cli import is_None
 _KNOWN_MODELS = [
                 "NWGOA",
                 "CIOFS",
-                "CIOFS_NOW",
+                "CIOFSOP",
             ]
 
 # Read PTM configuration information
@@ -102,7 +102,7 @@ class ParticleTrackingManager:
     ocean_model : Optional[str], optional
         Name of ocean model to use for driving drifter simulation, by default None.
         Use None for testing and set up. Otherwise input a string.
-        Options are: "NWGOA", "CIOFS", "CIOFS_now".
+        Options are: "NWGOA", "CIOFS", "CIOFSOP".
         Alternatively keep as None and set up a separate reader (see example in docs).
     ocean_model_local : Optional, bool
         Set to True to use local version of known `ocean_model` instead of remote version.
@@ -291,10 +291,10 @@ class ParticleTrackingManager:
                 else:
                     raise TypeError("start_time must be a string, datetime, or Timestamp.")
 
-            # make sure ocean_model name uppercase
-            if name == "ocean_model":
-                self.__dict__[name] = value.upper()
-                self.config_ptm["ocean_model"]["value"] = value.upper()
+            # # make sure ocean_model name uppercase
+            # if name == "ocean_model":
+            #     self.__dict__[name] = value.upper()
+            #     self.config_ptm["ocean_model"]["value"] = value.upper()
 
             # check start_time relative to ocean_model selection
             if name in ["ocean_model", "start_time"]:
@@ -306,7 +306,7 @@ class ParticleTrackingManager:
                         assert overall_start_time <= value <= nwgoa_end_time
                     elif value == "CIOFS":
                         assert overall_start_time <= value <= ciofs_end_time
-                    elif value == "CIOFS_NOW":
+                    elif value == "CIOFSOP":
                         assert (
                             ciofs_operational_start_time
                             <= value
