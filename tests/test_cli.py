@@ -28,6 +28,7 @@ def test_setup_library():
         lon=-151,
         lat=59,
         use_auto_landmask=True,
+        steps=3,
         start_time=datetime(2000, 1, 1),
     )
     m.run_all()

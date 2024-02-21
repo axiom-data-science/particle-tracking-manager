@@ -12,7 +12,7 @@ def test_add_new_reader():
 
     import xroms
 
-    manager = ptm.OpenDriftModel(use_static_masks=True)
+    manager = ptm.OpenDriftModel(use_static_masks=True, steps=2)
 
     url = xroms.datasets.CLOVER.fetch("ROMS_example_full_grid.nc")
     ds = xr.open_dataset(url, decode_times=False)
@@ -26,7 +26,7 @@ def test_run():
     import xroms
 
     seeding_kwargs = dict(lon=-90, lat=28.7, number=1)
-    manager = ptm.OpenDriftModel(**seeding_kwargs, use_static_masks=True)
+    manager = ptm.OpenDriftModel(**seeding_kwargs, use_static_masks=True, steps=2)
     url = xroms.datasets.CLOVER.fetch("ROMS_example_full_grid.nc")
     ds = xr.open_dataset(url, decode_times=False)
     manager.add_reader(ds=ds, name="txla")

@@ -88,7 +88,7 @@
     },
     "steps": {
         "type": "int",
-        "default": 3,
+        "default": "None",
         "min": 1,
         "max": 10000,
         "units": "None",
@@ -118,11 +118,11 @@
         "enum": [
             "NWGOA",
             "CIOFS",
-            "CIOFS_now"
+            "CIOFSOP"
         ],
         "default": "None",
         "ptm_level": 1,
-        "description": "Name of ocean model to use for driving drifter simulation, by default None. Use None for testing and set up. Otherwise input a string. Options are \"NWGOA\", \"CIOFS\", \"CIOFS_now\". Alternatively keep as None and set up a separate reader (see example in docs)."
+        "description": "Name of ocean model to use for driving drifter simulation, by default None. Use None for testing and set up. Otherwise input a string. Options are \"NWGOA\", \"CIOFS\", \"CIOFSOP\". Alternatively keep as None and set up a separate reader (see example in docs)."
     },
     "ocean_model_local": {
         "type": "bool",
