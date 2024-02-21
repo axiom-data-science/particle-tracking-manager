@@ -9,4 +9,4 @@ API
    :recursive:
 
    the_manager
-   models.opendrift.model_opendrift
+   models.opendrift.opendrift

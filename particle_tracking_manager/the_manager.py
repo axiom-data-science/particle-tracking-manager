@@ -141,7 +141,7 @@ class ParticleTrackingManager:
     lat: Union[int, float]
     surface_only: Optional[bool]
     z: Optional[Union[int, float]]
-    start_time: Optional[datetime.datetime]
+    start_time: Optional[Union[str, datetime.datetime, pd.Timestamp]]
     steps: Optional[int]
     time_step: int
     duration: Optional[datetime.timedelta]
@@ -206,7 +206,9 @@ class ParticleTrackingManager:
         # Set all attributes which will trigger some checks and changes in __setattr__
         # these will also update "value" in the config dict
         for key in sig.parameters.keys():
-            self.__setattr__(key, locals()[key])
+            # no need to run through for init if value is None (already set to None)
+            if locals()[key] is not None:
+                self.__setattr__(key, locals()[key])
 
         self.kw = kw
 
@@ -255,23 +257,20 @@ class ParticleTrackingManager:
         """Implement my own __setattr__ to enforce subsequent actions."""
 
         # create/update class attribute
-        # everything is already initialized with None so avoid overwriting 
-        # good values with None here
-        if value is not None:
-            self.__dict__[name] = value
+        self.__dict__[name] = value
 
-            # create/update "value" keyword in config to keep it up to date
-            if (
-                name in self.config_ptm.keys()
-            ):
-                self.config_ptm[name]["value"] = value
-            
+        # create/update "value" keyword in config to keep it up to date
+        if (
+            name in self.config_ptm.keys()
+        ):
+            self.config_ptm[name]["value"] = value
+
+        # create/update "value" keyword in model config to keep it up to date
+        if self.config_model is not None:  # can't run this until init in model class
+            self.__setattr_model__(name, value)
+
         # None of the following checks occur if value is None
         if value is not None:
-
-            # create/update "value" keyword in model config to keep it up to date
-            if self.config_model is not None:  # can't run this until init in model class
-                self.__setattr_model__(name, value)
 
             # check longitude when it is set
             if name == "lon":
@@ -302,14 +301,14 @@ class ParticleTrackingManager:
                     self.start_time is not None
                     and self.ocean_model is not None
                 ):
-                    if value == "NWGOA":
-                        assert overall_start_time <= value <= nwgoa_end_time
-                    elif value == "CIOFS":
-                        assert overall_start_time <= value <= ciofs_end_time
-                    elif value == "CIOFSOP":
+                    if self.ocean_model == "NWGOA":
+                        assert overall_start_time <= self.start_time <= nwgoa_end_time
+                    elif self.ocean_model == "CIOFS":
+                        assert overall_start_time <= self.start_time <= ciofs_end_time
+                    elif self.ocean_model == "CIOFSOP":
                         assert (
                             ciofs_operational_start_time
-                            <= value
+                            <= self.start_time
                             <= ciofs_operational_end_time
                         )
 
@@ -336,11 +335,11 @@ class ParticleTrackingManager:
                         "overriding values for `do3D`, `z`, and `vertical_mixing` because `surface_only` True"
                     )
                     if name == "do3D":
-                        value is False
+                        value = False
                     if name == "z":
-                        value is 0
+                        value = 0
                     if name == "vertical_mixing":
-                        value is False
+                        value = False
                     self.__dict__[name] = value
                     self.config_ptm[name]["value"] = value
 
@@ -360,9 +359,9 @@ class ParticleTrackingManager:
                 self.z = None
 
             # in case z is changed back after initialization
-            if name == "z":
+            if name == "z" and self.seed_seafloor:  # already checked that value is not None
                 self.logger.info(
-                    "setting `seed_seafloor` to False since now setting a non-None z value"
+                    "setting `seed_seafloor` from True to False since now setting a non-None z value"
                 )
                 self.seed_seafloor = False
 
@@ -378,7 +377,7 @@ class ParticleTrackingManager:
                 and self.lat is not None
             ):
 
-                if self.ocean_model != "TEST":
+                if self.ocean_model != "test":
                     rlon = self.reader_metadata("lon")
                     assert rlon.min() < self.lon < rlon.max()
                     rlat = self.reader_metadata("lat")
@@ -387,7 +386,7 @@ class ParticleTrackingManager:
             # if reader, lon, and lat set, check inputs
             if name == "has_added_reader" and value and self.start_time is not None:
 
-                if self.ocean_model != "TEST":
+                if self.ocean_model != "test":
                     assert self.reader_metadata("start_time") <= self.start_time
 
             # if reader, lon, and lat set, check inputs
@@ -407,9 +406,9 @@ class ParticleTrackingManager:
                 # duration and steps are always updated now that start_time and end_time are set
                 self.__dict__["duration"] = self.calc_duration()
                 self.__dict__["steps"] = self.calc_steps()
-            # elif name == "end_time" and self.start_time is not None:
-            #     self.__dict__["duration"] = self.calc_duration()
-            #     self.__dict__["steps"] = self.calc_steps()
+
+            if name == "ocean_model" and value not in _KNOWN_MODELS:
+                self.logger.info(f"ocean_model is not one of {_KNOWN_MODELS}.")
 
     def add_reader(self, **kwargs):
         """Here is where the model output is opened."""
@@ -428,7 +427,7 @@ class ParticleTrackingManager:
             if key is not None:
                 self.__setattr__(self, f"{key}", key)
 
-        # if self.ocean_model != "TEST" and not self.has_added_reader:
+        # if self.ocean_model != "test" and not self.has_added_reader:
         #     raise ValueError("first add reader with `manager.add_reader(**kwargs)`.")
 
         # have this check here so that all parameters aren't required until seeding

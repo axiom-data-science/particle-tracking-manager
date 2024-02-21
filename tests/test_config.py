@@ -55,23 +55,3 @@ def test_default_overrides():
         == m.show_config_model("steps")["value"]
         == 5
     )
-
-
-def test_horizontal_diffusivity_logic():
-    """Check logic for using default horizontal diff values for known models."""
-
-    m = ptm.OpenDriftModel()
-    m.ocean_model = "NWGOA"
-    assert m.horizontal_diffusivity == 150.0
-    m.ocean_model = "CIOFS"
-    assert m.horizontal_diffusivity == 10.0
-    
-    # or can overwrite it in this order
-    m.horizontal_diffusivity = 11
-    assert m.horizontal_diffusivity == 11.0
-
-    m.ocean_model = "CIOFS_NOW"
-    assert m.horizontal_diffusivity == 10.0
-
-    m = ptm.OpenDriftModel(ocean_model="NWGOA")
-    assert m.horizontal_diffusivity == 150.0

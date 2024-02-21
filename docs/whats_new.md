@@ -7,6 +7,7 @@
 * simplified handling of `horizontal_diffusivity` in `opendrift` model.
 * user can change `end_time`, `duration`, and `steps` and have the others update accordingly. Tests added to check this.
 * changed known model "CIOFS_now" to "CIOFSOP" to avoid upper/lower issues and include "OP" for "operational".
+* many more tests and improved behavior for attribute checks and updates
 
 
 ## v0.6.0 (February 15, 2024)

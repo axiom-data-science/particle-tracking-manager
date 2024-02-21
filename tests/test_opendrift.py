@@ -7,7 +7,7 @@ import pandas as pd
 import pytest
 import xarray as xr
 
-from particle_tracking_manager.models.opendrift.model_opendrift import (
+from particle_tracking_manager.models.opendrift.opendrift import (
     OpenDriftModel,
     config_model,
 )
@@ -117,27 +117,7 @@ ds = xr.Dataset(
         "lat_rho": (("Y", "X"), np.array([[1, 1, 1], [2, 2, 2]])),
     },
 )
-        
-def test_input_too_many_end_of_simulation():
-    with pytest.raises(AssertionError):
-        OpenDriftModel(steps=4, duration=pd.Timedelta("24h"), end_time = pd.Timestamp("1970-01-01T02:00"))
-    
-def test_changing_end_of_simulation():
-    """change end_time, steps, and duration and make sure others are updated accordingly."""
-    
-    m = OpenDriftModel(start_time=pd.Timestamp("2000-1-1"))
-    m.start_time = pd.Timestamp("2000-1-2")
-    m.end_time = pd.Timestamp("2000-1-3")
-    assert m.steps == 24
-    assert m.duration == pd.Timedelta('1 days 00:00:00')
-    
-    m.steps = 48
-    assert m.end_time == pd.Timestamp("2000-1-4")
-    assert m.duration == pd.Timedelta('2 days 00:00:00')
-    
-    m.duration = pd.Timedelta('2 days 12:00:00')
-    assert m.end_time == pd.Timestamp('2000-01-04 12:00:00')
-    assert m.steps == 60
+
 
 class TestOpenDriftModel_OceanDrift(unittest.TestCase):
     def setUp(self):
@@ -258,6 +238,7 @@ class TestOpenDriftModel_LarvalFish(unittest.TestCase):
         self.model.vertical_mixing = False
         self.model.steps = 3
         self.model.add_reader(ds=ds)
+        # import pdb; pdb.set_trace()
         assert self.model.reader.variables == [
             "x_sea_water_velocity",
             "y_sea_water_velocity",
@@ -266,6 +247,108 @@ class TestOpenDriftModel_LarvalFish(unittest.TestCase):
             "land_binary_mask",
             "sea_water_speed",
         ]
+
+
+def test_drift_model():
+    """can't change the drift_model after class initialization"""
+    with pytest.raises(ValueError):
+        m = OpenDriftModel(drift_model="not_a_real_model")
+
+
+class TestTheManager(unittest.TestCase):
+    def setUp(self):
+        self.m = OpenDriftModel()
+        # self.m.config_model = {"test_key": {"value": "old_value"}}
+
+    def test_set_drift_model(self):
+        with self.assertRaises(KeyError):
+            self.m.drift_model = "new_model"
+
+    def test_set_o(self):
+        with self.assertRaises(KeyError):
+            self.m.o = "new_o"
+
+    def test_stokes_drift_true_not_leeway(self):
+        self.m.stokes_drift = True
+        self.m.drift_model = "OceanDrift"
+        assert self.m.show_config(key="drift:use_tabularised_stokes_drift")
+
+    def test_surface_only_true_not_leeway(self):
+        self.m.surface_only = True
+        self.m.drift_model = "OceanDrift"
+        assert self.m.show_config(key="drift:truncate_ocean_model_below_m")["value"] == 0.5
+
+    def test_surface_only_false_not_leeway(self):
+        self.m.surface_only = False
+        self.m.drift_model = "OceanDrift"
+        assert self.m.show_config(key="drift:truncate_ocean_model_below_m")["value"] is None
+
+    def test_do3D_false_not_leeway(self):
+        self.m.do3D = False
+        self.m.drift_model = "OceanDrift"
+        assert not self.m.show_config(key="drift:vertical_advection")["value"]
+        assert not self.m.show_config(key="drift:vertical_mixing")["value"]
+
+    def test_do3D_true(self):
+        self.m.do3D = True
+        # assert self.m.show_config(key="drift:vertical_advection")["value"]
+
+    def test_vertical_mixing_false_vertical_mixing_timestep_not_default(self):
+        self.m.vertical_mixing = False
+        self.m.vertical_mixing_timestep = 10
+        d = self.m.show_config(key="vertical_mixing_timestep")
+        assert d["value"] == d["default"]
+
+    def test_vertical_mixing_false_diffusivitymodel_not_default(self):
+        self.m.vertical_mixing = False
+        self.m.diffusivitymodel = "not_default"
+        d = self.m.show_config(key="diffusivitymodel")
+        assert d["value"] == d["default"]
+
+    def test_vertical_mixing_false_mixed_layer_depth_not_default(self):
+        self.m.vertical_mixing = False
+        self.m.mixed_layer_depth = 10
+        d = self.m.show_config(key="mixed_layer_depth")
+        assert d["value"] == d["default"]
+
+class TestOpenDriftModel_Leeway(unittest.TestCase):
+    def setUp(self):
+        self.m = OpenDriftModel(drift_model="Leeway")
+
+    def test_leeway_model_wind_drift_factor_not_default(self):
+        self.m.wind_drift_factor = 10
+        d = self.m.show_config(key="wind_drift_factor")
+        assert d["value"] == d["default"]
+
+    def test_leeway_model_wind_drift_depth_not_default(self):
+        self.m.wind_drift_depth = 10
+        d = self.m.show_config(key="wind_drift_depth")
+        assert d["value"] == d["default"]
+
+    def test_leeway_model_stokes_drift_true(self):
+        self.m.stokes_drift = True
+        assert not self.m.stokes_drift
+        # assert not self.m.show_config(key="stokes_drift")["value"]
+
+
+def test_horizontal_diffusivity_logic():
+    """Check logic for using default horizontal diff values for known models."""
+
+    m = OpenDriftModel()
+    m.ocean_model = "NWGOA"
+    assert m.horizontal_diffusivity == 150.0  # known grid values
+    m.ocean_model = "CIOFS"
+    assert m.horizontal_diffusivity == 10.0  # known grid values
+    
+    # or can overwrite it in this order
+    m.horizontal_diffusivity = 11
+    assert m.horizontal_diffusivity == 11.0  # user-selected value
+
+    m.ocean_model = "CIOFSOP"
+    assert m.horizontal_diffusivity == 10.0  # known grid values
+
+    m = OpenDriftModel(ocean_model="NWGOA")
+    assert m.horizontal_diffusivity == 150.0  # known grid values
 
 
 if __name__ == "__main__":

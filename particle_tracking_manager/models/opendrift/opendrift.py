@@ -28,7 +28,7 @@ from ...the_manager import ParticleTrackingManager, _KNOWN_MODELS
 
 
 # Read OpenDrift configuration information
-loc = Path(__file__).parent / Path("opendrift_config.json")
+loc = Path(__file__).parent / Path("config.json")
 with open(loc, "r") as f:
     # Load the JSON file into a Python object
     config_model = json.load(f)
@@ -271,7 +271,9 @@ class OpenDriftModel(ParticleTrackingManager):
         # Set all attributes which will trigger some checks and changes in __setattr__
         # these will also update "value" in the config dict
         for key in sig.parameters.keys():
-            self.__setattr__(key, locals()[key])
+            # no need to run through for init if value is None (already set to None)
+            if locals()[key] is not None:
+                self.__setattr__(key, locals()[key])
             
     def calc_known_horizontal_diffusivity(self):
 
@@ -312,7 +314,7 @@ class OpenDriftModel(ParticleTrackingManager):
         self._update_config()
         
         if name in ["ocean_model", "horizontal_diffusivity"]:
-            
+
             # just set the value and move on if purposely setting a non-None value 
             # of horizontal_diffusivity; specifying this for clarity (already set 
             # value above).
@@ -322,12 +324,12 @@ class OpenDriftModel(ParticleTrackingManager):
             # in all other cases that ocean_model is a known model, want to use the 
             # grid-dependent value
             elif self.ocean_model in _KNOWN_MODELS:
+                print(name, value)
                 self.logger.info(
-                    "overriding horizontal_diffusivity parameter with one tuned to reader model"
+                    "Setting horizontal_diffusivity parameter to one tuned to reader model"
                 )
 
                 hdiff = self.calc_known_horizontal_diffusivity()
-
                 # when editing the __dict__ directly have to also update config_model
                 self.__dict__["horizontal_diffusivity"] = hdiff
                 self.config_model["horizontal_diffusivity"]["value"] = hdiff
@@ -376,68 +378,64 @@ class OpenDriftModel(ParticleTrackingManager):
         elif name == "do3D" and value:
             self.o.set_config("drift:vertical_advection", True)
 
-        # Make sure vertical_mixing_timestep equal to default value if vertical_mixing False
-        # same for diffusivitymodel and mixed_layer_depth
-        if not self.vertical_mixing:
-            if (
-                self.vertical_mixing_timestep
-                != self.show_config(key="vertical_mixing_timestep")["default"]
-            ):
+        # Make sure vertical_mixing_timestep equals default value if vertical_mixing False            
+        if name in ["vertical_mixing", "vertical_mixing_timestep"]:
+            vmtdef = self.config_model["vertical_mixing_timestep"]["default"]
+            if not self.vertical_mixing and self.vertical_mixing_timestep != vmtdef and self.vertical_mixing_timestep is not None:
                 self.logger.info(
-                    "`vertical_mixing_timestep` is not used if `vertical_mixing` is False, resetting value to default and not using."
+                    "vertical_mixing is False, so resetting value of vertical_mixing_timestep to default and not using."
                 )
-                self.vertical_mixing_timestep = self.show_config(
-                    key="vertical_mixing_timestep"
-                )["default"]
-            if (
-                self.diffusivitymodel
-                != self.show_config(key="diffusivitymodel")["default"]
-            ):
+                self.__dict__["vertical_mixing_timestep"] = vmtdef
+                self.config_model["vertical_mixing_timestep"]["value"] = vmtdef
+            
+        # Make sure diffusivitymodel equals default value if vertical_mixing False
+        if name in ["vertical_mixing", "diffusivitymodel"]:
+            dmodeldef = self.config_model["diffusivitymodel"]["default"]
+            if not self.vertical_mixing and self.diffusivitymodel != dmodeldef and self.diffusivitymodel is not None:
                 self.logger.info(
-                    "`diffusivitymodel` is not used if `vertical_mixing` is False, resetting value to default and not using."
+                    "vertical_mixing is False, so resetting value of diffusivitymodel to default and not using."
                 )
-                self.diffusivitymodel = self.show_config(key="diffusivitymodel")[
-                    "default"
-                ]
-            if (
-                self.mixed_layer_depth
-                != self.show_config(key="mixed_layer_depth")["default"]
-            ):
+                self.__dict__["diffusivitymodel"] = dmodeldef
+                self.config_model["diffusivitymodel"]["value"] = dmodeldef
+        
+        # Make sure mixed_layer_depth equals default value if vertical_mixing False
+        if name in ["vertical_mixing", "mixed_layer_depth"]:
+            mlddef = self.config_model["mixed_layer_depth"]["default"]
+            if not self.vertical_mixing and self.mixed_layer_depth != mlddef and self.mixed_layer_depth is not None:
                 self.logger.info(
-                    "`mixed_layer_depth` is not used if `vertical_mixing` is False, resetting value to default and not using."
+                    "vertical_mixing is False, so resetting value of mixed_layer_depth to default and not using."
                 )
-                self.mixed_layer_depth = self.show_config(key="mixed_layer_depth")[
-                    "default"
-                ]
-
-        # make sure user isn't try to use Leeway and "wind_drift_factor", "stokes_drift",
-        # "wind_drift_depth" at the same time
-        if self.drift_model == "Leeway":
-            if (
-                self.wind_drift_factor
-                != self.show_config(key="wind_drift_factor")["default"]
-            ):
+                self.__dict__["mixed_layer_depth"] = mlddef
+                self.config_model["mixed_layer_depth"]["value"] = mlddef
+                
+        # make sure user isn't try to use Leeway and "wind_drift_factor" at the same time
+        if name in ["drift_model", "wind_drift_factor"]:
+            mdfdef = self.config_model["wind_drift_factor"]["default"]
+            if self.drift_model == "Leeway" and self.wind_drift_factor != mdfdef and self.wind_drift_factor is not None:
                 self.logger.info(
-                    "wind_drift_factor cannot be used with Leeway model, resetting value to default and not using."
+                    "wind_drift_factor cannot be used with Leeway model, so resetting value to default and not using."
                 )
-                self.wind_drift_factor = self.show_config(key="wind_drift_factor")[
-                    "default"
-                ]
-            if (
-                self.wind_drift_depth
-                != self.show_config(key="wind_drift_depth")["default"]
-            ):
+                self.__dict__["wind_drift_factor"] = mdfdef
+                self.config_model["wind_drift_factor"]["value"] = mdfdef
+                
+        # make sure user isn't try to use Leeway and "wind_drift_depth" at the same time
+        if name in ["drift_model", "wind_drift_depth"]:
+            mdddef = self.config_model["wind_drift_depth"]["default"]
+            if self.drift_model == "Leeway" and self.wind_drift_depth != mdddef and self.wind_drift_depth is not None:
                 self.logger.info(
-                    "wind_drift_depth cannot be used with Leeway model, resetting value to default and not using."
+                    "wind_drift_depth cannot be used with Leeway model, so resetting value to default and not using."
                 )
-                self.wind_drift_depth = self.show_config(key="wind_drift_depth")[
-                    "default"
-                ]
-            if self.stokes_drift:
+                self.__dict__["wind_drift_depth"] = mdddef
+                self.config_model["wind_drift_depth"]["value"] = mdddef
+        
+        # make sure user isn't try to use Leeway and "stokes_drift" at the same time
+        if name in ["drift_model", "stokes_drift"]:
+            if self.drift_model == "Leeway" and self.stokes_drift:
                 self.logger.info(
-                    "stokes_drift cannot be used with Leeway model, changing to False."
+                    "stokes_drift cannot be used with Leeway model, so changing to False."
                 )
-                self.stokes_drift = False
+                self.__dict__["stokes_drift"] = False
+                self.config_model["stokes_drift"]["value"] = False
 
         self._update_config()
 
@@ -598,7 +596,7 @@ class OpenDriftModel(ParticleTrackingManager):
                     loc_local = "/mnt/depot/data/packrat/prod/noaa/coops/ofs/aws_ciofs/processed/aws_ciofs_kerchunk.parq"
                     loc_remote = "https://thredds.aoos.org/thredds/dodsC/AWS_CIOFS.nc"
 
-            elif self.ocean_model == "USER_INPUT":
+            elif self.ocean_model == "user_input":
 
                 # check for case that self.use_static_masks False (which is the default)
                 # but user input doesn't have wetdry masks
