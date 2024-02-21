@@ -1,5 +1,11 @@
 # What's New
 
+## v0.7.1 (February 21, 2024)
+
+* Small fix to some attributes to be less verbose
+* Fix setup.cfg to have correct config path since name changed
+
+
 ## v0.7.0 (February 21, 2024)
 
 * Now initialize all class attributes with None and removed usage of `hasattr` which simplifies and clarifies some code.
