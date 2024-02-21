@@ -5,6 +5,7 @@ import json
 import logging
 
 from pathlib import Path
+from typing import Optional, Union
 
 import appdirs
 
@@ -20,7 +21,7 @@ from opendrift.models.openoil import OpenOil
 from opendrift.readers import reader_ROMS_native
 
 from ...cli import is_None
-from ...the_manager import ParticleTrackingManager, _KNOWN_MODELS
+from ...the_manager import _KNOWN_MODELS, ParticleTrackingManager
 
 
 # from .cli import is_None
@@ -144,12 +145,17 @@ class OpenDriftModel(ParticleTrackingManager):
 
     logger: logging.Logger
     log: str
+    loglevel: str
     vertical_mixing_timestep: float
     diffusivitymodel: str
     mixed_layer_depth: float
     wind_drift_factor: float
     wind_drift_depth: float
     stokes_drift: bool
+    drift_model: str
+    o: Union[OceanDrift, Leeway, LarvalFish, OpenOil]
+    horizontal_diffusivity: Optional[float]
+    config_model: dict
 
     def __init__(
         self,
@@ -214,10 +220,10 @@ class OpenDriftModel(ParticleTrackingManager):
         from inspect import signature
 
         sig = signature(OpenDriftModel)
-        
+
         # initialize all class attributes to None without triggering the __setattr__ method
         # which does a bunch more stuff
-        for key in sig.parameters.keys():        
+        for key in sig.parameters.keys():
             self.__dict__[key] = None
 
         self.__dict__["config_model"] = config_model
@@ -274,8 +280,9 @@ class OpenDriftModel(ParticleTrackingManager):
             # no need to run through for init if value is None (already set to None)
             if locals()[key] is not None:
                 self.__setattr__(key, locals()[key])
-            
+
     def calc_known_horizontal_diffusivity(self):
+        """Calculate horizontal diffusivity based on known ocean_model."""
 
         # dx: approximate horizontal grid resolution (meters), used to calculate horizontal diffusivity
         if self.ocean_model == "NWGOA":
@@ -295,9 +302,8 @@ class OpenDriftModel(ParticleTrackingManager):
 
         # don't allow drift_model to be reset, have to reinitialize object instead
         # check for type of m.o and drift_model matching to enforce this
-        if (
-            (name in ["o", "drift_model"])
-            and (self.drift_model not in str(type(self.o)))
+        if (name in ["o", "drift_model"]) and (
+            self.drift_model not in str(type(self.o))
         ):
             raise KeyError(
                 "Can't overwrite `drift_model`; instead initialize OpenDriftModel with desired drift_model."
@@ -312,16 +318,18 @@ class OpenDriftModel(ParticleTrackingManager):
         ):
             self.config_model[name]["value"] = value
         self._update_config()
-        
+
         if name in ["ocean_model", "horizontal_diffusivity"]:
 
-            # just set the value and move on if purposely setting a non-None value 
-            # of horizontal_diffusivity; specifying this for clarity (already set 
+            # just set the value and move on if purposely setting a non-None value
+            # of horizontal_diffusivity; specifying this for clarity (already set
             # value above).
             if name == "horizontal_diffusivity" and value is not None:
-                self.logger.info(f"Setting horizontal_diffusivity to user-selected value {value}.")
-            
-            # in all other cases that ocean_model is a known model, want to use the 
+                self.logger.info(
+                    f"Setting horizontal_diffusivity to user-selected value {value}."
+                )
+
+            # in all other cases that ocean_model is a known model, want to use the
             # grid-dependent value
             elif self.ocean_model in _KNOWN_MODELS:
                 print(name, value)
@@ -336,10 +344,13 @@ class OpenDriftModel(ParticleTrackingManager):
 
             # if user not using a known ocean_model, change horizontal_diffusivity from None to 0
             # so it has a value. User can subsequently overwrite it too.
-            elif self.ocean_model not in _KNOWN_MODELS and self.horizontal_diffusivity is None:
+            elif (
+                self.ocean_model not in _KNOWN_MODELS
+                and self.horizontal_diffusivity is None
+            ):
 
                 self.logger.info(
-                    """Since ocean_model is user-input, changing horizontal_diffusivity parameter from None to 0.0. 
+                    """Since ocean_model is user-input, changing horizontal_diffusivity parameter from None to 0.0.
                     You can also set it to a specific value with `m.horizontal_diffusivity=[number]`."""
                 )
 
@@ -369,65 +380,81 @@ class OpenDriftModel(ParticleTrackingManager):
                 self.o.set_config("drift:truncate_ocean_model_below_m", None)
 
         # Leeway doesn't have this option available
-        if (
-            name == "do3D"
-            and not value
-            and self.drift_model != "Leeway"
-        ):
+        if name == "do3D" and not value and self.drift_model != "Leeway":
             self.o.disable_vertical_motion()
         elif name == "do3D" and value:
             self.o.set_config("drift:vertical_advection", True)
 
-        # Make sure vertical_mixing_timestep equals default value if vertical_mixing False            
+        # Make sure vertical_mixing_timestep equals default value if vertical_mixing False
         if name in ["vertical_mixing", "vertical_mixing_timestep"]:
             vmtdef = self.config_model["vertical_mixing_timestep"]["default"]
-            if not self.vertical_mixing and self.vertical_mixing_timestep != vmtdef and self.vertical_mixing_timestep is not None:
+            if (
+                not self.vertical_mixing
+                and self.vertical_mixing_timestep != vmtdef
+                and self.vertical_mixing_timestep is not None
+            ):
                 self.logger.info(
                     "vertical_mixing is False, so resetting value of vertical_mixing_timestep to default and not using."
                 )
                 self.__dict__["vertical_mixing_timestep"] = vmtdef
                 self.config_model["vertical_mixing_timestep"]["value"] = vmtdef
-            
+
         # Make sure diffusivitymodel equals default value if vertical_mixing False
         if name in ["vertical_mixing", "diffusivitymodel"]:
             dmodeldef = self.config_model["diffusivitymodel"]["default"]
-            if not self.vertical_mixing and self.diffusivitymodel != dmodeldef and self.diffusivitymodel is not None:
+            if (
+                not self.vertical_mixing
+                and self.diffusivitymodel != dmodeldef
+                and self.diffusivitymodel is not None
+            ):
                 self.logger.info(
                     "vertical_mixing is False, so resetting value of diffusivitymodel to default and not using."
                 )
                 self.__dict__["diffusivitymodel"] = dmodeldef
                 self.config_model["diffusivitymodel"]["value"] = dmodeldef
-        
+
         # Make sure mixed_layer_depth equals default value if vertical_mixing False
         if name in ["vertical_mixing", "mixed_layer_depth"]:
             mlddef = self.config_model["mixed_layer_depth"]["default"]
-            if not self.vertical_mixing and self.mixed_layer_depth != mlddef and self.mixed_layer_depth is not None:
+            if (
+                not self.vertical_mixing
+                and self.mixed_layer_depth != mlddef
+                and self.mixed_layer_depth is not None
+            ):
                 self.logger.info(
                     "vertical_mixing is False, so resetting value of mixed_layer_depth to default and not using."
                 )
                 self.__dict__["mixed_layer_depth"] = mlddef
                 self.config_model["mixed_layer_depth"]["value"] = mlddef
-                
+
         # make sure user isn't try to use Leeway and "wind_drift_factor" at the same time
         if name in ["drift_model", "wind_drift_factor"]:
             mdfdef = self.config_model["wind_drift_factor"]["default"]
-            if self.drift_model == "Leeway" and self.wind_drift_factor != mdfdef and self.wind_drift_factor is not None:
+            if (
+                self.drift_model == "Leeway"
+                and self.wind_drift_factor != mdfdef
+                and self.wind_drift_factor is not None
+            ):
                 self.logger.info(
                     "wind_drift_factor cannot be used with Leeway model, so resetting value to default and not using."
                 )
                 self.__dict__["wind_drift_factor"] = mdfdef
                 self.config_model["wind_drift_factor"]["value"] = mdfdef
-                
+
         # make sure user isn't try to use Leeway and "wind_drift_depth" at the same time
         if name in ["drift_model", "wind_drift_depth"]:
             mdddef = self.config_model["wind_drift_depth"]["default"]
-            if self.drift_model == "Leeway" and self.wind_drift_depth != mdddef and self.wind_drift_depth is not None:
+            if (
+                self.drift_model == "Leeway"
+                and self.wind_drift_depth != mdddef
+                and self.wind_drift_depth is not None
+            ):
                 self.logger.info(
                     "wind_drift_depth cannot be used with Leeway model, so resetting value to default and not using."
                 )
                 self.__dict__["wind_drift_depth"] = mdddef
                 self.config_model["wind_drift_depth"]["value"] = mdddef
-        
+
         # make sure user isn't try to use Leeway and "stokes_drift" at the same time
         if name in ["drift_model", "stokes_drift"]:
             if self.drift_model == "Leeway" and self.stokes_drift:
@@ -461,6 +488,15 @@ class OpenDriftModel(ParticleTrackingManager):
             Mapping of model variable names to standard names.
         """
 
+        if (
+            self.ocean_model not in _KNOWN_MODELS
+            and self.ocean_model != "test"
+            and ds is None
+        ):
+            raise ValueError(
+                "ocean_model must be a known model or user must input a Dataset."
+            )
+
         standard_name_mapping = standard_name_mapping or {}
 
         if ds is not None:
@@ -469,7 +505,7 @@ class OpenDriftModel(ParticleTrackingManager):
             else:
                 self.ocean_model = name
 
-        if self.ocean_model.upper() == "TEST":
+        if self.ocean_model == "test":
             pass
             # oceanmodel_lon0_360 = True
             # loc = "test"
@@ -590,8 +626,12 @@ class OpenDriftModel(ParticleTrackingManager):
 
                 elif self.ocean_model.upper() == "CIOFSOP":
 
-                    standard_name_mapping.update({"u_eastward": "x_sea_water_velocity",
-                                                  "v_northward": "y_sea_water_velocity"})
+                    standard_name_mapping.update(
+                        {
+                            "u_eastward": "x_sea_water_velocity",
+                            "v_northward": "y_sea_water_velocity",
+                        }
+                    )
 
                     loc_local = "/mnt/depot/data/packrat/prod/noaa/coops/ofs/aws_ciofs/processed/aws_ciofs_kerchunk.parq"
                     loc_remote = "https://thredds.aoos.org/thredds/dodsC/AWS_CIOFS.nc"
@@ -635,7 +675,7 @@ class OpenDriftModel(ParticleTrackingManager):
             if self.ocean_model == "NWGOA" and not self.use_static_masks:
                 ds["wetdry_mask_rho"] = (~ds.zeta.isnull()).astype(int)
                 ds.drop_vars("zeta", inplace=True)
-                
+
             # For CIOFSOP need to rename u/v to have "East" and "North" in the variable names
             # so they aren't rotated in the ROMS reader (the standard names have to be x/y not east/north)
             elif self.ocean_model == "CIOFSOP":
@@ -643,9 +683,7 @@ class OpenDriftModel(ParticleTrackingManager):
                 # grid = xr.open_dataset("/mnt/vault/ciofs/HINDCAST/nos.ciofs.romsgrid.nc")
                 # ds["angle"] = grid["angle"]
 
-            units_date = pd.Timestamp(
-                ds.ocean_time.attrs["units"].split("since ")[1]
-            )
+            units_date = pd.Timestamp(ds.ocean_time.attrs["units"].split("since ")[1])
             # use reader start time if not otherwise input
             if self.start_time is None:
                 self.logger.info("setting reader start_time as simulation start_time")
@@ -733,7 +771,9 @@ class OpenDriftModel(ParticleTrackingManager):
         """Run the drifters!"""
 
         if self.steps is None and self.duration is None and self.end_time is None:
-            raise ValueError("Exactly one of steps, duration, or end_time must be input and not be None.")
+            raise ValueError(
+                "Exactly one of steps, duration, or end_time must be input and not be None."
+            )
 
         if self.run_forward:
             timedir = 1

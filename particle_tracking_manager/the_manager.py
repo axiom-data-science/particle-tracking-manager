@@ -13,11 +13,12 @@ import pandas as pd
 
 from .cli import is_None
 
+
 _KNOWN_MODELS = [
-                "NWGOA",
-                "CIOFS",
-                "CIOFSOP",
-            ]
+    "NWGOA",
+    "CIOFS",
+    "CIOFSOP",
+]
 
 # Read PTM configuration information
 
@@ -147,6 +148,9 @@ class ParticleTrackingManager:
     duration: Optional[datetime.timedelta]
     end_time: Optional[datetime.datetime]
     timedir: int
+    config_ptm: dict
+    config_model: Optional[dict]
+    seed_seafloor: bool
 
     def __init__(
         self,
@@ -192,10 +196,10 @@ class ParticleTrackingManager:
             assert steps is None and end_time is None
         if end_time is not None:
             assert steps is None and duration is None
-        
+
         # initialize all class attributes to None without triggering the __setattr__ method
         # which does a bunch more stuff
-        for key in sig.parameters.keys():        
+        for key in sig.parameters.keys():
             self.__dict__[key] = None
 
         # mode flags
@@ -219,16 +223,21 @@ class ParticleTrackingManager:
     # calculate other simulation-length parameters when one is input
     # this way whichever parameter is input last overwrites the other parameters
     # that could have been input earlier
-    # also have to check for the special case that start_time is being updated to be the 
-    # initial model output when the reader is set and in that case also need to update 
+    # also have to check for the special case that start_time is being updated to be the
+    # initial model output when the reader is set and in that case also need to update
     # end_time based on whichever of steps or duration is available.
     def calc_end_time(self, changed_variable):
-        
-        if changed_variable == "steps" or (self.steps is not None and changed_variable == "start_time"):
+        """Calculate end time based on other simulation length parameters."""
+
+        if changed_variable == "steps" or (
+            self.steps is not None and changed_variable == "start_time"
+        ):
             return self.start_time + self.timedir * self.steps * datetime.timedelta(
                 seconds=self.time_step
             )
-        elif changed_variable == "duration" or (self.duration is not None and changed_variable == "start_time"):
+        elif changed_variable == "duration" or (
+            self.duration is not None and changed_variable == "start_time"
+        ):
             return self.start_time + self.timedir * self.duration
         else:
             return self.end_time
@@ -240,14 +249,16 @@ class ParticleTrackingManager:
         #     return self.start_time + self.timedir * self.duration
         # else:
         #     return self.end_time
-        
+
     def calc_duration(self):
+        """Calculate duration based on end_time and start_time."""
         if self.end_time is not None and self.start_time is not None:
             return abs(self.end_time - self.start_time)
         else:
             return self.duration
-    
+
     def calc_steps(self):
+        """Calculate steps based on duration and time_step."""
         if self.duration is not None and self.start_time is not None:
             return self.duration / datetime.timedelta(seconds=self.time_step)
         else:
@@ -260,9 +271,7 @@ class ParticleTrackingManager:
         self.__dict__[name] = value
 
         # create/update "value" keyword in config to keep it up to date
-        if (
-            name in self.config_ptm.keys()
-        ):
+        if name in self.config_ptm.keys():
             self.config_ptm[name]["value"] = value
 
         # create/update "value" keyword in model config to keep it up to date
@@ -288,7 +297,9 @@ class ParticleTrackingManager:
                     self.__dict__[name] = pd.Timestamp(value)
                     self.config_ptm[name]["value"] = pd.Timestamp(value)
                 else:
-                    raise TypeError("start_time must be a string, datetime, or Timestamp.")
+                    raise TypeError(
+                        "start_time must be a string, datetime, or Timestamp."
+                    )
 
             # # make sure ocean_model name uppercase
             # if name == "ocean_model":
@@ -297,10 +308,8 @@ class ParticleTrackingManager:
 
             # check start_time relative to ocean_model selection
             if name in ["ocean_model", "start_time"]:
-                if (
-                    self.start_time is not None
-                    and self.ocean_model is not None
-                ):
+                if self.start_time is not None and self.ocean_model is not None:
+                    assert isinstance(self.start_time, pd.Timestamp)
                     if self.ocean_model == "NWGOA":
                         assert overall_start_time <= self.start_time <= nwgoa_end_time
                     elif self.ocean_model == "CIOFS":
@@ -344,10 +353,7 @@ class ParticleTrackingManager:
                     self.config_ptm[name]["value"] = value
 
                 # if not 3D turn off vertical_mixing
-                if (
-                    not self.do3D
-                    and self.vertical_mixing
-                ):
+                if not self.do3D and self.vertical_mixing:
                     self.logger.info("turning off vertical_mixing since do3D is False")
                     self.__dict__["vertical_mixing"] = False
                     self.config_ptm["vertical_mixing"]["value"] = False
@@ -359,7 +365,9 @@ class ParticleTrackingManager:
                 self.z = None
 
             # in case z is changed back after initialization
-            if name == "z" and self.seed_seafloor:  # already checked that value is not None
+            if (
+                name == "z" and self.seed_seafloor
+            ):  # already checked that value is not None
                 self.logger.info(
                     "setting `seed_seafloor` from True to False since now setting a non-None z value"
                 )
@@ -400,7 +408,10 @@ class ParticleTrackingManager:
                 else:
                     self.__dict__["timedir"] = -1
 
-            if name in ["start_time", "end_time", "steps", "duration"] and self.start_time is not None:
+            if (
+                name in ["start_time", "end_time", "steps", "duration"]
+                and self.start_time is not None
+            ):
                 # the behavior in calc_end_time changes depending on which variable has been updated
                 self.__dict__["end_time"] = self.calc_end_time(name)
                 # duration and steps are always updated now that start_time and end_time are set
@@ -460,8 +471,10 @@ class ParticleTrackingManager:
 
         if not self.has_run_seeding:
             raise KeyError("first run seeding with `manager.seed()`.")
-        
-        self.logger.info(f"start_time: {self.start_time}, end_time: {self.end_time}, steps: {self.steps}, duration: {self.duration}")
+
+        self.logger.info(
+            f"start_time: {self.start_time}, end_time: {self.end_time}, steps: {self.steps}, duration: {self.duration}"
+        )
 
         # need end time info
         assert (

@@ -129,7 +129,14 @@ class TestOpenDriftModel_OceanDrift(unittest.TestCase):
         # need to input steps, duration, or end_time but don't here
         with pytest.raises(ValueError):
             self.model.add_reader(ds=ds)
- 
+
+    def test_ocean_model_not_known_ds_None(self):
+        self.model.ocean_model = "wrong_name"
+        self.model.ds = None  # this is the default
+        # need to input steps, duration, or end_time but don't here
+        with pytest.raises(ValueError):
+            self.model.add_reader(ds=ds)
+
     def test_drop_vars_do3D_false(self):
         self.model.do3D = False
         self.use_static_masks = False
@@ -276,12 +283,17 @@ class TestTheManager(unittest.TestCase):
     def test_surface_only_true_not_leeway(self):
         self.m.surface_only = True
         self.m.drift_model = "OceanDrift"
-        assert self.m.show_config(key="drift:truncate_ocean_model_below_m")["value"] == 0.5
+        assert (
+            self.m.show_config(key="drift:truncate_ocean_model_below_m")["value"] == 0.5
+        )
 
     def test_surface_only_false_not_leeway(self):
         self.m.surface_only = False
         self.m.drift_model = "OceanDrift"
-        assert self.m.show_config(key="drift:truncate_ocean_model_below_m")["value"] is None
+        assert (
+            self.m.show_config(key="drift:truncate_ocean_model_below_m")["value"]
+            is None
+        )
 
     def test_do3D_false_not_leeway(self):
         self.m.do3D = False
@@ -311,6 +323,7 @@ class TestTheManager(unittest.TestCase):
         d = self.m.show_config(key="mixed_layer_depth")
         assert d["value"] == d["default"]
 
+
 class TestOpenDriftModel_Leeway(unittest.TestCase):
     def setUp(self):
         self.m = OpenDriftModel(drift_model="Leeway")
@@ -339,7 +352,7 @@ def test_horizontal_diffusivity_logic():
     assert m.horizontal_diffusivity == 150.0  # known grid values
     m.ocean_model = "CIOFS"
     assert m.horizontal_diffusivity == 10.0  # known grid values
-    
+
     # or can overwrite it in this order
     m.horizontal_diffusivity = 11
     assert m.horizontal_diffusivity == 11.0  # user-selected value
