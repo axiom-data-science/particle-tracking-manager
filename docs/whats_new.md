@@ -1,6 +1,6 @@
 # What's New
 
-## Unreleased
+## v0.7.0 (February 21, 2024)
 
 * Now initialize all class attributes with None and removed usage of `hasattr` which simplifies and clarifies some code.
 * Improved handling of `start_time`, `end_time`, `duration`, and `steps` in `manager.py` which fixed a bug in which users couldn't input `start_time` and have the simulation run successfully.
