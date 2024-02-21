@@ -328,36 +328,47 @@ class ParticleTrackingManager:
                     # this is not a user-defined option
                     if -180 < self.lon < 0:
                         self.__dict__["lon"] += 360
+                        self.config_ptm["lon"]["value"] = False
 
             if name == "surface_only" and value:
                 self.logger.info(
-                    "overriding values for `do3D`, `z`, and `vertical_mixing` because `surface_only` True"
+                    "Overriding values for do3D, z, and vertical_mixing because surface_only is True (to False, 0, False)."
                 )
                 self.do3D = False
                 self.z = 0
                 self.vertical_mixing = False
 
             # in case any of these are reset by user after surface_only is already set
-            if name in ["do3D", "z", "vertical_mixing"]:
-                if self.surface_only:
-                    self.logger.info(
-                        "overriding values for `do3D`, `z`, and `vertical_mixing` because `surface_only` True"
-                    )
-                    if name == "do3D":
-                        value = False
-                    if name == "z":
-                        value = 0
-                    if name == "vertical_mixing":
-                        value = False
-                    self.__dict__[name] = value
-                    self.config_ptm[name]["value"] = value
+            # if surface_only is True, do3D must be False
+            if name == "do3D" and value and self.surface_only:
+                self.logger.info(
+                    "do3D must be False because surface_only is True. Setting do3D to False."
+                )
+                self.__dict__["do3D"] = False
+                self.config_ptm["do3D"]["value"] = False
 
-                # if not 3D turn off vertical_mixing
+            # if surface_only is True, z must be 0
+            if name == "z" and value != 0 and self.surface_only:
+                self.logger.info(
+                    "z must be 0 because surface_only is True. Setting z to 0."
+                )
+                self.__dict__["z"] = 0
+                self.config_ptm["z"]["value"] = 0
+
+            # if surface_only is True, vertical_mixing must be False
+            if name == "vertical_mixing" and value and self.surface_only:
+                self.logger.info(
+                    "vertical_mixing must be False because surface_only is True. Setting vertical_mixing to False."
+                )
+                self.__dict__["vertical_mixing"] = False
+                self.config_ptm["vertical_mixing"]["value"] = False
+
+            # if not 3D turn off vertical_mixing
+            if name in ["do3D", "vertical_mixing"]:
                 if not self.do3D and self.vertical_mixing:
-                    self.logger.info("turning off vertical_mixing since do3D is False")
+                    self.logger.info("Turning off vertical_mixing since do3D is False")
                     self.__dict__["vertical_mixing"] = False
                     self.config_ptm["vertical_mixing"]["value"] = False
-                    # self.vertical_mixing = False  # this is recursive
 
             # set z to None if seed_seafloor is True
             if name == "seed_seafloor" and value:
@@ -414,9 +425,12 @@ class ParticleTrackingManager:
             ):
                 # the behavior in calc_end_time changes depending on which variable has been updated
                 self.__dict__["end_time"] = self.calc_end_time(name)
+                self.config_ptm["end_time"]["value"] = self.calc_end_time(name)
                 # duration and steps are always updated now that start_time and end_time are set
                 self.__dict__["duration"] = self.calc_duration()
+                self.config_ptm["duration"]["value"] = self.calc_duration()
                 self.__dict__["steps"] = self.calc_steps()
+                self.config_ptm["steps"]["value"] = self.calc_steps()
 
             if name == "ocean_model" and value not in _KNOWN_MODELS:
                 self.logger.info(f"ocean_model is not one of {_KNOWN_MODELS}.")
