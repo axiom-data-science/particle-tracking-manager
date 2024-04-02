@@ -225,10 +225,10 @@ def test_input_too_many_end_of_simulation():
 
 def test_changing_end_of_simulation():
     """change end_time, steps, and duration
-    
+
     and make sure others are updated accordingly.
     This accounts for the default time_step of 300 seconds.
-    
+
     """
 
     m = ptm.OpenDriftModel(start_time=pd.Timestamp("2000-1-1"))
@@ -238,7 +238,7 @@ def test_changing_end_of_simulation():
     assert m.duration == pd.Timedelta("1 days 00:00:00")
 
     m.steps = 48
-    assert m.end_time == pd.Timestamp('2000-01-02 04:00:00')
+    assert m.end_time == pd.Timestamp("2000-01-02 04:00:00")
     assert m.duration == pd.Timedelta("0 days 04:00:00")
 
     m.duration = pd.Timedelta("2 days 12:00:00")

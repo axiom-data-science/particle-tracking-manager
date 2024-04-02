@@ -346,7 +346,6 @@ class OpenDriftModel(ParticleTrackingManager):
             # grid-dependent value
             elif self.ocean_model in _KNOWN_MODELS:
 
-
                 hdiff = self.calc_known_horizontal_diffusivity()
                 self.logger.info(
                     f"Setting horizontal_diffusivity parameter to one tuned to reader model of value {hdiff}."
@@ -397,14 +396,17 @@ class OpenDriftModel(ParticleTrackingManager):
             self.logger.info("do3D is False so disabling vertical motion.")
             self.o.disable_vertical_motion()
         elif name == "do3D" and not value and self.drift_model == "Leeway":
-            self.logger.info("do3D is False but drift_model is Leeway so doing nothing.")
+            self.logger.info(
+                "do3D is False but drift_model is Leeway so doing nothing."
+            )
 
         if name == "do3D" and value and self.drift_model != "Leeway":
             self.logger.info("do3D is True so turning on vertical advection.")
             self.o.set_config("drift:vertical_advection", True)
         elif name == "do3D" and value and self.drift_model == "Leeway":
-            self.logger.info("do3D is True but drift_model is Leeway so "
-                             "changing do3D to False.")
+            self.logger.info(
+                "do3D is True but drift_model is Leeway so " "changing do3D to False."
+            )
             self.do3D = False
 
         # Make sure vertical_mixing_timestep equals default value if vertical_mixing False
@@ -489,13 +491,21 @@ class OpenDriftModel(ParticleTrackingManager):
         # Add export variables for certain drift_model values
         # drift_model is always set initially only
         if name == "export_variables" and self.drift_model == "OpenOil":
-            oil_vars = ["mass_oil", "density", "mass_evaporated", "mass_dispersed", "mass_biodegraded", "viscosity", "water_fraction"]
-            self.__dict__["export_variables"]  += oil_vars
-            self.config_model["export_variables"]["value"]  += oil_vars
+            oil_vars = [
+                "mass_oil",
+                "density",
+                "mass_evaporated",
+                "mass_dispersed",
+                "mass_biodegraded",
+                "viscosity",
+                "water_fraction",
+            ]
+            self.__dict__["export_variables"] += oil_vars
+            self.config_model["export_variables"]["value"] += oil_vars
         elif name == "export_variables" and self.drift_model == "Leeway":
             vars = ["object_type"]
-            self.__dict__["export_variables"]  += vars
-            self.config_model["export_variables"]["value"]  += vars
+            self.__dict__["export_variables"] += vars
+            self.config_model["export_variables"]["value"] += vars
 
         self._update_config()
 
@@ -715,9 +725,13 @@ class OpenDriftModel(ParticleTrackingManager):
                 # ds["angle"] = grid["angle"]
 
             try:
-                units_date = pd.Timestamp(ds.ocean_time.attrs["units"].split("since ")[1])
+                units_date = pd.Timestamp(
+                    ds.ocean_time.attrs["units"].split("since ")[1]
+                )
             except KeyError:  # for remote
-                units_date = pd.Timestamp(ds.ocean_time.encoding["units"].split("since ")[0])
+                units_date = pd.Timestamp(
+                    ds.ocean_time.encoding["units"].split("since ")[0]
+                )
             # use reader start time if not otherwise input
             if self.start_time is None:
                 self.logger.info("setting reader start_time as simulation start_time")
@@ -822,7 +836,10 @@ class OpenDriftModel(ParticleTrackingManager):
 
         self.o._config = config_input_to_opendrift  # only OpenDrift config
 
-        output_file = self.output_file or f"output-results_{datetime.datetime.utcnow():%Y-%m-%dT%H%M:%SZ}.nc"
+        output_file = (
+            self.output_file
+            or f"output-results_{datetime.datetime.utcnow():%Y-%m-%dT%H%M:%SZ}.nc"
+        )
 
         self.o.run(
             time_step=timedir * self.time_step,
@@ -940,7 +957,7 @@ class OpenDriftModel(ParticleTrackingManager):
 
         return self.o.export_variables
 
-    def drift_model_config(self, ptm_level=[1,2,3], prefix=""):
+    def drift_model_config(self, ptm_level=[1, 2, 3], prefix=""):
         """Show config for this drift model selection.
 
         This shows all PTM-controlled parameters for the OpenDrift
@@ -956,7 +973,13 @@ class OpenDriftModel(ParticleTrackingManager):
             prefix to search config for, only for OpenDrift parameters (not PTM).
         """
 
-        return [(key, value_dict["value"]) for key, value_dict in self.show_config(substring=":", ptm_level=ptm_level, level=[1,2,3], prefix=prefix).items() if "value" in value_dict]
+        return [
+            (key, value_dict["value"])
+            for key, value_dict in self.show_config(
+                substring=":", ptm_level=ptm_level, level=[1, 2, 3], prefix=prefix
+            ).items()
+            if "value" in value_dict
+        ]
 
     def get_configspec(self, prefix, substring, excludestring, level, ptm_level):
         """Copied from OpenDrift, then modified."""
