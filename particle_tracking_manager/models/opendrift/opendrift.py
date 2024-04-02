@@ -329,7 +329,7 @@ class OpenDriftModel(ParticleTrackingManager):
             elif "CIOFS" in value:
                 self.Dcrit = 0.3
             else:
-                self.Dcrit = 0.0
+                self.Dcrit = 0.1
             self.logger.info(f"For ocean_model {value}, setting Dcrit to {self.Dcrit}.")
 
         if name in ["ocean_model", "horizontal_diffusivity"]:
@@ -492,6 +492,10 @@ class OpenDriftModel(ParticleTrackingManager):
             oil_vars = ["mass_oil", "density", "mass_evaporated", "mass_dispersed", "mass_biodegraded", "viscosity", "water_fraction"]
             self.__dict__["export_variables"]  += oil_vars
             self.config_model["export_variables"]["value"]  += oil_vars
+        elif name == "export_variables" and self.drift_model == "Leeway":
+            vars = ["object_type"]
+            self.__dict__["export_variables"]  += vars
+            self.config_model["export_variables"]["value"]  += vars
 
         self._update_config()
 
