@@ -67,19 +67,19 @@
             "float",
             "datetime.timedelta"
         ],
-        "default": 3600,
+        "default": 300,
         "min": 1,
         "max": 86400,
         "units": "seconds",
         "description": "Interval between particles updates, in seconds or as timedelta.",
-        "ptm_level": 1
+        "ptm_level": 2
     },
     "time_step_output": {
         "type": [
             "float",
             "datetime.timedelta"
         ],
-        "default": "None",
+        "default": 3600,
         "min": 1,
         "max": 604800,
         "units": "seconds",
@@ -143,7 +143,7 @@
         "ptm_level": 1
     },
     "vertical_mixing": {
-        "default": false,
+        "default": true,
         "od_mapping": "drift:vertical_mixing",
         "ptm_level": 1
     },
@@ -162,5 +162,11 @@
         "default": false,
         "ptm_level": 2,
         "description": "Set to True to use static masks for known models instead of wetdry masks. If False, the masks are change in time."
+    },
+    "output_file": {
+        "type": "str",
+        "default": "None",
+        "description": "Name of file to write output to. If None, default name is used.",
+        "ptm_level": 3
     }
 }
