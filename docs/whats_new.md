@@ -1,5 +1,18 @@
 # What's New
 
+## v0.8.0 (April 2, 2024)
+
+* `time_step_output` behavior has changed — 1 hour by default
+* `time_step` is now 5 min by default
+* added `Dcrit` parameter for accurately finding where drifters are stranded in tidal flats
+* `vertical_mixing` is True by default now
+* added seafloor_action option
+* fixed some Leeway/3D handling and log messaging
+* export_variables are specific to drift_model as needed
+* do not drop zeta anymore since used in opendrift
+* output_file is now an option
+
+
 ## v0.7.1 (February 21, 2024)
 
 * Small fix to some attributes to be less verbose
