@@ -71,10 +71,10 @@ class ParticleTrackingManager:
     run_forward : bool, optional
         True to run forward in time, False to run backward, by default True
     time_step : int, optional
-        Time step in seconds, options >0, <86400 (1 day in seconds), by default 3600
-    time_step_output : int, optional
-        How often to output model output, in seconds. Should be a multiple of time_step.
-        By default will take the value of time_step (this change occurs in the model).
+        Time step in seconds, options >0, <86400 (1 day in seconds), by default 300.
+    time_step_output : int, Timedelta, optional
+        How often to output model output. Should be a multiple of time_step.
+        By default 3600.
     steps : int, optional
         Number of time steps to run in simulation. Options >0.
         steps, end_time, or duration must be input by user. By default steps is 3 and
@@ -129,6 +129,8 @@ class ParticleTrackingManager:
         with a user-input ocean_model, you can drop the wetdry_mask_rho etc variables from the
         dataset before inputting to PTM. Setting this to True may save computation time but
         will be less accurate, especially in the tidal flat regions of the model.
+    output_file : Optional[str], optional
+        Name of output file to save, by default None. If None, default is set in the model.
 
     Notes
     -----
@@ -176,6 +178,7 @@ class ParticleTrackingManager:
         do3D: bool = config_ptm["do3D"]["default"],
         vertical_mixing: bool = config_ptm["vertical_mixing"]["default"],
         use_static_masks: bool = config_ptm["use_static_masks"]["default"],
+        output_file: Optional[str] = config_ptm["output_file"]["default"],
         **kw,
     ) -> None:
         """Inputs necessary for any particle tracking."""
@@ -328,7 +331,7 @@ class ParticleTrackingManager:
                     # this is not a user-defined option
                     if -180 < self.lon < 0:
                         self.__dict__["lon"] += 360
-                        self.config_ptm["lon"]["value"] = False
+                        self.config_ptm["lon"]["value"] += 360  # this isn't really used
 
             if name == "surface_only" and value:
                 self.logger.info(
