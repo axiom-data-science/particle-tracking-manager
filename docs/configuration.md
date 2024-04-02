@@ -72,6 +72,12 @@ All config:
 m.show_config()
 ```
 
+Config for the specified OpenDrift drift_model; that is, the selections going into the OpenDrift simulation that were specified by PTM as opposed to using the defaults (though they might be the same as the OpenDrift defaults):
+
+```
+m.drift_model_config()
+```
+
 
 ### Showing Configuration Parameter Details
 
