@@ -3,7 +3,7 @@
 import opendrift
 
 
-def plot_dest(o):
+def plot_dest(o, filename):
     """This is copied from an opendrift example."""
 
     import cmocean
@@ -24,4 +24,6 @@ def plot_dest(o):
         vmin=0,
         vmax=vmax,
         cmap=cmap,
+        fast=True,
+        filename=filename,
     )
