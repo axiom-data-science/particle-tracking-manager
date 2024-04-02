@@ -97,10 +97,11 @@ def test_ocean_model_not_None(mock_reader_metadata):
         m.has_added_reader = True
 
 
+@pytest.mark.slow
 def test_parameter_passing():
     """make sure parameters passed into package make it to simulation runtime."""
 
-    ts = 2 * 3600
+    ts = 5
     diffmodel = "windspeed_Sundby1983"
     use_auto_landmask = True
     vertical_mixing = True
@@ -223,21 +224,26 @@ def test_input_too_many_end_of_simulation():
 
 
 def test_changing_end_of_simulation():
-    """change end_time, steps, and duration and make sure others are updated accordingly."""
+    """change end_time, steps, and duration
+
+    and make sure others are updated accordingly.
+    This accounts for the default time_step of 300 seconds.
+
+    """
 
     m = ptm.OpenDriftModel(start_time=pd.Timestamp("2000-1-1"))
     m.start_time = pd.Timestamp("2000-1-2")
     m.end_time = pd.Timestamp("2000-1-3")
-    assert m.steps == 24
+    assert m.steps == 288
     assert m.duration == pd.Timedelta("1 days 00:00:00")
 
     m.steps = 48
-    assert m.end_time == pd.Timestamp("2000-1-4")
-    assert m.duration == pd.Timedelta("2 days 00:00:00")
+    assert m.end_time == pd.Timestamp("2000-01-02 04:00:00")
+    assert m.duration == pd.Timedelta("0 days 04:00:00")
 
     m.duration = pd.Timedelta("2 days 12:00:00")
     assert m.end_time == pd.Timestamp("2000-01-04 12:00:00")
-    assert m.steps == 60
+    assert m.steps == 720
 
 
 class TestTheManager(unittest.TestCase):

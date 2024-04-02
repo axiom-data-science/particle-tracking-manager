@@ -7,14 +7,15 @@
     },
     "export_variables": {
         "default": [
-            "z"
+            "z",
+            "origin_marker"
         ],
         "ptm_level": 2,
         "type": "list",
         "description": "List of variables to export. Options available with `m.all_export_variables` for a given `drift_model`. ['lon', 'lat', 'ID', 'status'] will always be exported."
     },
     "radius": {
-        "default": 0.0,
+        "default": 1000.0,
         "ptm_level": 1,
         "type": "float",
         "min": 0.0,
@@ -56,6 +57,11 @@
     "coastline_action": {
         "default": "previous",
         "od_mapping": "general:coastline_action",
+        "ptm_level": 1
+    },
+    "seafloor_action": {
+        "default": "previous",
+        "od_mapping": "general:seafloor_action",
         "ptm_level": 1
     },
     "max_speed": {
@@ -198,5 +204,10 @@
         "default": "low",
         "ptm_level": 2,
         "description": "Log verbosity"
+    },
+    "Dcrit": {
+        "default": 0.1,
+        "od_mapping": "general:seafloor_action_dcrit",
+        "ptm_level": 3
     }
 }
