@@ -84,6 +84,9 @@ class OpenDriftModel(ParticleTrackingManager):
     coastline_action : str, optional
         Action to perform if a drifter hits the coastline, by default "previous". Options
         are 'stranding', 'previous'.
+    seafloor_action : str, optional
+        Action to perform if a drifter hits the seafloor, by default "deactivate". Options
+        are 'deactivate', 'previous', 'lift_to_seafloor'.
     max_speed : int
         Typical maximum speed of elements, used to estimate reader buffer size.
     wind_drift_factor : float
@@ -173,6 +176,7 @@ class OpenDriftModel(ParticleTrackingManager):
         stokes_drift: bool = config_model["stokes_drift"]["default"],
         mixed_layer_depth: float = config_model["mixed_layer_depth"]["default"],
         coastline_action: str = config_model["coastline_action"]["default"],
+        seafloor_action: str = config_model["seafloor_action"]["default"],
         max_speed: int = config_model["max_speed"]["default"],
         wind_drift_factor: float = config_model["wind_drift_factor"]["default"],
         wind_drift_depth: float = config_model["wind_drift_depth"]["default"],
@@ -319,6 +323,15 @@ class OpenDriftModel(ParticleTrackingManager):
             self.config_model[name]["value"] = value
         self._update_config()
 
+        if name == "ocean_model":
+            if value == "NWGOA":
+                self.Dcrit = 0.5
+            elif "CIOFS" in value:
+                self.Dcrit = 0.3
+            else:
+                self.Dcrit = 0.0
+            self.logger.info(f"For ocean_model {value}, setting Dcrit to {self.Dcrit}.")
+
         if name in ["ocean_model", "horizontal_diffusivity"]:
 
             # just set the value and move on if purposely setting a non-None value
@@ -332,12 +345,12 @@ class OpenDriftModel(ParticleTrackingManager):
             # in all other cases that ocean_model is a known model, want to use the
             # grid-dependent value
             elif self.ocean_model in _KNOWN_MODELS:
-                print(name, value)
-                self.logger.info(
-                    "Setting horizontal_diffusivity parameter to one tuned to reader model"
-                )
+
 
                 hdiff = self.calc_known_horizontal_diffusivity()
+                self.logger.info(
+                    f"Setting horizontal_diffusivity parameter to one tuned to reader model of value {hdiff}."
+                )
                 # when editing the __dict__ directly have to also update config_model
                 self.__dict__["horizontal_diffusivity"] = hdiff
                 self.config_model["horizontal_diffusivity"]["value"] = hdiff
@@ -381,9 +394,18 @@ class OpenDriftModel(ParticleTrackingManager):
 
         # Leeway doesn't have this option available
         if name == "do3D" and not value and self.drift_model != "Leeway":
+            self.logger.info("do3D is False so disabling vertical motion.")
             self.o.disable_vertical_motion()
-        elif name == "do3D" and value:
+        elif name == "do3D" and not value and self.drift_model == "Leeway":
+            self.logger.info("do3D is False but drift_model is Leeway so doing nothing.")
+
+        if name == "do3D" and value and self.drift_model != "Leeway":
+            self.logger.info("do3D is True so turning on vertical advection.")
             self.o.set_config("drift:vertical_advection", True)
+        elif name == "do3D" and value and self.drift_model == "Leeway":
+            self.logger.info("do3D is True but drift_model is Leeway so "
+                             "changing do3D to False.")
+            self.do3D = False
 
         # Make sure vertical_mixing_timestep equals default value if vertical_mixing False
         if name in ["vertical_mixing", "vertical_mixing_timestep"]:
@@ -463,6 +485,13 @@ class OpenDriftModel(ParticleTrackingManager):
                 )
                 self.__dict__["stokes_drift"] = False
                 self.config_model["stokes_drift"]["value"] = False
+
+        # Add export variables for certain drift_model values
+        # drift_model is always set initially only
+        if name == "export_variables" and self.drift_model == "OpenOil":
+            oil_vars = ["mass_oil", "density", "mass_evaporated", "mass_dispersed", "mass_biodegraded", "viscosity", "water_fraction"]
+            self.__dict__["export_variables"]  += oil_vars
+            self.config_model["export_variables"]["value"]  += oil_vars
 
         self._update_config()
 
@@ -617,14 +646,13 @@ class OpenDriftModel(ParticleTrackingManager):
 
                 drop_vars += [
                     "wetdry_mask_psi",
-                    "zeta",
                 ]
                 if self.ocean_model == "CIOFS":
 
                     loc_local = "/mnt/vault/ciofs/HINDCAST/ciofs_kerchunk.parq"
                     loc_remote = "http://xpublish-ciofs.srv.axds.co/datasets/ciofs_hindcast/zarr/"
 
-                elif self.ocean_model.upper() == "CIOFSOP":
+                elif self.ocean_model == "CIOFSOP":
 
                     standard_name_mapping.update(
                         {
@@ -674,7 +702,6 @@ class OpenDriftModel(ParticleTrackingManager):
             # For NWGOA, need to calculate wetdry mask from a variable
             if self.ocean_model == "NWGOA" and not self.use_static_masks:
                 ds["wetdry_mask_rho"] = (~ds.zeta.isnull()).astype(int)
-                ds.drop_vars("zeta", inplace=True)
 
             # For CIOFSOP need to rename u/v to have "East" and "North" in the variable names
             # so they aren't rotated in the ROMS reader (the standard names have to be x/y not east/north)
@@ -683,7 +710,10 @@ class OpenDriftModel(ParticleTrackingManager):
                 # grid = xr.open_dataset("/mnt/vault/ciofs/HINDCAST/nos.ciofs.romsgrid.nc")
                 # ds["angle"] = grid["angle"]
 
-            units_date = pd.Timestamp(ds.ocean_time.attrs["units"].split("since ")[1])
+            try:
+                units_date = pd.Timestamp(ds.ocean_time.attrs["units"].split("since ")[1])
+            except KeyError:  # for remote
+                units_date = pd.Timestamp(ds.ocean_time.encoding["units"].split("since ")[0])
             # use reader start time if not otherwise input
             if self.start_time is None:
                 self.logger.info("setting reader start_time as simulation start_time")
@@ -787,11 +817,15 @@ class OpenDriftModel(ParticleTrackingManager):
         }
 
         self.o._config = config_input_to_opendrift  # only OpenDrift config
+
+        output_file = self.output_file or f"output-results_{datetime.datetime.utcnow():%Y-%m-%dT%H%M:%SZ}.nc"
+
         self.o.run(
             time_step=timedir * self.time_step,
+            time_step_output=self.time_step_output,
             steps=self.steps,
             export_variables=self.export_variables,
-            outfile=f"output-results_{datetime.datetime.utcnow():%Y-%m-%dT%H%M:%SZ}.nc",
+            outfile=output_file,
         )
 
         self.o._config = full_config  # reinstate config
@@ -901,6 +935,24 @@ class OpenDriftModel(ParticleTrackingManager):
         """Output list of all actual export variables."""
 
         return self.o.export_variables
+
+    def drift_model_config(self, ptm_level=[1,2,3], prefix=""):
+        """Show config for this drift model selection.
+
+        This shows all PTM-controlled parameters for the OpenDrift
+        drift model selected and their current values, at the selected ptm_level
+        of importance.
+
+        Parameters
+        ----------
+        ptm_level : int, list, optional
+            Options are 1, 2, 3, or lists of combinations. Use [1,2,3] for all.
+            Default is 1.
+        prefix : str, optional
+            prefix to search config for, only for OpenDrift parameters (not PTM).
+        """
+
+        return [(key, value_dict["value"]) for key, value_dict in self.show_config(substring=":", ptm_level=ptm_level, level=[1,2,3], prefix=prefix).items() if "value" in value_dict]
 
     def get_configspec(self, prefix, substring, excludestring, level, ptm_level):
         """Copied from OpenDrift, then modified."""
