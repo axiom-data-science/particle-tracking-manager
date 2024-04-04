@@ -405,9 +405,27 @@ class OpenDriftModel(ParticleTrackingManager):
             self.o.set_config("drift:vertical_advection", True)
         elif name == "do3D" and value and self.drift_model == "Leeway":
             self.logger.info(
-                "do3D is True but drift_model is Leeway so " "changing do3D to False."
+                "do3D is True but drift_model is Leeway so changing do3D to False."
             )
             self.do3D = False
+
+        # if drift_model is LarvalFish, vertical_mixing has to be True
+        if name == "vertical_mixing" and not value and self.drift_model == "LarvalFish":
+            raise ValueError(
+                "drift_model is LarvalFish which always has vertical mixing on in OpenDrift so vertical_mixing must be True."
+            )
+
+        # if drift_model is LarvalFish, surface_only can't be True
+        if name == "surface_only" and value and self.drift_model == "LarvalFish":
+            raise ValueError(
+                "drift_model is LarvalFish which is always 3D in OpenDrift so surface_only must be False."
+            )
+
+        # if drift_model is LarvalFish, do3D has to be True
+        if name == "do3D" and not value and self.drift_model == "LarvalFish":
+            raise ValueError(
+                "drift_model is LarvalFish which is always 3D in OpenDrift so do3D must be True."
+            )
 
         # Make sure vertical_mixing_timestep equals default value if vertical_mixing False
         if name in ["vertical_mixing", "vertical_mixing_timestep"]:
@@ -504,6 +522,17 @@ class OpenDriftModel(ParticleTrackingManager):
             self.config_model["export_variables"]["value"] += oil_vars
         elif name == "export_variables" and self.drift_model == "Leeway":
             vars = ["object_type"]
+            self.__dict__["export_variables"] += vars
+            self.config_model["export_variables"]["value"] += vars
+        elif name == "export_variables" and self.drift_model == "LarvalFish":
+            vars = [
+                "diameter",
+                "neutral_buoyancy_salinity",
+                "stage_fraction",
+                "hatched",
+                "length",
+                "weight",
+            ]
             self.__dict__["export_variables"] += vars
             self.config_model["export_variables"]["value"] += vars
 
@@ -725,13 +754,12 @@ class OpenDriftModel(ParticleTrackingManager):
                 # ds["angle"] = grid["angle"]
 
             try:
-                units_date = pd.Timestamp(
-                    ds.ocean_time.attrs["units"].split("since ")[1]
-                )
-            except KeyError:  # for remote
-                units_date = pd.Timestamp(
-                    ds.ocean_time.encoding["units"].split("since ")[0]
-                )
+                units = ds.ocean_time.attrs["units"]
+            except KeyError:
+                units = ds.ocean_time.encoding["units"]
+            datestr = units.split("since ")[1]
+            units_date = pd.Timestamp(datestr)
+
             # use reader start time if not otherwise input
             if self.start_time is None:
                 self.logger.info("setting reader start_time as simulation start_time")
@@ -740,11 +768,14 @@ class OpenDriftModel(ParticleTrackingManager):
                 self.start_time = units_date + pd.to_timedelta(
                     ds.ocean_time[0].values, unit="s"
                 )
-
             # narrow model output to simulation time if possible before sending to Reader
             if self.start_time is not None and self.end_time is not None:
+                dt_model = float(
+                    ds.ocean_time[1] - ds.ocean_time[0]
+                )  # time step of the model output in seconds
                 start_time_num = (self.start_time - units_date).total_seconds()
-                end_time_num = (self.end_time - units_date).total_seconds()
+                # want to include the next ocean model output after the last drifter simulation time
+                end_time_num = (self.end_time - units_date).total_seconds() + dt_model
                 ds = ds.sel(ocean_time=slice(start_time_num, end_time_num))
                 self.logger.info("Narrowed model output to simulation time")
             else:
@@ -783,10 +814,28 @@ class OpenDriftModel(ParticleTrackingManager):
     def run_seed(self):
         """Seed drifters for model."""
 
+        already_there = [
+            "seed:number",
+            "seed:z",
+            "seed:seafloor",
+            "seed:droplet_diameter_mu",
+            "seed:droplet_diameter_min_subsea",
+            "seed:droplet_size_distribution",
+            "seed:droplet_diameter_sigma",
+            "seed:droplet_diameter_max_subsea",
+            "seed:object_type",
+        ]
+
         seed_kws = {
             "time": self.start_time.to_pydatetime(),
             "z": self.z,
         }
+
+        # update seed_kws with drift_model-specific seed parameters
+        seedlist = self.drift_model_config(prefix="seed")
+        seedlist = [(one, two) for one, two in seedlist if one not in already_there]
+        seedlist = [(one.replace("seed:", ""), two) for one, two in seedlist]
+        seed_kws.update(seedlist)
 
         if self.seed_flag == "elements":
             # add additional seed parameters

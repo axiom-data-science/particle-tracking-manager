@@ -11,6 +11,7 @@ dependencies:
   - fastparquet
   - jupyter
   - jupyterlab
+  - kerchunk
   - xarray
   - numpy
   - opendrift

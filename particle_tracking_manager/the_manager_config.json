@@ -159,7 +159,7 @@
     },
     "use_static_masks": {
         "type": "bool",
-        "default": false,
+        "default": true,
         "ptm_level": 2,
         "description": "Set to True to use static masks for known models instead of wetdry masks. If False, the masks are change in time."
     },

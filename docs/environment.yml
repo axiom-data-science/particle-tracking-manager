@@ -8,6 +8,7 @@ dependencies:
    - adios_db
    - aiohttp
    - appdirs
+   - cmocean
    - numpy
    - xarray
    # These are needed for the docs themselves
