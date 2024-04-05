@@ -59,17 +59,26 @@ This demo will run using easily-available ROMS model output from `xroms`.
 
 import particle_tracking_manager as ptm
 import xroms
+import xarray as xr
 
 
-m = ptm.OpenDriftModel(lon = -90, lat = 28.7, number=1, steps=2)
+m = ptm.OpenDriftModel(lon = -90, lat = 28.7, number=10, steps=20,
+                       use_static_masks=True)
+
 
 url = xroms.datasets.CLOVER.fetch("ROMS_example_full_grid.nc")
-reader_kwargs = dict(loc=url, kwargs_xarray={})
-m.add_reader(**reader_kwargs)
+ds = xr.open_dataset(url, decode_times=False)
+m.add_reader(ds=ds)
 
 # m.run_all() or the following
 m.seed()
 m.run()
+```
+
+Plot using `OpenDrift`'s built in plotting. Many options are available, including animations (see [OpenDrift docs for more information](https://opendrift.github.io/)).
+
+```{code-cell} ipython3
+m.o.plot(fast=True)
 ```
 
 ## Idealized simulation
@@ -80,7 +89,7 @@ To run an idealized scenario, no reader should be added but configuration parame
 import particle_tracking_manager as ptm
 from datetime import datetime
 m = ptm.OpenDriftModel(lon=4.0, lat=60.0, start_time=datetime(2015, 9, 22, 6),
-                       use_auto_landmask=True,)
+                       use_auto_landmask=True, steps=20)
 
 # idealized simulation, provide a fake current
 m.o.set_config('environment:fallback:y_sea_water_velocity', 1)
@@ -90,6 +99,10 @@ m.seed()
 
 # run simulation
 m.run()
+```
+
+```{code-cell} ipython3
+m.o.plot(fast=True)
 ```
 
 ## Ways to Get Information

@@ -160,8 +160,10 @@ m.show_config(key="ocean_model")
 The built-in ocean models are:
 * NWGOA (1999–2008) over the Northwest Gulf of Alaska (Danielson, S. L., K. S. Hedstrom, E. Curchitser,	2016. Cook Inlet Model Calculations, Final Report to Bureau of Ocean Energy Management,	M14AC00014,	OCS	Study BOEM 2015-050, University	of Alaska Fairbanks, Fairbanks,	AK,	149 pp.)
 * CIOFS (1999–2022) across Cook Inlet, Alaska, a hindcast version of NOAA's CIOFS model. (Thyng, K. M., C. Liu, M. Feen, E. L. Dobbins, 2023. Cook Inlet Circulation Modeling, Final Report to Oil Spill Recovery Institute, Axiom Data Science, Anchorage, AK.)
-* CIOFS_NOW (mid-2021 through 48 hours from present time) which is the nowcast/forecast version of the CIOFS model. (Shi, L., L. Lanerolle, Y. Chen, D. Cao, R. Patchen, A. Zhang,
+* CIOFSOP (mid-2021 through 48 hours from present time) which is the nowcast/forecast version of the CIOFS model. (Shi, L., L. Lanerolle, Y. Chen, D. Cao, R. Patchen, A. Zhang,
 and E. P. Myers, 2020. NOS Cook Inlet Operational Forecast System: Model development and hindcast skill assessment, NOAA Technical Report NOS CS 40, Silver Spring, Maryland, September 2020.)
+
+If you are running locally on an Axiom server you can use `ocean_model_local=True` to access the model output locally instead of remotely.
 
 An alternative ocean model can be used instead by initializing the `Manager` then setting up the reader manually, as shown in a {ref}`Quick Start<new_reader>` example:
 
@@ -238,6 +240,8 @@ To limit the variables saved in the export file, input a list of just the variab
 ```
 m = ptm.OpenDriftModel(export_variables=[])
 ```
+
+The default list of `export_variables` is set in `config_model` but is modified depending on the `drift_model` set.
 
 
 #### How to modify details for Stokes Drift
