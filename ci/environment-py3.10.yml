@@ -40,7 +40,7 @@ dependencies:
   # # - trajan>=0.1.3
   # # - adios_db
   ##
-  - opendrift>=1.11.2
+  # - opendrift>=1.11.2
   - scipy
   - xarray
   # - xroms
@@ -50,7 +50,8 @@ dependencies:
   - coverage
   - pip
   - pytest
-  # - pip:
+  - pip:
+    - opendrift>=1.11.2
     # - adios_db
     # - git+https://github.com/OpenDrift/opendrift
     # - git+https://github.com/fsspec/kerchunk
