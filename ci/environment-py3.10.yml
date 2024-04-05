@@ -4,7 +4,7 @@ channels:
 dependencies:
   - python=3.10
   ############## These will have to be adjusted to your specific project
-  # - adios_db
+  - adios-db
   - appdirs
   - aiohttp
   - kerchunk
@@ -50,8 +50,8 @@ dependencies:
   - coverage
   - pip
   - pytest
-  - pip:
-    - adios_db
+  # - pip:
+    # - adios_db
     # - git+https://github.com/OpenDrift/opendrift
     # - git+https://github.com/fsspec/kerchunk
     # - xroms  # can't be found on conda-forge for CI, but don't need since in runslow tests?
