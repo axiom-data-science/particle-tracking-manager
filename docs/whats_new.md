@@ -1,5 +1,9 @@
 # What's New
 
+## v0.8.1 (April 5, 2024)
+
+* updated docs
+
 ## v0.8.0 (April 2, 2024)
 
 * `time_step_output` behavior has changed — 1 hour by default

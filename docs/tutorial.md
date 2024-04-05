@@ -24,7 +24,20 @@ import cmocean.cm as cmo
 
 ## Ocean Models
 
-Three ocean models are built into PTM and can be accessed by name `ocean_model=` "NWGOA", "CIOFS", and "CIOFSOP", and either accessed remotely or locally if run on an internal server (at Axiom) (with `ocean_model_local=True`). Alternatively, a user can input their own xarray Dataset, which we will do for this tutorial. When you input your own Dataset, you have to add the reader by hand as opposed to being able to input the `ocean_model` name in the initial call.
+### Known Models
+
+Three ocean models are built into PTM and can be accessed by name `ocean_model=` "NWGOA", "CIOFS", and "CIOFSOP", and either accessed remotely or locally if run on an internal server (at Axiom) (with `ocean_model_local=True`).
+
+### Wet/dry vs. Static Masks
+
+The known models in PTM have wet/dry masks from ROMS so they have had to be specially handled, requiring some new development in `OpenDrift`. There are two options:
+
+* (DEFAULT) Use the typical, static, ROMS masks (`mask_rho`, `mask_u`, `mask_v`). For ROMS simulations run in [wet/dry mode](https://www.myroms.org/wiki/WET_DRY), grid cells in `mask_rho` are 0 if they are permanently dry and 1 if they are ever wet. This saves some computational time but is inconsistent with the ROMS output files in some places since the drifters may be allowed (due to the static mask) to enter a cell they wouldn't otherwise. However, it doesn't make much of a difference for simulations that aren't in the tidal flats.
+* Use the time-varying wet/dry masks (`wetdry_mask_rho`, `wetdry_mask_u`, `wetdry_mask_v`). This costs some more computational time but is fully consistent with the ROMS output files. This option should be selected if drifters are expected to run in the tidal flats.
+
+### User-input Models
+
+As opposed to known models, a user can input their own xarray Dataset, which we will do for this tutorial. When you input your own Dataset, you have to add the reader by hand as opposed to being able to input the `ocean_model` name in the initial call.
 
 ```{code-cell} ipython3
 url = xroms.datasets.CLOVER.fetch("ROMS_example_full_grid.nc")
