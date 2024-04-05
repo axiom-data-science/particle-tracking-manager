@@ -326,7 +326,7 @@ class ParticleTrackingManager:
 
             # deal with if input longitudes need to be shifted due to model
             if name == "oceanmodel_lon0_360" and value:
-                if self.ocean_model is not "test" and self.lon is not None:
+                if self.ocean_model != "test" and self.lon is not None:
                     # move longitude to be 0 to 360 for this model
                     # this is not a user-defined option
                     if -180 < self.lon < 0:
