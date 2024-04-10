@@ -4,6 +4,7 @@ import datetime
 import json
 import logging
 import os
+import platform
 
 from pathlib import Path
 from typing import Optional, Union
@@ -938,8 +939,12 @@ class OpenDriftModel(ParticleTrackingManager):
             if isinstance(v, (bool, type(None), pd.Timestamp, pd.Timedelta)):
                 v = str(v)
             ds.attrs[f"ptm_config_{k}"] = v
-        os.remove(output_file)  # cause permissions issue
-        ds.to_netcdf(output_file)
+        os_name = platform.system()
+        if os_name == "Windows":
+            ds.to_netcdf(output_file)
+        else:
+            os.remove(output_file)  # cause permissions issue
+            ds.to_netcdf(output_file)
 
     @property
     def _config(self):

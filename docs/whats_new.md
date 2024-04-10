@@ -1,5 +1,12 @@
 # What's New
 
+## v0.8.2 (April 10, 2024)
+
+* updated docs
+* improved `drift_model_config()`
+* updated tests
+* now include PTM metadata with output file
+
 ## v0.8.1 (April 5, 2024)
 
 * updated docs
