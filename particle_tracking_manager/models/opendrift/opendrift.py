@@ -1,6 +1,7 @@
 """Using OpenDrift for particle tracking."""
 import copy
 import datetime
+import gc
 import json
 import logging
 import os
@@ -944,6 +945,10 @@ class OpenDriftModel(ParticleTrackingManager):
         temp_fd, temp_path = tempfile.mkstemp()
         ds.to_netcdf(temp_path)
         ds.close()
+        del ds
+
+        # Call the garbage collector
+        gc.collect()
         os.remove(output_file)
 
         # Replace the original file with the temporary file
