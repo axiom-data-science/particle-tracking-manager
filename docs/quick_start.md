@@ -30,7 +30,8 @@ Run directly from the Lagrangian model you want to use, which will inherit from 
 ```
 import particle_tracking_manager as ptm
 
-m = ptm.OpenDriftModel(ocean_model="NWGOA", lon=-151, lat=59)
+m = ptm.OpenDriftModel(ocean_model="NWGOA", lon=-151, lat=59, steps=1)
+# Can modify `m` between these steps, or look at `OpenDrift` config with `m.drift_model_config()`
 m.run_all()
 ```
 
@@ -43,7 +44,13 @@ Then find results in file `m.outfile_name`.
 The equivalent for the set up above for using the command line is:
 
 ```
-ptm lon=-151 lat=59 ocean_model=NWGOA
+ptm lon=-151 lat=59 ocean_model=NWGOA steps=1
+```
+
+To just initialize the simulation and print the `OpenDrift` configuration to screen without running the simulation, add the `--dry-run` flag:
+
+```
+ptm lon=-151 lat=59 ocean_model=NWGOA steps=1 --dry-run
 ```
 
 `m.outfile_name` is printed to the screen after the command has been run. `ptm` is installed as an entry point with `particle-tracking-manager`.
@@ -122,11 +129,17 @@ m.reader
 Get reader/ocean model properties (gathered metadata about model):
 
 ```
-m.reader_metadata(key)
+m.reader_metadata(<key>)
 ```
 
 Show configuration details — many more details on this in {doc}`configuration`:
 
 ```
 m.show_config()
+```
+
+Show `OpenDrift` configuration for selected `drift_model`:
+
+```
+m.drift_model_config()
 ```

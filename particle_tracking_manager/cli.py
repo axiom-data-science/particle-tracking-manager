@@ -106,6 +106,13 @@ def main():
         help="Input keyword arguments for running PTM. Available options are specific to the `catalog_type`. Dictionary-style input, e.g. `case='Oil'`. Format for list items is e.g. standard_names='[sea_water_practical_salinity,sea_water_temperature]'.",
     )
 
+    parser.add_argument(
+        "--dry-run",
+        help="Return configuration parameters without running the model.",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+    )
+
     args = parser.parse_args()
 
     to_bool = {
@@ -115,14 +122,20 @@ def main():
     }
     args.kwargs.update(to_bool)
 
-    # # set default
-    # if "model" not in args:
-    #     args.kwargs["model"] = "opendrift"
-
-    # if args.kwargs["ocean_model"] is None and args.kwargs["start_time"] is None:
-    #     raise KeyError("Need to either use a reader or input a start_time to avoid error.")
-
     m = ptm.OpenDriftModel(**args.kwargs)
-    m.run_all()
 
-    print(m.outfile_name)
+    if args.dry_run:
+
+        # run this to make sure everything is updated fully
+        m.add_reader()
+        print(m.drift_model_config())
+
+    else:
+
+        m.add_reader()
+        print(m.drift_model_config())
+
+        m.seed()
+        m.run()
+
+        print(m.outfile_name)

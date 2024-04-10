@@ -233,6 +233,8 @@ class TestTheManager(unittest.TestCase):
     def setUp(self):
         self.m = OpenDriftModel()
         # self.m.config_model = {"test_key": {"value": "old_value"}}
+        # test m.drift_model_config()
+        # also test in other sub tests
 
     def test_set_drift_model(self):
         """can't change the drift_model after class initialization"""
@@ -245,19 +247,16 @@ class TestTheManager(unittest.TestCase):
 
     def test_stokes_drift_true_not_leeway(self):
         self.m.stokes_drift = True
-        self.m.drift_model = "OceanDrift"
         assert self.m.show_config(key="drift:use_tabularised_stokes_drift")
 
     def test_surface_only_true_not_leeway(self):
         self.m.surface_only = True
-        self.m.drift_model = "OceanDrift"
         assert (
             self.m.show_config(key="drift:truncate_ocean_model_below_m")["value"] == 0.5
         )
 
     def test_surface_only_false_not_leeway(self):
         self.m.surface_only = False
-        self.m.drift_model = "OceanDrift"
         assert (
             self.m.show_config(key="drift:truncate_ocean_model_below_m")["value"]
             is None
@@ -265,7 +264,6 @@ class TestTheManager(unittest.TestCase):
 
     def test_do3D_false_not_leeway(self):
         self.m.do3D = False
-        self.m.drift_model = "OceanDrift"
         assert not self.m.show_config(key="drift:vertical_advection")["value"]
         assert not self.m.show_config(key="drift:vertical_mixing")["value"]
 
@@ -391,6 +389,7 @@ def test_OpenOil_seeding():
         oil_film_thickness=5,
         oil_type="GENERIC DIESEL",
     )
+
     m.o.set_config("environment:constant:x_wind", -1)
     m.o.set_config("environment:constant:y_wind", -1)
     m.o.set_config("environment:constant:x_sea_water_velocity", -1)
