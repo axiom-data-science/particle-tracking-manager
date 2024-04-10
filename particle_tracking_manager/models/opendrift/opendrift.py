@@ -5,9 +5,9 @@ import json
 import logging
 import os
 import platform
+import tempfile
 
 from pathlib import Path
-import tempfile
 from typing import Optional, Union
 
 import appdirs
@@ -940,10 +940,11 @@ class OpenDriftModel(ParticleTrackingManager):
             if isinstance(v, (bool, type(None), pd.Timestamp, pd.Timedelta)):
                 v = str(v)
             ds.attrs[f"ptm_config_{k}"] = v
-        
+
         temp_fd, temp_path = tempfile.mkstemp()
         ds.to_netcdf(temp_path)
         ds.close()
+        os.remove(output_file)
 
         # Replace the original file with the temporary file
         os.replace(temp_path, output_file)
@@ -954,7 +955,6 @@ class OpenDriftModel(ParticleTrackingManager):
         #     os.remove(output_file)  # cause permissions issue
         # ds.close()
         # ds.to_netcdf(output_file)
-        
 
     @property
     def _config(self):
