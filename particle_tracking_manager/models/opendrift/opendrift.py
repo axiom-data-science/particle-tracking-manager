@@ -919,8 +919,8 @@ class OpenDriftModel(ParticleTrackingManager):
 
         self.o._config = config_input_to_opendrift  # only OpenDrift config
 
-        output_file = (
-            self.output_file
+        output_file_initial = (
+            f"{self.output_file}_initial"
             or f"output-results_{datetime.datetime.utcnow():%Y-%m-%dT%H%M:%SZ}.nc"
         )
 
@@ -929,30 +929,46 @@ class OpenDriftModel(ParticleTrackingManager):
             time_step_output=self.time_step_output,
             steps=self.steps,
             export_variables=self.export_variables,
-            outfile=output_file,
+            outfile=output_file_initial,
         )
 
         self.o._config = full_config  # reinstate config
 
         # open outfile file and add config to it
         # config can't be present earlier because it breaks opendrift
-        ds = xr.open_dataset(output_file)
+        ds = xr.open_dataset(output_file_initial)
         for k, v in self.drift_model_config():
             if isinstance(v, (bool, type(None), pd.Timestamp, pd.Timedelta)):
                 v = str(v)
             ds.attrs[f"ptm_config_{k}"] = v
 
-        temp_fd, temp_path = tempfile.mkstemp()
-        ds.to_netcdf(temp_path)
-        ds.close()
-        del ds
+        # MAKE NEW 
+        output_file = (
+            self.output_file
+            or f"output-results_{datetime.datetime.utcnow():%Y-%m-%dT%H%M:%SZ}.nc"
+        )
+        # OVERWRITE self.o.outfile_name
+        # remove initial file
 
-        # Call the garbage collector
-        gc.collect()
-        os.remove(output_file)
+        # temp_fd, temp_path = tempfile.mkstemp()
+        ds.to_netcdf(output_file)
+        
+        # ds.close()
+        # del ds
+        
+        # update with new path name
+        self.o.outfile_name = output_file
+        
+        # remove initial file to save space
+        os.remove(output_file_initial)
+        
+
+        # # Call the garbage collector
+        # gc.collect()
+        # os.remove(output_file)
 
         # Replace the original file with the temporary file
-        os.replace(temp_path, output_file)
+        # os.replace(temp_path, output_file)
         # os_name = platform.system()
         # if os_name == "Windows":
         #     ds.to_netcdf(output_file)
