@@ -173,8 +173,8 @@ import xroms
 
 m = ptm.OpenDriftModel(lon=-90, lat=28.7, number=1, steps=2)
 url = xroms.datasets.CLOVER.fetch("ROMS_example_full_grid.nc")
-reader_kwargs = dict(loc=url, kwargs_xarray={})
-m.add_reader(**reader_kwargs)
+ds = xr.open_dataset(url, decode_times=False)
+m.add_reader(ds=ds)
 m.run_all()
 ```
 
@@ -184,7 +184,7 @@ To run an idealized scenario, no reader should be added (`ocean_model` should be
 ```
 from datetime import datetime
 m = ptm.OpenDriftModel(lon=4.0, lat=60.0, start_time=datetime(2015, 9, 22, 6),
-                       use_auto_landmask=True,)
+                       use_auto_landmask=True, steps=5)
 
 # idealized simulation, provide a fake current
 m.o.set_config('environment:fallback:y_sea_water_velocity', 1)
@@ -201,7 +201,7 @@ For testing purposes, all steps can be run (including added a "reader") with the
 ```
 from datetime import datetime
 m = ptm.OpenDriftModel(lon=4.0, lat=60.0, start_time=datetime(2015, 9, 22, 6),
-                       use_auto_landmask=True, ocean_model="test")
+                       use_auto_landmask=True, ocean_model="test", steps=5)
 
 m.run_all()
 ```
@@ -246,7 +246,7 @@ The default list of `export_variables` is set in `config_model` but is modified 
 
 #### How to modify details for Stokes Drift
 
-Turn on (on by default):
+Turn on (on by default, drift model-dependent):
 
 ```
 m = ptm.OpenDriftModel(stokes_drift=True)

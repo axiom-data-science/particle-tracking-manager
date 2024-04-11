@@ -1,8 +1,12 @@
 """Using OpenDrift for particle tracking."""
 import copy
 import datetime
+import gc
 import json
 import logging
+import os
+import platform
+import tempfile
 
 from pathlib import Path
 from typing import Optional, Union
@@ -735,11 +739,17 @@ class OpenDriftModel(ParticleTrackingManager):
                 else:
                     if ".nc" in loc_remote:
                         ds = xr.open_dataset(
-                            loc_remote, chunks={}, drop_variables=drop_vars
+                            loc_remote,
+                            chunks={},
+                            drop_variables=drop_vars,
+                            decode_times=False,
                         )
                     else:
                         ds = xr.open_zarr(
-                            loc_remote, chunks={}, drop_variables=drop_vars
+                            loc_remote,
+                            chunks={},
+                            drop_variables=drop_vars,
+                            decode_times=False,
                         )
 
             # For NWGOA, need to calculate wetdry mask from a variable
@@ -811,8 +821,12 @@ class OpenDriftModel(ParticleTrackingManager):
         else:
             raise ValueError("reader did not set an ocean_model")
 
-    def run_seed(self):
-        """Seed drifters for model."""
+    @property
+    def seed_kws(self):
+        """Gather seed input kwargs.
+
+        This could be run more than once.
+        """
 
         already_there = [
             "seed:number",
@@ -824,10 +838,16 @@ class OpenDriftModel(ParticleTrackingManager):
             "seed:droplet_diameter_sigma",
             "seed:droplet_diameter_max_subsea",
             "seed:object_type",
+            "seed_flag",
+            "drift:use_tabularised_stokes_drift",
+            "drift:vertical_advection",
+            "drift:truncate_ocean_model_below_m",
         ]
 
-        seed_kws = {
-            "time": self.start_time.to_pydatetime(),
+        _seed_kws = {
+            "time": self.start_time.to_pydatetime()
+            if self.start_time is not None
+            else None,
             "z": self.z,
         }
 
@@ -835,11 +855,11 @@ class OpenDriftModel(ParticleTrackingManager):
         seedlist = self.drift_model_config(prefix="seed")
         seedlist = [(one, two) for one, two in seedlist if one not in already_there]
         seedlist = [(one.replace("seed:", ""), two) for one, two in seedlist]
-        seed_kws.update(seedlist)
+        _seed_kws.update(seedlist)
 
         if self.seed_flag == "elements":
             # add additional seed parameters
-            seed_kws.update(
+            _seed_kws.update(
                 {
                     "lon": self.lon,
                     "lat": self.lat,
@@ -848,20 +868,34 @@ class OpenDriftModel(ParticleTrackingManager):
                 }
             )
 
-            self.o.seed_elements(**seed_kws)
+        elif self.seed_flag == "geojson":
+
+            # geojson needs string representation of time
+            _seed_kws["time"] = (
+                self.start_time.isoformat() if self.start_time is not None else None
+            )
+
+        self._seed_kws = _seed_kws
+        return self._seed_kws
+
+    def run_seed(self):
+        """Actually seed drifters for model."""
+
+        if self.seed_flag == "elements":
+
+            self.o.seed_elements(**self.seed_kws)
 
         elif self.seed_flag == "geojson":
 
             # geojson needs string representation of time
-            seed_kws["time"] = self.start_time.isoformat()
-            self.geojson["properties"] = seed_kws
+            self.seed_kws["time"] = self.start_time.isoformat()
+            self.geojson["properties"] = self.seed_kws
             json_string_dumps = json.dumps(self.geojson)
             self.o.seed_from_geojson(json_string_dumps)
 
         else:
             raise ValueError(f"seed_flag {self.seed_flag} not recognized.")
 
-        self.seed_kws = seed_kws
         self.initial_drifters = self.o.elements_scheduled
 
     def run_drifters(self):
@@ -885,8 +919,8 @@ class OpenDriftModel(ParticleTrackingManager):
 
         self.o._config = config_input_to_opendrift  # only OpenDrift config
 
-        output_file = (
-            self.output_file
+        output_file_initial = (
+            f"{self.output_file}_initial"
             or f"output-results_{datetime.datetime.utcnow():%Y-%m-%dT%H%M:%SZ}.nc"
         )
 
@@ -895,10 +929,36 @@ class OpenDriftModel(ParticleTrackingManager):
             time_step_output=self.time_step_output,
             steps=self.steps,
             export_variables=self.export_variables,
-            outfile=output_file,
+            outfile=output_file_initial,
         )
 
         self.o._config = full_config  # reinstate config
+
+        # open outfile file and add config to it
+        # config can't be present earlier because it breaks opendrift
+        ds = xr.open_dataset(output_file_initial)
+        for k, v in self.drift_model_config():
+            if isinstance(v, (bool, type(None), pd.Timestamp, pd.Timedelta)):
+                v = str(v)
+            ds.attrs[f"ptm_config_{k}"] = v
+
+        # Make new output file
+        output_file = (
+            self.output_file
+            or f"output-results_{datetime.datetime.utcnow():%Y-%m-%dT%H%M:%SZ}.nc"
+        )
+
+        ds.to_netcdf(output_file)
+
+        # update with new path name
+        self.o.outfile_name = output_file
+
+        try:
+            # remove initial file to save space
+            os.remove(output_file_initial)
+        except PermissionError:
+            # windows issue
+            pass
 
     @property
     def _config(self):
@@ -1011,7 +1071,8 @@ class OpenDriftModel(ParticleTrackingManager):
 
         This shows all PTM-controlled parameters for the OpenDrift
         drift model selected and their current values, at the selected ptm_level
-        of importance.
+        of importance. It includes some additional configuration parameters
+        that are indirectly controlled by PTM parameters.
 
         Parameters
         ----------
@@ -1022,13 +1083,36 @@ class OpenDriftModel(ParticleTrackingManager):
             prefix to search config for, only for OpenDrift parameters (not PTM).
         """
 
-        return [
+        outlist = [
             (key, value_dict["value"])
             for key, value_dict in self.show_config(
                 substring=":", ptm_level=ptm_level, level=[1, 2, 3], prefix=prefix
             ).items()
             if "value" in value_dict
         ]
+
+        # also PTM config parameters that are separate from OpenDrift parameters
+        outlist2 = [
+            (key, value_dict["value"])
+            for key, value_dict in self.show_config(
+                ptm_level=ptm_level, prefix=prefix
+            ).items()
+            if "od_mapping" not in value_dict and "value" in value_dict
+        ]
+
+        # extra parameters that are not in the config_model but are set by PTM indirectly
+        extra_keys = [
+            "drift:vertical_advection",
+            "drift:truncate_ocean_model_below_m",
+            "drift:use_tabularised_stokes_drift",
+        ]
+        outlist += [
+            (key, self.show_config(key=key)["value"])
+            for key in extra_keys
+            if "value" in self.show_config(key=key)
+        ]
+
+        return outlist + outlist2
 
     def get_configspec(self, prefix, substring, excludestring, level, ptm_level):
         """Copied from OpenDrift, then modified."""
