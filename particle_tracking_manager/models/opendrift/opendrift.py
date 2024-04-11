@@ -942,39 +942,23 @@ class OpenDriftModel(ParticleTrackingManager):
                 v = str(v)
             ds.attrs[f"ptm_config_{k}"] = v
 
-        # MAKE NEW
+        # Make new output file
         output_file = (
             self.output_file
             or f"output-results_{datetime.datetime.utcnow():%Y-%m-%dT%H%M:%SZ}.nc"
         )
-        # OVERWRITE self.o.outfile_name
-        # remove initial file
 
-        # temp_fd, temp_path = tempfile.mkstemp()
         ds.to_netcdf(output_file)
-
-        # ds.close()
-        # del ds
 
         # update with new path name
         self.o.outfile_name = output_file
 
-        # # remove initial file to save space
-        # os.remove(output_file_initial)
-
-        # # Call the garbage collector
-        # gc.collect()
-        # os.remove(output_file)
-
-        # Replace the original file with the temporary file
-        # os.replace(temp_path, output_file)
-        # os_name = platform.system()
-        # if os_name == "Windows":
-        #     ds.to_netcdf(output_file)
-        # else:
-        #     os.remove(output_file)  # cause permissions issue
-        # ds.close()
-        # ds.to_netcdf(output_file)
+        try:
+            # remove initial file to save space
+            os.remove(output_file_initial)
+        except PermissionError:
+            # windows issue
+            pass
 
     @property
     def _config(self):
