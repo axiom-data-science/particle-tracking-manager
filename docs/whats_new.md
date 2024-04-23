@@ -1,5 +1,11 @@
 # What's New
 
+## v0.8.3 (April 23, 2024)
+
+* removed `Dcrit` because realized it is not necessary
+* improved log handling for CLI
+* changed `OpenDrift` default handling so they are now changed to None
+
 ## v0.8.2 (April 10, 2024)
 
 * updated docs

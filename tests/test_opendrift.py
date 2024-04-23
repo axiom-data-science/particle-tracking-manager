@@ -25,9 +25,7 @@ class TestOpenDriftModel(unittest.TestCase):
         self.assertEqual(
             self.odm.use_auto_landmask, config_model["use_auto_landmask"]["default"]
         )
-        self.assertEqual(
-            self.odm.diffusivitymodel, config_model["diffusivitymodel"]["default"]
-        )
+        self.assertEqual(self.odm.diffusivitymodel, None)
         self.assertEqual(self.odm.stokes_drift, config_model["stokes_drift"]["default"])
         self.assertEqual(
             self.odm.mixed_layer_depth, config_model["mixed_layer_depth"]["default"]
@@ -44,7 +42,7 @@ class TestOpenDriftModel(unittest.TestCase):
         )
         self.assertEqual(
             self.odm.vertical_mixing_timestep,
-            config_model["vertical_mixing_timestep"]["default"],
+            None,
         )
         self.assertEqual(self.odm.object_type, config_model["object_type"]["default"])
         self.assertEqual(self.odm.diameter, config_model["diameter"]["default"])
@@ -275,19 +273,19 @@ class TestTheManager(unittest.TestCase):
         self.m.vertical_mixing = False
         self.m.vertical_mixing_timestep = 10
         d = self.m.show_config(key="vertical_mixing_timestep")
-        assert d["value"] == d["default"]
+        assert d["value"] == None
 
     def test_vertical_mixing_false_diffusivitymodel_not_default(self):
         self.m.vertical_mixing = False
         self.m.diffusivitymodel = "not_default"
         d = self.m.show_config(key="diffusivitymodel")
-        assert d["value"] == d["default"]
+        assert d["value"] == None
 
     def test_vertical_mixing_false_mixed_layer_depth_not_default(self):
         self.m.vertical_mixing = False
         self.m.mixed_layer_depth = 10
         d = self.m.show_config(key="mixed_layer_depth")
-        assert d["value"] == d["default"]
+        assert d["value"] == 30
 
 
 class TestOpenDriftModel_Leeway(unittest.TestCase):
@@ -299,14 +297,14 @@ class TestOpenDriftModel_Leeway(unittest.TestCase):
     def test_leeway_model_wind_drift_factor_not_default(self):
         self.m.wind_drift_factor = 10
         d = self.m.show_config(key="wind_drift_factor")
-        assert d["value"] == d["default"]
+        assert d["value"] == None
         assert self.m.object_type == ">PIW, scuba suit (face up)"
         assert self.m.o._config["object_type"]["value"] == ">PIW, scuba suit (face up)"
 
     def test_leeway_model_wind_drift_depth_not_default(self):
         self.m.wind_drift_depth = 10
         d = self.m.show_config(key="wind_drift_depth")
-        assert d["value"] == d["default"]
+        assert d["value"] == None
 
     def test_leeway_model_stokes_drift_true(self):
         self.m.stokes_drift = True
