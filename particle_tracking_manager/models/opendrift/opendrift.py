@@ -327,15 +327,6 @@ class OpenDriftModel(ParticleTrackingManager):
             self.config_model[name]["value"] = value
         self._update_config()
 
-        if name == "ocean_model":
-            if value == "NWGOA":
-                self.Dcrit = 0.5
-            elif "CIOFS" in value:
-                self.Dcrit = 0.3
-            else:
-                self.Dcrit = 0.1
-            self.logger.info(f"For ocean_model {value}, setting Dcrit to {self.Dcrit}.")
-
         if name in ["ocean_model", "horizontal_diffusivity"]:
 
             # just set the value and move on if purposely setting a non-None value
@@ -431,33 +422,24 @@ class OpenDriftModel(ParticleTrackingManager):
                 "drift_model is LarvalFish which is always 3D in OpenDrift so do3D must be True."
             )
 
-        # Make sure vertical_mixing_timestep equals default value if vertical_mixing False
+        # Make sure vertical_mixing_timestep equals None if vertical_mixing False
         if name in ["vertical_mixing", "vertical_mixing_timestep"]:
-            vmtdef = self.config_model["vertical_mixing_timestep"]["default"]
-            if (
-                not self.vertical_mixing
-                and self.vertical_mixing_timestep != vmtdef
-                and self.vertical_mixing_timestep is not None
-            ):
+            if not self.vertical_mixing:
                 self.logger.info(
-                    "vertical_mixing is False, so resetting value of vertical_mixing_timestep to default and not using."
+                    "vertical_mixing is False, so setting value of vertical_mixing_timestep "
+                    "to None."
                 )
-                self.__dict__["vertical_mixing_timestep"] = vmtdef
-                self.config_model["vertical_mixing_timestep"]["value"] = vmtdef
+                self.__dict__["vertical_mixing_timestep"] = None
+                self.config_model["vertical_mixing_timestep"]["value"] = None
 
-        # Make sure diffusivitymodel equals default value if vertical_mixing False
+        # Make sure diffusivitymodel equals None if vertical_mixing False
         if name in ["vertical_mixing", "diffusivitymodel"]:
-            dmodeldef = self.config_model["diffusivitymodel"]["default"]
-            if (
-                not self.vertical_mixing
-                and self.diffusivitymodel != dmodeldef
-                and self.diffusivitymodel is not None
-            ):
+            if not self.vertical_mixing:
                 self.logger.info(
-                    "vertical_mixing is False, so resetting value of diffusivitymodel to default and not using."
+                    "vertical_mixing is False, so setting value of diffusivitymodel to None."
                 )
-                self.__dict__["diffusivitymodel"] = dmodeldef
-                self.config_model["diffusivitymodel"]["value"] = dmodeldef
+                self.__dict__["diffusivitymodel"] = None
+                self.config_model["diffusivitymodel"]["value"] = None
 
         # Make sure mixed_layer_depth equals default value if vertical_mixing False
         if name in ["vertical_mixing", "mixed_layer_depth"]:
@@ -473,36 +455,28 @@ class OpenDriftModel(ParticleTrackingManager):
                 self.__dict__["mixed_layer_depth"] = mlddef
                 self.config_model["mixed_layer_depth"]["value"] = mlddef
 
-        # make sure user isn't try to use Leeway and "wind_drift_factor" at the same time
-        if name in ["drift_model", "wind_drift_factor"]:
-            mdfdef = self.config_model["wind_drift_factor"]["default"]
-            if (
-                self.drift_model == "Leeway"
-                and self.wind_drift_factor != mdfdef
-                and self.wind_drift_factor is not None
-            ):
+        # make sure user isn't try to use Leeway or LarvalFish and "wind_drift_factor" at the same time
+        if name == "wind_drift_factor":
+            if self.drift_model in ["Leeway", "LarvalFish"]:
                 self.logger.info(
-                    "wind_drift_factor cannot be used with Leeway model, so resetting value to default and not using."
+                    "wind_drift_factor cannot be used with Leeway or LarvalFish models, "
+                    "so setting to None."
                 )
-                self.__dict__["wind_drift_factor"] = mdfdef
-                self.config_model["wind_drift_factor"]["value"] = mdfdef
+                self.__dict__["wind_drift_factor"] = None
+                self.config_model["wind_drift_factor"]["value"] = None
 
-        # make sure user isn't try to use Leeway and "wind_drift_depth" at the same time
-        if name in ["drift_model", "wind_drift_depth"]:
-            mdddef = self.config_model["wind_drift_depth"]["default"]
-            if (
-                self.drift_model == "Leeway"
-                and self.wind_drift_depth != mdddef
-                and self.wind_drift_depth is not None
-            ):
+        # make sure user isn't try to use Leeway or LarvalFish models and "wind_drift_depth" at the same time
+        if name == "wind_drift_depth":
+            if self.drift_model in ["Leeway", "LarvalFish"]:
                 self.logger.info(
-                    "wind_drift_depth cannot be used with Leeway model, so resetting value to default and not using."
+                    "wind_drift_depth cannot be used with Leeway or LarvalFish models, "
+                    "so setting to None."
                 )
-                self.__dict__["wind_drift_depth"] = mdddef
-                self.config_model["wind_drift_depth"]["value"] = mdddef
+                self.__dict__["wind_drift_depth"] = None
+                self.config_model["wind_drift_depth"]["value"] = None
 
         # make sure user isn't try to use Leeway and "stokes_drift" at the same time
-        if name in ["drift_model", "stokes_drift"]:
+        if name == "stokes_drift":
             if self.drift_model == "Leeway" and self.stokes_drift:
                 self.logger.info(
                     "stokes_drift cannot be used with Leeway model, so changing to False."
@@ -1088,7 +1062,7 @@ class OpenDriftModel(ParticleTrackingManager):
             for key, value_dict in self.show_config(
                 substring=":", ptm_level=ptm_level, level=[1, 2, 3], prefix=prefix
             ).items()
-            if "value" in value_dict
+            if "value" in value_dict and value_dict["value"] is not None
         ]
 
         # also PTM config parameters that are separate from OpenDrift parameters
@@ -1097,7 +1071,9 @@ class OpenDriftModel(ParticleTrackingManager):
             for key, value_dict in self.show_config(
                 ptm_level=ptm_level, prefix=prefix
             ).items()
-            if "od_mapping" not in value_dict and "value" in value_dict
+            if "od_mapping" not in value_dict
+            and "value" in value_dict
+            and value_dict["value"] is not None
         ]
 
         # extra parameters that are not in the config_model but are set by PTM indirectly

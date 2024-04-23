@@ -65,7 +65,7 @@
         "ptm_level": 1
     },
     "max_speed": {
-        "default": 2,
+        "default": 5,
         "od_mapping": "drift:max_speed"
     },
     "horizontal_diffusivity": {
@@ -204,10 +204,5 @@
         "default": "low",
         "ptm_level": 2,
         "description": "Log verbosity"
-    },
-    "Dcrit": {
-        "default": 0.1,
-        "od_mapping": "general:seafloor_action_dcrit",
-        "ptm_level": 3
     }
 }
