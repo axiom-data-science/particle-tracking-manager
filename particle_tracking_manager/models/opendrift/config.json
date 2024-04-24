@@ -10,13 +10,13 @@
             "z",
             "origin_marker"
         ],
-        "ptm_level": 2,
+        "ptm_level": 3,
         "type": "list",
         "description": "List of variables to export. Options available with `m.all_export_variables` for a given `drift_model`. ['lon', 'lat', 'ID', 'status'] will always be exported."
     },
     "radius": {
         "default": 1000.0,
-        "ptm_level": 1,
+        "ptm_level": 2,
         "type": "float",
         "min": 0.0,
         "max": 1000000,
@@ -25,13 +25,13 @@
     },
     "radius_type": {
         "default": "gaussian",
-        "ptm_level": 2,
+        "ptm_level": 3,
         "type": "enum - gaussian - uniform",
         "description": "If 'gaussian' (default), the radius is the standard deviation in x-y-directions. If 'uniform', elements are spread evenly and always inside a circle with the given radius. This is used by function `seed_elements`."
     },
     "wind_drift_factor": {
         "default": 0.02,
-        "ptm_level": 1,
+        "ptm_level": 2,
         "od_mapping": "seed:wind_drift_factor"
     },
     "diffusivitymodel": {
@@ -42,7 +42,7 @@
     "stokes_drift": {
         "default": true,
         "od_mapping": "drift:stokes_drift",
-        "ptm_level": 1
+        "ptm_level": 2
     },
     "use_auto_landmask": {
         "default": false,
@@ -57,12 +57,12 @@
     "coastline_action": {
         "default": "previous",
         "od_mapping": "general:coastline_action",
-        "ptm_level": 1
+        "ptm_level": 2
     },
     "seafloor_action": {
         "default": "previous",
         "od_mapping": "general:seafloor_action",
-        "ptm_level": 1
+        "ptm_level": 2
     },
     "max_speed": {
         "default": 5,
@@ -71,29 +71,29 @@
     "horizontal_diffusivity": {
         "default": "None",
         "od_mapping": "drift:horizontal_diffusivity",
-        "ptm_level": 1
+        "ptm_level": 2
     },
     "current_uncertainty": {
         "default": 0,
         "value": 0,
         "od_mapping": "drift:current_uncertainty",
-        "ptm_level": 1
+        "ptm_level": 2
     },
     "wind_uncertainty": {
         "default": 0,
         "value": 0,
         "od_mapping": "drift:wind_uncertainty",
-        "ptm_level": 1
+        "ptm_level": 2
     },
     "wind_drift_depth": {
         "default": 0.02,
         "od_mapping": "drift:wind_drift_depth",
-        "ptm_level": 2
+        "ptm_level": 3
     },
     "vertical_mixing_timestep": {
         "default": 60,
         "od_mapping": "vertical_mixing:timestep",
-        "ptm_level": 2
+        "ptm_level": 3
     },
     "object_type": {
         "default": "Person-in-water (PIW), unknown state (mean values)",
@@ -138,62 +138,62 @@
     "m3_per_hour": {
         "default": 1,
         "od_mapping": "seed:m3_per_hour",
-        "ptm_level": 1
+        "ptm_level": 2
     },
     "oil_film_thickness": {
         "default": 1,
         "od_mapping": "seed:oil_film_thickness",
-        "ptm_level": 2
+        "ptm_level": 3
     },
     "droplet_size_distribution": {
         "default": "uniform",
         "od_mapping": "seed:droplet_size_distribution",
-        "ptm_level": 2
+        "ptm_level": 3
     },
     "droplet_diameter_mu": {
         "default": 0.001,
         "od_mapping": "seed:droplet_diameter_mu",
-        "ptm_level": 2
+        "ptm_level": 3
     },
     "droplet_diameter_sigma": {
         "default": 0.0005,
         "od_mapping": "seed:droplet_diameter_sigma",
-        "ptm_level": 2
+        "ptm_level": 3
     },
     "droplet_diameter_min_subsea": {
         "default": 0.0005,
         "od_mapping": "seed:droplet_diameter_min_subsea",
-        "ptm_level": 2
+        "ptm_level": 3
     },
     "droplet_diameter_max_subsea": {
         "default": 0.005,
         "od_mapping": "seed:droplet_diameter_max_subsea",
-        "ptm_level": 2
+        "ptm_level": 3
     },
     "emulsification": {
         "default": true,
         "od_mapping": "processes:emulsification",
-        "ptm_level": 1
+        "ptm_level": 2
     },
     "dispersion": {
         "default": true,
         "od_mapping": "processes:dispersion",
-        "ptm_level": 1
+        "ptm_level": 2
     },
     "evaporation": {
         "default": true,
         "od_mapping": "processes:evaporation",
-        "ptm_level": 1
+        "ptm_level": 2
     },
     "update_oilfilm_thickness": {
         "default": true,
         "od_mapping": "processes:update_oilfilm_thickness",
-        "ptm_level": 1
+        "ptm_level": 2
     },
     "biodegradation": {
         "default": true,
         "od_mapping": "processes:biodegradation",
-        "ptm_level": 1
+        "ptm_level": 2
     },
     "log": {
         "type": "enum",
@@ -202,7 +202,7 @@
             "high"
         ],
         "default": "low",
-        "ptm_level": 2,
+        "ptm_level": 3,
         "description": "Log verbosity"
     }
 }

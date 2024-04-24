@@ -60,7 +60,7 @@
         "type": "bool",
         "default": true,
         "description": "Run forward in time.",
-        "ptm_level": 1
+        "ptm_level": 2
     },
     "time_step": {
         "type": [
@@ -72,7 +72,7 @@
         "max": 86400,
         "units": "seconds",
         "description": "Interval between particles updates, in seconds or as timedelta.",
-        "ptm_level": 2
+        "ptm_level": 3
     },
     "time_step_output": {
         "type": [
@@ -84,7 +84,7 @@
         "max": 604800,
         "units": "seconds",
         "description": "Time step at which element properties are stored and eventually written to file.",
-        "ptm_level": 2
+        "ptm_level": 3
     },
     "steps": {
         "type": "int",
@@ -145,7 +145,7 @@
     "vertical_mixing": {
         "default": true,
         "od_mapping": "drift:vertical_mixing",
-        "ptm_level": 1
+        "ptm_level": 2
     },
     "z": {
         "default": 0,
@@ -160,7 +160,7 @@
     "use_static_masks": {
         "type": "bool",
         "default": true,
-        "ptm_level": 2,
+        "ptm_level": 3,
         "description": "Set to True to use static masks for known models instead of wetdry masks. If False, the masks are change in time."
     },
     "output_file": {

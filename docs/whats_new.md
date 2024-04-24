@@ -1,5 +1,9 @@
 # What's New
 
+## v0.8.4 (April 24, 2024)
+
+* updated the `ptm_level` of a bunch of config parameters
+
 ## v0.8.3 (April 23, 2024)
 
 * removed `Dcrit` because realized it is not necessary
