@@ -25,7 +25,7 @@ class TestOpenDriftModel(unittest.TestCase):
         self.assertEqual(
             self.odm.use_auto_landmask, config_model["use_auto_landmask"]["default"]
         )
-        self.assertEqual(self.odm.diffusivitymodel, None)
+        self.assertEqual(self.odm.diffusivitymodel, "windspeed_Large1994")
         self.assertEqual(self.odm.stokes_drift, config_model["stokes_drift"]["default"])
         self.assertEqual(
             self.odm.mixed_layer_depth, config_model["mixed_layer_depth"]["default"]
@@ -279,7 +279,7 @@ class TestTheManager(unittest.TestCase):
         self.m.vertical_mixing = False
         self.m.diffusivitymodel = "not_default"
         d = self.m.show_config(key="diffusivitymodel")
-        assert d["value"] == None
+        assert d["value"] == "windspeed_Large1994"
 
     def test_vertical_mixing_false_mixed_layer_depth_not_default(self):
         self.m.vertical_mixing = False

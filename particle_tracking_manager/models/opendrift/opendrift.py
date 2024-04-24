@@ -432,14 +432,19 @@ class OpenDriftModel(ParticleTrackingManager):
                 self.__dict__["vertical_mixing_timestep"] = None
                 self.config_model["vertical_mixing_timestep"]["value"] = None
 
-        # Make sure diffusivitymodel equals None if vertical_mixing False
+        # Make sure diffusivitymodel equals default value if vertical_mixing False
         if name in ["vertical_mixing", "diffusivitymodel"]:
-            if not self.vertical_mixing:
+            dmodeldef = self.config_model["diffusivitymodel"]["default"]
+            if (
+                not self.vertical_mixing
+                and self.diffusivitymodel != dmodeldef
+                and self.diffusivitymodel is not None
+            ):
                 self.logger.info(
-                    "vertical_mixing is False, so setting value of diffusivitymodel to None."
+                    "vertical_mixing is False, so resetting value of diffusivitymodel to default and not using."
                 )
-                self.__dict__["diffusivitymodel"] = None
-                self.config_model["diffusivitymodel"]["value"] = None
+                self.__dict__["diffusivitymodel"] = dmodeldef
+                self.config_model["diffusivitymodel"]["value"] = dmodeldef
 
         # Make sure mixed_layer_depth equals default value if vertical_mixing False
         if name in ["vertical_mixing", "mixed_layer_depth"]:
