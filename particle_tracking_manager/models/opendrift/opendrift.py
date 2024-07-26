@@ -26,6 +26,7 @@ from opendrift.readers import reader_ROMS_native
 
 from ...cli import is_None
 from ...the_manager import _KNOWN_MODELS, ParticleTrackingManager
+from .utils import make_ciofs_kerchunk, make_nwgoa_kerchunk
 
 
 # from .cli import is_None
@@ -661,8 +662,11 @@ class OpenDriftModel(ParticleTrackingManager):
                     "hraw",
                     "snow_thick",
                 ]
+                start = f"{self.start_time.year}-{str(self.start_time.month).zfill(2)}-{str(self.start_time.day).zfill(2)}"
+                end = f"{self.end_time.year}-{str(self.end_time.month).zfill(2)}-{str(self.end_time.day).zfill(2)}"
+                loc_local = make_nwgoa_kerchunk(start=start, end=end)
 
-                loc_local = "/mnt/depot/data/packrat/prod/aoos/nwgoa/processed/nwgoa_kerchunk.parq"
+                # loc_local = "/mnt/depot/data/packrat/prod/aoos/nwgoa/processed/nwgoa_kerchunk.parq"
                 loc_remote = (
                     "http://xpublish-nwgoa.srv.axds.co/datasets/nwgoa_all/zarr/"
                 )
@@ -674,8 +678,14 @@ class OpenDriftModel(ParticleTrackingManager):
                     "wetdry_mask_psi",
                 ]
                 if self.ocean_model == "CIOFS":
-
-                    loc_local = "/mnt/vault/ciofs/HINDCAST/ciofs_kerchunk.parq"
+                    start = f"{self.start_time.year}_{str(self.start_time.dayofyear - 1).zfill(4)}"
+                    end = (
+                        f"{self.end_time.year}_{str(self.end_time.dayofyear).zfill(4)}"
+                    )
+                    loc_local = make_ciofs_kerchunk(start=start, end=end)
+                    # loc_local = make_ciofs_kerchunk(start="2005_0052", end="2005_0068")
+                    # loc_local = "/mnt/vault/ciofs/HINDCAST/ciofs_kerchunk_2005.parq"
+                    # loc_local = "/mnt/vault/ciofs/HINDCAST/ciofs_kerchunk.parq"
                     loc_remote = "http://xpublish-ciofs.srv.axds.co/datasets/ciofs_hindcast/zarr/"
 
                 elif self.ocean_model == "CIOFSOP":
@@ -762,11 +772,19 @@ class OpenDriftModel(ParticleTrackingManager):
                 dt_model = float(
                     ds.ocean_time[1] - ds.ocean_time[0]
                 )  # time step of the model output in seconds
-                start_time_num = (self.start_time - units_date).total_seconds()
+                # want to include the next ocean model output before the first drifter simulation time
+                # in case it starts before model times
+                start_time_num = (
+                    self.start_time - units_date
+                ).total_seconds() - dt_model
                 # want to include the next ocean model output after the last drifter simulation time
                 end_time_num = (self.end_time - units_date).total_seconds() + dt_model
                 ds = ds.sel(ocean_time=slice(start_time_num, end_time_num))
                 self.logger.info("Narrowed model output to simulation time")
+                if len(ds.ocean_time) == 0:
+                    raise ValueError(
+                        "No model output left for simulation time. Check start_time and end_time."
+                    )
             else:
                 raise ValueError(
                     "start_time and end_time must be set to narrow model output to simulation time"
@@ -823,10 +841,19 @@ class OpenDriftModel(ParticleTrackingManager):
             "drift:truncate_ocean_model_below_m",
         ]
 
+        if self.start_time_end is not None:
+            # time can be a list to start drifters linearly in time
+            time = [
+                self.start_time.to_pydatetime(),
+                self.start_time_end.to_pydatetime(),
+            ]
+        elif self.start_time is not None:
+            time = self.start_time.to_pydatetime()
+        else:
+            time = None
+
         _seed_kws = {
-            "time": self.start_time.to_pydatetime()
-            if self.start_time is not None
-            else None,
+            "time": time,
             "z": self.z,
         }
 
@@ -861,7 +888,6 @@ class OpenDriftModel(ParticleTrackingManager):
         """Actually seed drifters for model."""
 
         if self.seed_flag == "elements":
-
             self.o.seed_elements(**self.seed_kws)
 
         elif self.seed_flag == "geojson":
@@ -900,7 +926,7 @@ class OpenDriftModel(ParticleTrackingManager):
 
         output_file_initial = (
             f"{self.output_file}_initial"
-            or f"output-results_{datetime.datetime.utcnow():%Y-%m-%dT%H%M:%SZ}.nc"
+            or f"output-results_{datetime.datetime.now():%Y-%m-%dT%H%M:%SZ}.nc"
         )
 
         self.o.run(
