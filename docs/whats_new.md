@@ -6,7 +6,7 @@
 * depth z should be negative! Fixed this in tests.
 * added `start_time_end`, which adds OpenDrift capability for starting drifters over linear time frame
 * fixed so unique log file is output for each simulation even if run in a script, and has the same name as `output_file`.
-* small fix to hist plot
+* small fix to histogram plot
 
 ## v0.8.4 (April 24, 2024)
 
