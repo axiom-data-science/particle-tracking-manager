@@ -56,6 +56,15 @@
         "description": "Start time for drifter simulation.",
         "ptm_level": 1
     },
+    "start_time_end": {
+        "type": "datetime.datetime",
+        "default": "None",
+        "min": "datetime.datetime(1999,1,1)",
+        "max": "pd.Timestamp.now() + pd.Timedelta(\"48H\")",
+        "units": "time",
+        "description": "If used, this creates a range of start times for drifters, starting with `start_time` and ending with `start_time_end`. Drifters will be initialized linearly between the two start times.",
+        "ptm_level": 2
+    },
     "run_forward": {
         "type": "bool",
         "default": true,
