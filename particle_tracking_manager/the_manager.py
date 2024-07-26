@@ -61,6 +61,7 @@ class ParticleTrackingManager:
         Depth of initial drifter locations, by default 0 but taken from the
         default in the model. Values are overridden if
         ``surface_only==True`` to 0 and to the seabed if ``seed_seafloor`` is True.
+        Depth is negative downward in OpenDrift.
     seed_seafloor : bool, optional
         Set to True to seed drifters vertically at the seabed, default is False. If True
         then value of z is set to None and ignored.
@@ -68,6 +69,10 @@ class ParticleTrackingManager:
         Number of drifters to simulate. Default is 100.
     start_time : Optional[str,datetime.datetime,pd.Timestamp], optional
         Start time of simulation, by default None
+    start_time_end : Optional[str,datetime.datetime,pd.Timestamp], optional
+        If not None, this creates a range of start times for drifters, starting with
+        `start_time` and ending with `start_time_end`. Drifters will be initialized linearly
+        between the two start times. Default None.
     run_forward : bool, optional
         True to run forward in time, False to run backward, by default True
     time_step : int, optional
@@ -130,7 +135,7 @@ class ParticleTrackingManager:
         dataset before inputting to PTM. Setting this to True may save computation time but
         will be less accurate, especially in the tidal flat regions of the model.
     output_file : Optional[str], optional
-        Name of output file to save, by default None. If None, default is set in the model.
+        Name of output file to save, by default None. If None, default is set in the model. With ".nc" suffix.
 
     Notes
     -----
@@ -145,6 +150,7 @@ class ParticleTrackingManager:
     surface_only: Optional[bool]
     z: Optional[Union[int, float]]
     start_time: Optional[Union[str, datetime.datetime, pd.Timestamp]]
+    start_time_end: Optional[Union[str, datetime.datetime, pd.Timestamp]]
     steps: Optional[int]
     time_step: int
     duration: Optional[datetime.timedelta]
@@ -165,6 +171,7 @@ class ParticleTrackingManager:
         seed_seafloor: bool = config_ptm["seed_seafloor"]["default"],
         number: int = config_ptm["number"]["default"],
         start_time: Optional[Union[str, datetime.datetime, pd.Timestamp]] = None,
+        start_time_end: Optional[Union[str, datetime.datetime, pd.Timestamp]] = None,
         run_forward: bool = config_ptm["run_forward"]["default"],
         time_step: int = config_ptm["time_step"]["default"],
         time_step_output: Optional[int] = config_ptm["time_step_output"]["default"],
@@ -218,6 +225,29 @@ class ParticleTrackingManager:
                 self.__setattr__(key, locals()[key])
 
         self.kw = kw
+
+        if self.__dict__["output_file"] is None:
+            self.__dict__[
+                "output_file"
+            ] = f"output-results_{datetime.datetime.now():%Y-%m-%dT%H%M:%SZ}.nc"
+
+        ## set up log for this simulation
+        # Create a file handler
+        assert self.__dict__["output_file"] is not None
+        logfile_name = self.__dict__["output_file"].replace(".nc", ".log")
+        self.file_handler = logging.FileHandler(logfile_name)
+
+        # Create a formatter and add it to the handler
+        formatter = logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        )
+        self.file_handler.setFormatter(formatter)
+
+        # Add the handler to the logger
+        self.logger.addHandler(self.file_handler)
+
+        self.logger.info(f"filename: {logfile_name}")
+        ##
 
     def __setattr_model__(self, name: str, value) -> None:
         """Implement this in model class to add specific __setattr__ there too."""
@@ -340,6 +370,12 @@ class ParticleTrackingManager:
                 self.do3D = False
                 self.z = 0
                 self.vertical_mixing = False
+
+            # z should be a negative value, representing below the surface
+            if name == "z" and value > 0:
+                raise ValueError(
+                    "z should be a negative value, representing below the surface."
+                )
 
             # in case any of these are reset by user after surface_only is already set
             # if surface_only is True, do3D must be False
@@ -501,6 +537,11 @@ class ParticleTrackingManager:
         )
 
         self.run_drifters()
+
+        # Remove the handler at the end of the loop
+        self.logger.removeHandler(self.file_handler)
+        self.file_handler.close()
+
         self.has_run = True
 
     def run_all(self):
