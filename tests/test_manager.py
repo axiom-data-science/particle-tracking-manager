@@ -12,6 +12,13 @@ import pytest
 import particle_tracking_manager as ptm
 
 
+def test_z_sign():
+    """z should be negative"""
+
+    with pytest.raises(ValueError):
+        m = ptm.OpenDriftModel(z=1)
+
+
 def test_order():
     """Have to configure before seeding."""
 
@@ -207,7 +214,7 @@ def test_setattr_oceanmodel_lon0_360():
 
 def test_setattr_surface_only():
     """Test setting surface_only attribute."""
-    manager = ptm.OpenDriftModel(do3D=True, z=1, vertical_mixing=True)
+    manager = ptm.OpenDriftModel(do3D=True, z=-1, vertical_mixing=True)
     manager.surface_only = True
     assert manager.do3D == False
     assert manager.z == 0
@@ -297,7 +304,7 @@ class TestManager(unittest.TestCase):
         self.m.surface_only = True
         self.m.do3D = True
         self.assertEqual(self.m.do3D, False)
-        self.m.z = 10
+        self.m.z = -10
         self.assertEqual(self.m.z, 0)
         self.m.vertical_mixing = True
         self.assertEqual(self.m.vertical_mixing, False)
@@ -319,8 +326,8 @@ class TestManager(unittest.TestCase):
         self.assertIsNone(self.m.z)
 
     def test_z_set(self):
-        self.m.z = 10
-        self.assertEqual(self.m.z, 10)
+        self.m.z = -10
+        self.assertEqual(self.m.z, -10)
         self.assertFalse(self.m.seed_seafloor)
 
     def test_has_added_reader_true_ocean_model_set(self):
