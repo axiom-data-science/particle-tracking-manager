@@ -45,7 +45,7 @@ jobs:
       #     python -m pip install -e . --no-deps --force-reinstall
 
       - name: Setup Micromamba Python ${{ matrix.python-version }}
-        uses: mamba-org/setup-micromamba@v1
+        uses: mamba-org/setup-micromamba@v2
         with:
           init-shell: bash
           create-args: >-
