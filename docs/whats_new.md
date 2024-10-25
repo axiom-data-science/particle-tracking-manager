@@ -1,5 +1,9 @@
 # What's New
 
+## v0.9.1 (October 25, 2024)
+
+* Added local model option of CIOFS Fresh for which kerchunk files also can be generated on the fly
+
 ## v0.9.0 (July 26, 2024)
 
 * Added utilities to generate kerchunk files on the fly for the time period of the simulation length for CIOFS and NWGOA. This has majorly sped up CIOFS simulations and modestly sped up NWGOA simulations.

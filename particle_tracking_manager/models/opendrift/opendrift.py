@@ -682,11 +682,18 @@ class OpenDriftModel(ParticleTrackingManager):
                     end = (
                         f"{self.end_time.year}_{str(self.end_time.dayofyear).zfill(4)}"
                     )
-                    loc_local = make_ciofs_kerchunk(start=start, end=end)
-                    # loc_local = make_ciofs_kerchunk(start="2005_0052", end="2005_0068")
-                    # loc_local = "/mnt/vault/ciofs/HINDCAST/ciofs_kerchunk_2005.parq"
-                    # loc_local = "/mnt/vault/ciofs/HINDCAST/ciofs_kerchunk.parq"
+                    loc_local = make_ciofs_kerchunk(start=start, end=end, name="ciofs")
                     loc_remote = "http://xpublish-ciofs.srv.axds.co/datasets/ciofs_hindcast/zarr/"
+
+                elif self.ocean_model == "CIOFSFRESH":
+                    start = f"{self.start_time.year}_{str(self.start_time.dayofyear - 1).zfill(4)}"
+                    end = (
+                        f"{self.end_time.year}_{str(self.end_time.dayofyear).zfill(4)}"
+                    )
+                    loc_local = make_ciofs_kerchunk(
+                        start=start, end=end, name="ciofs_fresh"
+                    )
+                    loc_remote = None
 
                 elif self.ocean_model == "CIOFSOP":
 
@@ -727,6 +734,10 @@ class OpenDriftModel(ParticleTrackingManager):
                 # otherwise remote
                 else:
                     if ".nc" in loc_remote:
+
+                        if self.ocean_model == "CIOFSFRESH":
+                            raise NotImplementedError
+
                         ds = xr.open_dataset(
                             loc_remote,
                             chunks={},
