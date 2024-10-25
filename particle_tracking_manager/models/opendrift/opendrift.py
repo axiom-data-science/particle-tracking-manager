@@ -690,7 +690,9 @@ class OpenDriftModel(ParticleTrackingManager):
                     end = (
                         f"{self.end_time.year}_{str(self.end_time.dayofyear).zfill(4)}"
                     )
-                    loc_local = make_ciofs_kerchunk(start=start, end=end, name="ciofs_fresh")
+                    loc_local = make_ciofs_kerchunk(
+                        start=start, end=end, name="ciofs_fresh"
+                    )
                     loc_remote = None
 
                 elif self.ocean_model == "CIOFSOP":
