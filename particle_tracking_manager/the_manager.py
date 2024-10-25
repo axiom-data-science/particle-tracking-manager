@@ -17,6 +17,7 @@ from .cli import is_None
 _KNOWN_MODELS = [
     "NWGOA",
     "CIOFS",
+    "CIOFSFRESH",
     "CIOFSOP",
 ]
 

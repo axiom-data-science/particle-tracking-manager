@@ -10,7 +10,7 @@ import fsspec
 from kerchunk.combine import MultiZarrToZarr
 
 
-def make_ciofs_kerchunk(start, end):
+def make_ciofs_kerchunk(start, end, name):
     """_summary_
 
     Parameters
@@ -25,7 +25,7 @@ def make_ciofs_kerchunk(start, end):
         _description_
     """
 
-    output_dir_single_files = "/home/kristen/projects/kerchunk_setup/ciofs"
+    output_dir_single_files = f"/home/kristen/projects/kerchunk_setup/{name}"
 
     fs2 = fsspec.filesystem("")  # local file system to save final jsons to
 
