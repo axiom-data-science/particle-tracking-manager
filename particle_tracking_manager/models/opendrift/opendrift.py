@@ -662,6 +662,10 @@ class OpenDriftModel(ParticleTrackingManager):
                     "hraw",
                     "snow_thick",
                 ]
+                if self.start_time is None:
+                    raise ValueError(
+                        "Need to set start_time ahead of time to add local reader."
+                    )
                 start = f"{self.start_time.year}-{str(self.start_time.month).zfill(2)}-{str(self.start_time.day).zfill(2)}"
                 end = f"{self.end_time.year}-{str(self.end_time.month).zfill(2)}-{str(self.end_time.day).zfill(2)}"
                 loc_local = make_nwgoa_kerchunk(start=start, end=end)
@@ -678,6 +682,10 @@ class OpenDriftModel(ParticleTrackingManager):
                     "wetdry_mask_psi",
                 ]
                 if self.ocean_model == "CIOFS":
+                    if self.start_time is None:
+                        raise ValueError(
+                            "Need to set start_time ahead of time to add local reader."
+                        )
                     start = f"{self.start_time.year}_{str(self.start_time.dayofyear - 1).zfill(4)}"
                     end = (
                         f"{self.end_time.year}_{str(self.end_time.dayofyear).zfill(4)}"
@@ -686,6 +694,10 @@ class OpenDriftModel(ParticleTrackingManager):
                     loc_remote = "http://xpublish-ciofs.srv.axds.co/datasets/ciofs_hindcast/zarr/"
 
                 elif self.ocean_model == "CIOFSFRESH":
+                    if self.start_time is None:
+                        raise ValueError(
+                            "Need to set start_time ahead of time to add local reader."
+                        )
                     start = f"{self.start_time.year}_{str(self.start_time.dayofyear - 1).zfill(4)}"
                     end = (
                         f"{self.end_time.year}_{str(self.end_time.dayofyear).zfill(4)}"
@@ -703,8 +715,17 @@ class OpenDriftModel(ParticleTrackingManager):
                             "v_northward": "y_sea_water_velocity",
                         }
                     )
+                    if self.start_time is None:
+                        raise ValueError(
+                            "Need to set start_time ahead of time to add local reader."
+                        )
+                    start = f"{self.start_time.year}-{str(self.start_time.month).zfill(2)}-{str(self.start_time.day).zfill(2)}"
+                    end = f"{self.end_time.year}-{str(self.end_time.month).zfill(2)}-{str(self.end_time.day).zfill(2)}"
 
-                    loc_local = "/mnt/depot/data/packrat/prod/noaa/coops/ofs/aws_ciofs/processed/aws_ciofs_kerchunk.parq"
+                    loc_local = make_ciofs_kerchunk(
+                        start=start, end=end, name="aws_ciofs_with_angle"
+                    )
+                    # loc_local = "/mnt/depot/data/packrat/prod/noaa/coops/ofs/aws_ciofs/processed/aws_ciofs_kerchunk.parq"
                     loc_remote = "https://thredds.aoos.org/thredds/dodsC/AWS_CIOFS.nc"
 
             elif self.ocean_model == "user_input":
@@ -726,9 +747,13 @@ class OpenDriftModel(ParticleTrackingManager):
                     ds = xr.open_dataset(
                         loc_local,
                         engine="kerchunk",
-                        chunks={},
+                        # chunks={},  # Looks like it is faster not to include this for kerchunk
                         drop_variables=drop_vars,
                         decode_times=False,
+                    )
+
+                    self.logger.info(
+                        f"Opened local dataset starting {start} and ending {end} with number outputs {ds.ocean_time.size}."
                     )
 
                 # otherwise remote
@@ -751,6 +776,10 @@ class OpenDriftModel(ParticleTrackingManager):
                             drop_variables=drop_vars,
                             decode_times=False,
                         )
+
+                    self.logger.info(
+                        f"Opened remote dataset {loc_remote} with number outputs {ds.ocean_time.size}."
+                    )
 
             # For NWGOA, need to calculate wetdry mask from a variable
             if self.ocean_model == "NWGOA" and not self.use_static_masks:
