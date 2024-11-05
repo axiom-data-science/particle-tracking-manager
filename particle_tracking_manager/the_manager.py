@@ -446,7 +446,10 @@ class ParticleTrackingManager:
             if name == "has_added_reader" and value and self.start_time is not None:
 
                 if self.ocean_model != "test":
-                    assert self.reader_metadata("start_time") <= self.start_time
+                    if self.reader_metadata("start_time") > self.start_time:
+                        raise ValueError(
+                            f"reader start_time {self.reader_metadata('start_time')} is after class start_time {self.start_time}."
+                        )
 
             # if reader, lon, and lat set, check inputs
             if name == "has_added_reader" and value:

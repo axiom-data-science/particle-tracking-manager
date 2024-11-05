@@ -17,7 +17,8 @@ def make_ciofs_kerchunk(start, end, name):
     ----------
     start, end : str
         Should be something like "2004_0001" for YYYY_0DDD where DDD is dayofyear
-        to match the files in the directory, which are by year and day of year.
+        to match the files in the directory, which are by year and day of year
+        ("ciofs_fresh" or "ciofs") or "YYYY-MM-DD" for "aws_ciofs"
 
     Returns
     -------
@@ -25,7 +26,13 @@ def make_ciofs_kerchunk(start, end, name):
         _description_
     """
 
-    output_dir_single_files = f"/home/kristen/projects/kerchunk_setup/{name}"
+    if name in ["ciofs", "ciofs_fresh", "aws_ciofs_with_angle"]:
+        output_dir_single_files = f"/home/kristen/projects/kerchunk_setup/{name}"
+    # elif name == "aws_ciofs":
+    #     output_dir_single_files = f"/home/chang/kerchunk_aws_ciofs/{name}"
+    # future directory: /mnt/depot/data/packrat/prod/noaa/coops/ofs/aws_ciofs/processed/.kerchunk_json
+    else:
+        raise ValueError(f"Name {name} not recognized")
 
     fs2 = fsspec.filesystem("")  # local file system to save final jsons to
 
@@ -33,7 +40,30 @@ def make_ciofs_kerchunk(start, end, name):
     json_list = sorted(
         fs2.glob(f"{output_dir_single_files}/*.json")
     )  # combine single json files
-    json_list = [j for j in json_list if Path(j).stem >= start and Path(j).stem <= end]
+
+    if name in ["ciofs", "ciofs_fresh"]:
+        json_list = sorted(
+            fs2.glob(f"{output_dir_single_files}/*.json")
+        )  # combine single json files
+        json_list = [
+            j for j in json_list if Path(j).stem >= start and Path(j).stem <= end
+        ]
+    elif name == "aws_ciofs_with_angle":
+        json_list = sorted(
+            fs2.glob(f"{output_dir_single_files}/ciofs_*.json")
+        )  # combine single json files
+        json_list = [
+            j
+            for j in json_list
+            if Path(j).stem.split("_")[1] >= start and Path(j).stem.split("_")[1] <= end
+        ]
+    else:
+        raise ValueError(f"Name {name} not recognized")
+
+    if json_list == []:
+        raise ValueError(
+            f"No files found in {output_dir_single_files} for {start} to {end}"
+        )
 
     # Multi-file JSONs
     # This code uses the output generated above to create a single ensemble dataset,

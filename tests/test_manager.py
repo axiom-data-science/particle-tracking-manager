@@ -58,6 +58,16 @@ def test_seed():
     )
 
 
+def test_set_start_time_ahead():
+    """Test set start_time ahead when using start_time for local kerchunk file setup."""
+
+    m = ptm.OpenDriftModel(ocean_model="CIOFSOP")
+
+    # this causes the check
+    with pytest.raises(ValueError):
+        m.add_reader()
+
+
 @mock.patch(
     "particle_tracking_manager.models.opendrift.opendrift.OpenDriftModel.reader_metadata"
 )
@@ -86,7 +96,7 @@ def test_start_time_check(mock_reader_metadata):
     m = ptm.OpenDriftModel(start_time=datetime(1999, 1, 1))
 
     # this causes the check
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError):
         m.has_added_reader = True
 
 
