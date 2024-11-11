@@ -144,6 +144,8 @@ class OpenDriftModel(ParticleTrackingManager):
         Oil mass is biodegraded (eaten by bacteria).
     log : str, optional
         Options are "low" and "high" verbosity for log, by default "low"
+    output_format : str, default "netcdf"
+        Name of input/output module type to use for writing Lagrangian model output. Default is "netcdf".
 
     Notes
     -----
@@ -164,6 +166,7 @@ class OpenDriftModel(ParticleTrackingManager):
     o: Union[OceanDrift, Leeway, LarvalFish, OpenOil]
     horizontal_diffusivity: Optional[float]
     config_model: dict
+    output_format: str
 
     def __init__(
         self,
@@ -221,6 +224,7 @@ class OpenDriftModel(ParticleTrackingManager):
         ],
         biodegradation: bool = config_model["biodegradation"]["default"],
         log: str = config_model["log"]["default"],
+        output_format: str = config_model["output_format"]["default"],
         **kw,
     ) -> None:
         """Inputs for OpenDrift model."""
@@ -248,18 +252,29 @@ class OpenDriftModel(ParticleTrackingManager):
         # so do this before super initialization
         self.__dict__["drift_model"] = drift_model
 
+        # # need output_format defined right away
+        # self.__dict__["output_format"] = output_format
+
         # do this right away so I can query the object
+        # we don't actually input output_format here because we first output to netcdf, then
+        # resave as parquet after adding in extra config
         if self.drift_model == "Leeway":
-            o = Leeway(loglevel=self.loglevel)
+            o = Leeway(loglevel=self.loglevel)  # , output_format=self.output_format)
 
         elif self.drift_model == "OceanDrift":
-            o = OceanDrift(loglevel=self.loglevel)
+            o = OceanDrift(
+                loglevel=self.loglevel
+            )  # , output_format=self.output_format)
 
         elif self.drift_model == "LarvalFish":
-            o = LarvalFish(loglevel=self.loglevel)
+            o = LarvalFish(
+                loglevel=self.loglevel
+            )  # , output_format=self.output_format)
 
         elif self.drift_model == "OpenOil":
-            o = OpenOil(loglevel=self.loglevel, weathering_model="noaa")
+            o = OpenOil(
+                loglevel=self.loglevel, weathering_model="noaa"
+            )  # , output_format=self.output_format)
 
         else:
             raise ValueError(f"Drifter model {self.drift_model} is not recognized.")
@@ -662,13 +677,18 @@ class OpenDriftModel(ParticleTrackingManager):
                     "hraw",
                     "snow_thick",
                 ]
-                if self.start_time is None:
-                    raise ValueError(
-                        "Need to set start_time ahead of time to add local reader."
-                    )
-                start = f"{self.start_time.year}-{str(self.start_time.month).zfill(2)}-{str(self.start_time.day).zfill(2)}"
-                end = f"{self.end_time.year}-{str(self.end_time.month).zfill(2)}-{str(self.end_time.day).zfill(2)}"
-                loc_local = make_nwgoa_kerchunk(start=start, end=end)
+
+                if self.ocean_model_local:
+
+                    if self.start_time is None:
+                        raise ValueError(
+                            "Need to set start_time ahead of time to add local reader."
+                        )
+                    start_time = self.start_time
+                    start = f"{start_time.year}-{str(start_time.month).zfill(2)}-{str(start_time.day).zfill(2)}"
+                    end_time = self.end_time
+                    end = f"{end_time.year}-{str(end_time.month).zfill(2)}-{str(end_time.day).zfill(2)}"
+                    loc_local = make_nwgoa_kerchunk(start=start, end=end)
 
                 # loc_local = "/mnt/depot/data/packrat/prod/aoos/nwgoa/processed/nwgoa_kerchunk.parq"
                 loc_remote = (
@@ -682,29 +702,34 @@ class OpenDriftModel(ParticleTrackingManager):
                     "wetdry_mask_psi",
                 ]
                 if self.ocean_model == "CIOFS":
-                    if self.start_time is None:
-                        raise ValueError(
-                            "Need to set start_time ahead of time to add local reader."
+
+                    if self.ocean_model_local:
+
+                        if self.start_time is None:
+                            raise ValueError(
+                                "Need to set start_time ahead of time to add local reader."
+                            )
+                        start = f"{self.start_time.year}_{str(self.start_time.dayofyear - 1).zfill(4)}"
+                        end = f"{self.end_time.year}_{str(self.end_time.dayofyear).zfill(4)}"
+                        loc_local = make_ciofs_kerchunk(
+                            start=start, end=end, name="ciofs"
                         )
-                    start = f"{self.start_time.year}_{str(self.start_time.dayofyear - 1).zfill(4)}"
-                    end = (
-                        f"{self.end_time.year}_{str(self.end_time.dayofyear).zfill(4)}"
-                    )
-                    loc_local = make_ciofs_kerchunk(start=start, end=end, name="ciofs")
                     loc_remote = "http://xpublish-ciofs.srv.axds.co/datasets/ciofs_hindcast/zarr/"
 
                 elif self.ocean_model == "CIOFSFRESH":
-                    if self.start_time is None:
-                        raise ValueError(
-                            "Need to set start_time ahead of time to add local reader."
+
+                    if self.ocean_model_local:
+
+                        if self.start_time is None:
+                            raise ValueError(
+                                "Need to set start_time ahead of time to add local reader."
+                            )
+                        start = f"{self.start_time.year}_{str(self.start_time.dayofyear - 1).zfill(4)}"
+
+                        end = f"{self.end_time.year}_{str(self.end_time.dayofyear).zfill(4)}"
+                        loc_local = make_ciofs_kerchunk(
+                            start=start, end=end, name="ciofs_fresh"
                         )
-                    start = f"{self.start_time.year}_{str(self.start_time.dayofyear - 1).zfill(4)}"
-                    end = (
-                        f"{self.end_time.year}_{str(self.end_time.dayofyear).zfill(4)}"
-                    )
-                    loc_local = make_ciofs_kerchunk(
-                        start=start, end=end, name="ciofs_fresh"
-                    )
                     loc_remote = None
 
                 elif self.ocean_model == "CIOFSOP":
@@ -715,17 +740,21 @@ class OpenDriftModel(ParticleTrackingManager):
                             "v_northward": "y_sea_water_velocity",
                         }
                     )
-                    if self.start_time is None:
-                        raise ValueError(
-                            "Need to set start_time ahead of time to add local reader."
-                        )
-                    start = f"{self.start_time.year}-{str(self.start_time.month).zfill(2)}-{str(self.start_time.day).zfill(2)}"
-                    end = f"{self.end_time.year}-{str(self.end_time.month).zfill(2)}-{str(self.end_time.day).zfill(2)}"
 
-                    loc_local = make_ciofs_kerchunk(
-                        start=start, end=end, name="aws_ciofs_with_angle"
-                    )
-                    # loc_local = "/mnt/depot/data/packrat/prod/noaa/coops/ofs/aws_ciofs/processed/aws_ciofs_kerchunk.parq"
+                    if self.ocean_model_local:
+
+                        if self.start_time is None:
+                            raise ValueError(
+                                "Need to set start_time ahead of time to add local reader."
+                            )
+                        start = f"{self.start_time.year}-{str(self.start_time.month).zfill(2)}-{str(self.start_time.day).zfill(2)}"
+                        end = f"{self.end_time.year}-{str(self.end_time.month).zfill(2)}-{str(self.end_time.day).zfill(2)}"
+
+                        loc_local = make_ciofs_kerchunk(
+                            start=start, end=end, name="aws_ciofs_with_angle"
+                        )
+                        # loc_local = "/mnt/depot/data/packrat/prod/noaa/coops/ofs/aws_ciofs/processed/aws_ciofs_kerchunk.parq"
+
                     loc_remote = "https://thredds.aoos.org/thredds/dodsC/AWS_CIOFS.nc"
 
             elif self.ocean_model == "user_input":
@@ -964,10 +993,21 @@ class OpenDriftModel(ParticleTrackingManager):
 
         self.o._config = config_input_to_opendrift  # only OpenDrift config
 
-        output_file_initial = (
-            f"{self.output_file}_initial"
-            or f"output-results_{datetime.datetime.now():%Y-%m-%dT%H%M:%SZ}.nc"
+        output_file = (
+            self.output_file
+            or f"output-results_{datetime.datetime.now():%Y-%m-%dT%H%M:%SZ}"
         )
+        output_file_initial = f"{output_file}_initial" + ".nc"
+
+        # initially output to netcdf even if parquet has been selected
+        # since I do this weird 2 step saving process
+
+        # if self.output_format == "netcdf":
+        #     output_file_initial += ".nc"
+        # elif self.output_format == "parquet":
+        #     output_file_initial += ".parq"
+        # else:
+        #     raise ValueError(f"output_format {self.output_format} not recognized.")
 
         self.o.run(
             time_step=timedir * self.time_step,
@@ -987,13 +1027,19 @@ class OpenDriftModel(ParticleTrackingManager):
                 v = str(v)
             ds.attrs[f"ptm_config_{k}"] = v
 
-        # Make new output file
-        output_file = (
-            self.output_file
-            or f"output-results_{datetime.datetime.utcnow():%Y-%m-%dT%H%M:%SZ}.nc"
-        )
+        if self.output_format == "netcdf":
+            output_file += ".nc"
+        elif self.output_format == "parquet":
+            output_file += ".parq"
+        else:
+            raise ValueError(f"output_format {self.output_format} not recognized.")
 
-        ds.to_netcdf(output_file)
+        if self.output_format == "netcdf":
+            ds.to_netcdf(output_file)
+        elif self.output_format == "parquet":
+            ds.to_dataframe().to_parquet(output_file)
+        else:
+            raise ValueError(f"output_format {self.output_format} not recognized.")
 
         # update with new path name
         self.o.outfile_name = output_file

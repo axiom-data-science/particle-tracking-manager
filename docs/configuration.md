@@ -145,7 +145,7 @@ m.show_config(ptm_level=[1,2,3], excludestring=":").keys()
 
 This section is split into two: first options that are available to all models (thus are handled in the Manager) and those for `OpenDriftModel` (the only model option currently).
 
-This is not currently a comprehensive list but a place where extra details are included that might not be clear or available elsewhere. For more information look at the configuration information (previous section) and the docstrings for each class.
+This is not currently a comprehensive list but a place where extra details are included that might not be clear or available elsewhere. For more information look at the configuration information (previous section) and the docstrings for each class in the API.
 
 ### Manager options, available to all models
 
