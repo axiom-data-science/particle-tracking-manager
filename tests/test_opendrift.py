@@ -312,6 +312,16 @@ class TestOpenDriftModel_Leeway(unittest.TestCase):
         # assert not self.m.show_config(key="stokes_drift")["value"]
 
 
+def test_output_format():
+    """Check output_format."""
+
+    m = OpenDriftModel(output_format="netcdf")
+    assert m.output_format == "netcdf"
+
+    m = OpenDriftModel(output_format="parquet")
+    assert m.output_format == "parquet"
+
+
 def test_horizontal_diffusivity_logic():
     """Check logic for using default horizontal diff values for known models."""
 

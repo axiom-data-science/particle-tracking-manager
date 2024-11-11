@@ -207,6 +207,11 @@ def make_nwgoa_kerchunk(start, end):
         and Path(j).stem.split("nwgoa_")[1] <= end
     ]
 
+    if json_list == []:
+        raise ValueError(
+            f"No files found in {output_dir_single_files} for {start} to {end}"
+        )
+
     # account for double compression
     # Look at individual variables in the files to see what needs to be changed with
     # h5dump -d ocean_time -p /mnt/depot/data/packrat/prod/aoos/nwgoa/processed/1999/nwgoa_1999-02-01.nc

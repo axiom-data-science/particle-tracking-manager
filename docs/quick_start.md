@@ -55,6 +55,22 @@ ptm lon=-151 lat=59 ocean_model=NWGOA steps=1 --dry-run
 
 `m.outfile_name` is printed to the screen after the command has been run. `ptm` is installed as an entry point with `particle-tracking-manager`.
 
+
+If you are running this locally (this is for Axiom people), you'll want to run it like this:
+
+```
+ptm lon=-151 lat=59 ocean_model=NWGOA steps=1 ocean_model_local=True start_time=2000-1-1T01
+```
+
+where you should include `ocean_model_local=True` since you are running the model locally on a server, if you are doing so, you need to input a `start_time` since it will create a kerchunk file on the fly for `ocean_model` that you select.
+
+Similarly you would do:
+
+```
+ptm lon=-151 lat=59 ocean_model=NWGOA steps=1 ocean_model_local=True start_time=2000-1-1T01 --dry-run
+```
+
+
 +++
 
 (new_reader)=

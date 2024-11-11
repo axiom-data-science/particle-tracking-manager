@@ -136,7 +136,7 @@ class ParticleTrackingManager:
         dataset before inputting to PTM. Setting this to True may save computation time but
         will be less accurate, especially in the tidal flat regions of the model.
     output_file : Optional[str], optional
-        Name of output file to save, by default None. If None, default is set in the model. With ".nc" suffix.
+        Name of output file to save, by default None. If None, default is set in the model. Without any suffix.
 
     Notes
     -----
@@ -230,12 +230,12 @@ class ParticleTrackingManager:
         if self.__dict__["output_file"] is None:
             self.__dict__[
                 "output_file"
-            ] = f"output-results_{datetime.datetime.now():%Y-%m-%dT%H%M:%SZ}.nc"
+            ] = f"output-results_{datetime.datetime.now():%Y-%m-%dT%H%M:%SZ}"
 
         ## set up log for this simulation
         # Create a file handler
         assert self.__dict__["output_file"] is not None
-        logfile_name = self.__dict__["output_file"].replace(".nc", ".log")
+        logfile_name = self.__dict__["output_file"] + ".log"
         self.file_handler = logging.FileHandler(logfile_name)
 
         # Create a formatter and add it to the handler

@@ -1,8 +1,13 @@
 # What's New
 
+## v0.9.2 (November 11, 2024)
+
+* Added ability to save output files as parquet instead of netcdf.
+* Partially updated docs
+
 ## v0.9.1 (October 25, 2024)
 
-* Added local model option of CIOFS Fresh for which kerchunk files also can be generated on the fly
+* Added local model option of CIOFS Fresh for which kerchunk files also can be generated on the fly.
 
 ## v0.9.0 (July 26, 2024)
 
