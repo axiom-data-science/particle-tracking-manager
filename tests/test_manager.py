@@ -61,7 +61,7 @@ def test_seed():
 def test_set_start_time_ahead():
     """Test set start_time ahead when using start_time for local kerchunk file setup."""
 
-    m = ptm.OpenDriftModel(ocean_model="CIOFSOP")
+    m = ptm.OpenDriftModel(ocean_model="CIOFSOP", ocean_model_local=True)
 
     # this causes the check
     with pytest.raises(ValueError):
