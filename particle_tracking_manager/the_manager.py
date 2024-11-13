@@ -137,6 +137,8 @@ class ParticleTrackingManager:
         will be less accurate, especially in the tidal flat regions of the model.
     output_file : Optional[str], optional
         Name of output file to save, by default None. If None, default is set in the model. Without any suffix.
+    output_format : str, default "netcdf"
+        Name of input/output module type to use for writing Lagrangian model output. Default is "netcdf".
 
     Notes
     -----
@@ -160,6 +162,8 @@ class ParticleTrackingManager:
     config_ptm: dict
     config_model: Optional[dict]
     seed_seafloor: bool
+    output_file: str
+    output_format: str
 
     def __init__(
         self,
@@ -187,6 +191,7 @@ class ParticleTrackingManager:
         vertical_mixing: bool = config_ptm["vertical_mixing"]["default"],
         use_static_masks: bool = config_ptm["use_static_masks"]["default"],
         output_file: Optional[str] = config_ptm["output_file"]["default"],
+        output_format: str = config_ptm["output_format"]["default"],
         **kw,
     ) -> None:
         """Inputs necessary for any particle tracking."""
@@ -363,6 +368,39 @@ class ParticleTrackingManager:
                     if -180 < self.lon < 0:
                         self.__dict__["lon"] += 360
                         self.config_ptm["lon"]["value"] += 360  # this isn't really used
+
+            if name in ["output_file", "output_format"]:
+                # import pdb; pdb.set_trace()
+
+                # remove netcdf suffix if it is there to just have name
+                # by this point, output_file should already be a filename like what is
+                # available here, from OpenDrift (if run from there)
+                if self.output_file is not None:
+                    output_file = self.output_file.rstrip(".nc")
+                else:
+                    output_file = (
+                        f"output-results_{datetime.datetime.now():%Y-%m-%dT%H%M:%SZ}"
+                    )
+
+                # make new attribute for initial output file
+                self.output_file_initial = str(
+                    pathlib.Path(f"{output_file}_initial").with_suffix(".nc")
+                )
+
+                if self.output_format is not None:
+                    if self.output_format == "netcdf":
+                        output_file = str(pathlib.Path(output_file).with_suffix(".nc"))
+                    elif self.output_format == "parquet":
+                        output_file = str(
+                            pathlib.Path(output_file).with_suffix(".parq")
+                        )
+                    else:
+                        raise ValueError(
+                            f"output_format {self.output_format} not recognized."
+                        )
+
+                self.__dict__["output_file"] = output_file
+                self.config_ptm["output_file"]["value"] = output_file
 
             if name == "surface_only" and value:
                 self.logger.info(

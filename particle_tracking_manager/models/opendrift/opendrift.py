@@ -144,8 +144,6 @@ class OpenDriftModel(ParticleTrackingManager):
         Oil mass is biodegraded (eaten by bacteria).
     log : str, optional
         Options are "low" and "high" verbosity for log, by default "low"
-    output_format : str, default "netcdf"
-        Name of input/output module type to use for writing Lagrangian model output. Default is "netcdf".
 
     Notes
     -----
@@ -166,7 +164,6 @@ class OpenDriftModel(ParticleTrackingManager):
     o: Union[OceanDrift, Leeway, LarvalFish, OpenOil]
     horizontal_diffusivity: Optional[float]
     config_model: dict
-    output_format: str
 
     def __init__(
         self,
@@ -224,7 +221,6 @@ class OpenDriftModel(ParticleTrackingManager):
         ],
         biodegradation: bool = config_model["biodegradation"]["default"],
         log: str = config_model["log"]["default"],
-        output_format: str = config_model["output_format"]["default"],
         **kw,
     ) -> None:
         """Inputs for OpenDrift model."""
@@ -252,6 +248,9 @@ class OpenDriftModel(ParticleTrackingManager):
         # so do this before super initialization
         self.__dict__["drift_model"] = drift_model
 
+        # I left this code here but it isn't used for now
+        # it will be used if we can export to parquet/netcdf directly
+        # without needing to resave the file with extra config
         # # need output_format defined right away
         # self.__dict__["output_format"] = output_format
 
@@ -263,7 +262,7 @@ class OpenDriftModel(ParticleTrackingManager):
 
         elif self.drift_model == "OceanDrift":
             o = OceanDrift(
-                loglevel=self.loglevel
+                loglevel=self.loglevel,
             )  # , output_format=self.output_format)
 
         elif self.drift_model == "LarvalFish":
@@ -993,12 +992,6 @@ class OpenDriftModel(ParticleTrackingManager):
 
         self.o._config = config_input_to_opendrift  # only OpenDrift config
 
-        output_file = (
-            self.output_file
-            or f"output-results_{datetime.datetime.now():%Y-%m-%dT%H%M:%SZ}"
-        )
-        output_file_initial = f"{output_file}_initial" + ".nc"
-
         # initially output to netcdf even if parquet has been selected
         # since I do this weird 2 step saving process
 
@@ -1014,39 +1007,33 @@ class OpenDriftModel(ParticleTrackingManager):
             time_step_output=self.time_step_output,
             steps=self.steps,
             export_variables=self.export_variables,
-            outfile=output_file_initial,
+            outfile=self.output_file_initial,
         )
 
         self.o._config = full_config  # reinstate config
 
         # open outfile file and add config to it
         # config can't be present earlier because it breaks opendrift
-        ds = xr.open_dataset(output_file_initial)
+        ds = xr.open_dataset(self.output_file_initial)
         for k, v in self.drift_model_config():
             if isinstance(v, (bool, type(None), pd.Timestamp, pd.Timedelta)):
                 v = str(v)
             ds.attrs[f"ptm_config_{k}"] = v
 
         if self.output_format == "netcdf":
-            output_file += ".nc"
+            ds.to_netcdf(self.output_file)
         elif self.output_format == "parquet":
-            output_file += ".parq"
-        else:
-            raise ValueError(f"output_format {self.output_format} not recognized.")
-
-        if self.output_format == "netcdf":
-            ds.to_netcdf(output_file)
-        elif self.output_format == "parquet":
-            ds.to_dataframe().to_parquet(output_file)
+            ds.to_dataframe().to_parquet(self.output_file)
         else:
             raise ValueError(f"output_format {self.output_format} not recognized.")
 
         # update with new path name
-        self.o.outfile_name = output_file
+        self.o.outfile_name = self.output_file
+        self.output_file = self.output_file
 
         try:
             # remove initial file to save space
-            os.remove(output_file_initial)
+            os.remove(self.output_file_initial)
         except PermissionError:
             # windows issue
             pass

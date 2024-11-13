@@ -177,5 +177,15 @@
         "default": "None",
         "description": "Name of file to write output to. If None, default name is used.",
         "ptm_level": 3
+    },
+    "output_format": {
+        "type": "enum",
+        "enum": [
+            "netcdf",
+            "parquet"
+        ],
+        "default": "netcdf",
+        "description": "Output file format. Options are \"netcdf\" or \"parquet\".",
+        "ptm_level": 2
     }
 }
