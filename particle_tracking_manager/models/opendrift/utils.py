@@ -26,11 +26,10 @@ def make_ciofs_kerchunk(start, end, name):
         _description_
     """
 
-    if name in ["ciofs", "ciofs_fresh", "aws_ciofs_with_angle"]:
+    if name in ["ciofs", "ciofs_fresh"]:
         output_dir_single_files = f"/home/kristen/projects/kerchunk_setup/{name}"
-    # elif name == "aws_ciofs":
-    #     output_dir_single_files = f"/home/chang/kerchunk_aws_ciofs/{name}"
-    # future directory: /mnt/depot/data/packrat/prod/noaa/coops/ofs/aws_ciofs/processed/.kerchunk_json
+    elif name == "aws_ciofs_with_angle":
+        output_dir_single_files = "/mnt/depot/data/packrat/prod/noaa/coops/ofs/aws_ciofs/processed/.kerchunk_json"
     else:
         raise ValueError(f"Name {name} not recognized")
 
