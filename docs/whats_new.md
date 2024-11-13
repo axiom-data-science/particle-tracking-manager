@@ -1,5 +1,10 @@
 # What's New
 
+## v0.9.3 (November 13, 2024)
+
+* Moved `output_format` parameter to manager config from model config
+* Changed source location for CIOFSOP local model output
+
 ## v0.9.2 (November 11, 2024)
 
 * Added ability to save output files as parquet instead of netcdf.
