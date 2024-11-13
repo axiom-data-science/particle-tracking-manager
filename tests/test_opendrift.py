@@ -322,6 +322,16 @@ def test_output_format():
     assert m.output_format == "parquet"
 
 
+def test_output_file():
+    """make sure output file is parquet if output_format is parquet"""
+
+    m = OpenDriftModel(output_format="parquet")
+    assert m.output_file.endswith(".parq")
+
+    m = OpenDriftModel(output_format="netcdf")
+    assert m.output_file.endswith(".nc")
+
+
 def test_horizontal_diffusivity_logic():
     """Check logic for using default horizontal diff values for known models."""
 
