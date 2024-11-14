@@ -164,6 +164,7 @@ class ParticleTrackingManager:
     seed_seafloor: bool
     output_file: str
     output_format: str
+    output_file_initial: Optional[str]
 
     def __init__(
         self,
@@ -222,6 +223,8 @@ class ParticleTrackingManager:
         self.__dict__["has_added_reader"] = False
         self.__dict__["has_run_seeding"] = False
         self.__dict__["has_run"] = False
+
+        self.output_file_initial = None
 
         # Set all attributes which will trigger some checks and changes in __setattr__
         # these will also update "value" in the config dict
@@ -383,9 +386,10 @@ class ParticleTrackingManager:
                     )
 
                 # make new attribute for initial output file
-                self.output_file_initial = str(
-                    pathlib.Path(f"{output_file}_initial").with_suffix(".nc")
-                )
+                if self.output_file_initial is None:
+                    self.output_file_initial = str(
+                        pathlib.Path(f"{output_file}_initial").with_suffix(".nc")
+                    )
 
                 if self.output_format is not None:
                     if self.output_format == "netcdf":
