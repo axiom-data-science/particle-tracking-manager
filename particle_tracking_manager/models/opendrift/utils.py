@@ -26,8 +26,10 @@ def make_ciofs_kerchunk(start, end, name):
         _description_
     """
 
-    if name in ["ciofs", "ciofs_fresh"]:
-        output_dir_single_files = f"/home/kristen/projects/kerchunk_setup/{name}"
+    if name == "ciofs":
+        output_dir_single_files = "/mnt/vault/ciofs/HINDCAST/.kerchunk_json"
+    elif name == "ciofs_fresh":
+        output_dir_single_files = "/mnt/vault/ciofs/HINDCAST_FRESHWATER/.kerchunk_json"
     elif name == "aws_ciofs_with_angle":
         output_dir_single_files = "/mnt/depot/data/packrat/prod/noaa/coops/ofs/aws_ciofs/processed/.kerchunk_json"
     else:
@@ -191,7 +193,9 @@ def make_nwgoa_kerchunk(start, end):
     """
 
     # this version of the daily json files has the grid file merged
-    output_dir_single_files = "/home/kristen/projects/kerchunk_setup/nwgoa_with_grids"
+    output_dir_single_files = (
+        "/mnt/depot/data/packrat/prod/aoos/nwgoa/processed/.kerchunk_json"
+    )
 
     fs2 = fsspec.filesystem("")  # local file system to save final jsons to
 
