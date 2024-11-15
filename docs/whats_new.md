@@ -1,5 +1,17 @@
 # What's New
 
+## v0.9.6 (November 15, 2024)
+
+* made caching directory creation and saving to cache optional with input option `use_cache`.
+
+## v0.9.5 (November 14, 2024)
+
+* fixed error in output file
+
+## v0.9.4 (November 14, 2024)
+
+* Updated locations for local model output.
+
 ## v0.9.3 (November 13, 2024)
 
 * Moved `output_format` parameter to manager config from model config
