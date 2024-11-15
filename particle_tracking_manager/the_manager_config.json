@@ -187,5 +187,11 @@
         "default": "netcdf",
         "description": "Output file format. Options are \"netcdf\" or \"parquet\".",
         "ptm_level": 2
+    },
+    "use_cache": {
+        "type": "bool",
+        "default": true,
+        "description": "Set to True to use cache for storing interpolators. This saves time on repeat simulations, may be used for other items in the future.",
+        "ptm_level": 3
     }
 }

@@ -11,8 +11,6 @@ import tempfile
 from pathlib import Path
 from typing import Optional, Union
 
-import appdirs
-
 # using my own version of ROMS reader
 # from .reader_ROMS_native import Reader
 import pandas as pd
@@ -858,22 +856,11 @@ class OpenDriftModel(ParticleTrackingManager):
                     "start_time and end_time must be set to narrow model output to simulation time"
                 )
 
-            # save interpolators to save time
-            cache_dir = Path(
-                appdirs.user_cache_dir(
-                    appname="particle-tracking-manager", appauthor="axiom-data-science"
-                )
-            )
-            cache_dir.mkdir(parents=True, exist_ok=True)
-            self.cache_dir = cache_dir
-            self.interpolator_filename = cache_dir / Path(
-                f"{self.ocean_model}_interpolator"
-            )
             reader = reader_ROMS_native.Reader(
                 filename=ds,
                 name=self.ocean_model,
                 standard_name_mapping=standard_name_mapping,
-                save_interpolator=True,
+                save_interpolator=self.save_interpolator,
                 interpolator_filename=self.interpolator_filename,
             )
 

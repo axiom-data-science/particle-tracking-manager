@@ -240,6 +240,13 @@ def test_input_too_many_end_of_simulation():
         )
 
 
+def test_no_cache():
+    """Test having no cache"""
+
+    m = ptm.OpenDriftModel(use_cache=False)
+    assert m.interpolator_filename is None
+
+
 def test_changing_end_of_simulation():
     """change end_time, steps, and duration
 

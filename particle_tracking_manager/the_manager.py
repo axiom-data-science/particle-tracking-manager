@@ -1,7 +1,6 @@
 """Contains logic for configuring particle tracking simulations."""
 
 
-# from docstring_inheritance import NumpyDocstringInheritanceMeta
 import datetime
 import json
 import logging
@@ -9,6 +8,8 @@ import pathlib
 
 from typing import Optional, Union
 
+# from docstring_inheritance import NumpyDocstringInheritanceMeta
+import appdirs
 import pandas as pd
 
 from .cli import is_None
@@ -139,6 +140,8 @@ class ParticleTrackingManager:
         Name of output file to save, by default None. If None, default is set in the model. Without any suffix.
     output_format : str, default "netcdf"
         Name of input/output module type to use for writing Lagrangian model output. Default is "netcdf".
+    use_cache : bool
+        Set to True to use cache for saving interpolators, by default True.
 
     Notes
     -----
@@ -165,6 +168,7 @@ class ParticleTrackingManager:
     output_file: str
     output_format: str
     output_file_initial: Optional[str]
+    interpolator_filename: Optional[pathlib.Path]
 
     def __init__(
         self,
@@ -193,6 +197,7 @@ class ParticleTrackingManager:
         use_static_masks: bool = config_ptm["use_static_masks"]["default"],
         output_file: Optional[str] = config_ptm["output_file"]["default"],
         output_format: str = config_ptm["output_format"]["default"],
+        use_cache: bool = config_ptm["use_cache"]["default"],
         **kw,
     ) -> None:
         """Inputs necessary for any particle tracking."""
@@ -465,6 +470,29 @@ class ParticleTrackingManager:
                     "setting `seed_seafloor` from True to False since now setting a non-None z value"
                 )
                 self.seed_seafloor = False
+
+            # save interpolators to save time
+            if name == "use_cache":
+                if value:
+                    cache_dir = pathlib.Path(
+                        appdirs.user_cache_dir(
+                            appname="particle-tracking-manager",
+                            appauthor="axiom-data-science",
+                        )
+                    )
+                    cache_dir.mkdir(parents=True, exist_ok=True)
+                    self.cache_dir = cache_dir
+                    self.interpolator_filename = cache_dir / pathlib.Path(
+                        f"{self.ocean_model}_interpolator"
+                    )
+                    self.save_interpolator = True
+                    self.logger.info(
+                        f"Interpolators will be saved to {self.interpolator_filename}."
+                    )
+                else:
+                    self.save_interpolator = False
+                    self.interpolator_filename = None
+                    self.logger.info("Interpolators will not be saved.")
 
             # if reader, lon, and lat set, check inputs
             if (
