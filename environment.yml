@@ -13,7 +13,7 @@ dependencies:
   - jupyterlab
   - kerchunk
   - xarray
-  - numpy
+  - numpy<2
   - opendrift
   - scipy
   - dask
