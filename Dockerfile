@@ -15,4 +15,3 @@ COPY --chown=$MAMBA_USER:$MAMBA_USER pyproject.toml setup.cfg conftest.py README
 WORKDIR $PROJECT_ROOT/
 
 ENTRYPOINT ["micromamba", "run", "python", "-m", "particle_tracking_manager.cli"]
-
