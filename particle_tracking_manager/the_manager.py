@@ -1,7 +1,6 @@
 """Contains logic for configuring particle tracking simulations."""
 
 
-# from docstring_inheritance import NumpyDocstringInheritanceMeta
 import datetime
 import json
 import logging
@@ -9,6 +8,8 @@ import pathlib
 
 from typing import Optional, Union
 
+# from docstring_inheritance import NumpyDocstringInheritanceMeta
+import appdirs
 import pandas as pd
 
 from .cli import is_None
@@ -17,6 +18,7 @@ from .cli import is_None
 _KNOWN_MODELS = [
     "NWGOA",
     "CIOFS",
+    "CIOFSFRESH",
     "CIOFSOP",
 ]
 
@@ -61,6 +63,7 @@ class ParticleTrackingManager:
         Depth of initial drifter locations, by default 0 but taken from the
         default in the model. Values are overridden if
         ``surface_only==True`` to 0 and to the seabed if ``seed_seafloor`` is True.
+        Depth is negative downward in OpenDrift.
     seed_seafloor : bool, optional
         Set to True to seed drifters vertically at the seabed, default is False. If True
         then value of z is set to None and ignored.
@@ -68,6 +71,10 @@ class ParticleTrackingManager:
         Number of drifters to simulate. Default is 100.
     start_time : Optional[str,datetime.datetime,pd.Timestamp], optional
         Start time of simulation, by default None
+    start_time_end : Optional[str,datetime.datetime,pd.Timestamp], optional
+        If not None, this creates a range of start times for drifters, starting with
+        `start_time` and ending with `start_time_end`. Drifters will be initialized linearly
+        between the two start times. Default None.
     run_forward : bool, optional
         True to run forward in time, False to run backward, by default True
     time_step : int, optional
@@ -130,7 +137,11 @@ class ParticleTrackingManager:
         dataset before inputting to PTM. Setting this to True may save computation time but
         will be less accurate, especially in the tidal flat regions of the model.
     output_file : Optional[str], optional
-        Name of output file to save, by default None. If None, default is set in the model.
+        Name of output file to save, by default None. If None, default is set in the model. Without any suffix.
+    output_format : str, default "netcdf"
+        Name of input/output module type to use for writing Lagrangian model output. Default is "netcdf".
+    use_cache : bool
+        Set to True to use cache for saving interpolators, by default True.
 
     Notes
     -----
@@ -145,6 +156,7 @@ class ParticleTrackingManager:
     surface_only: Optional[bool]
     z: Optional[Union[int, float]]
     start_time: Optional[Union[str, datetime.datetime, pd.Timestamp]]
+    start_time_end: Optional[Union[str, datetime.datetime, pd.Timestamp]]
     steps: Optional[int]
     time_step: int
     duration: Optional[datetime.timedelta]
@@ -153,6 +165,10 @@ class ParticleTrackingManager:
     config_ptm: dict
     config_model: Optional[dict]
     seed_seafloor: bool
+    output_file: str
+    output_format: str
+    output_file_initial: Optional[str]
+    interpolator_filename: Optional[pathlib.Path]
 
     def __init__(
         self,
@@ -165,6 +181,7 @@ class ParticleTrackingManager:
         seed_seafloor: bool = config_ptm["seed_seafloor"]["default"],
         number: int = config_ptm["number"]["default"],
         start_time: Optional[Union[str, datetime.datetime, pd.Timestamp]] = None,
+        start_time_end: Optional[Union[str, datetime.datetime, pd.Timestamp]] = None,
         run_forward: bool = config_ptm["run_forward"]["default"],
         time_step: int = config_ptm["time_step"]["default"],
         time_step_output: Optional[int] = config_ptm["time_step_output"]["default"],
@@ -179,6 +196,8 @@ class ParticleTrackingManager:
         vertical_mixing: bool = config_ptm["vertical_mixing"]["default"],
         use_static_masks: bool = config_ptm["use_static_masks"]["default"],
         output_file: Optional[str] = config_ptm["output_file"]["default"],
+        output_format: str = config_ptm["output_format"]["default"],
+        use_cache: bool = config_ptm["use_cache"]["default"],
         **kw,
     ) -> None:
         """Inputs necessary for any particle tracking."""
@@ -210,6 +229,8 @@ class ParticleTrackingManager:
         self.__dict__["has_run_seeding"] = False
         self.__dict__["has_run"] = False
 
+        self.output_file_initial = None
+
         # Set all attributes which will trigger some checks and changes in __setattr__
         # these will also update "value" in the config dict
         for key in sig.parameters.keys():
@@ -218,6 +239,29 @@ class ParticleTrackingManager:
                 self.__setattr__(key, locals()[key])
 
         self.kw = kw
+
+        if self.__dict__["output_file"] is None:
+            self.__dict__[
+                "output_file"
+            ] = f"output-results_{datetime.datetime.now():%Y-%m-%dT%H%M:%SZ}"
+
+        ## set up log for this simulation
+        # Create a file handler
+        assert self.__dict__["output_file"] is not None
+        logfile_name = self.__dict__["output_file"] + ".log"
+        self.file_handler = logging.FileHandler(logfile_name)
+
+        # Create a formatter and add it to the handler
+        formatter = logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        )
+        self.file_handler.setFormatter(formatter)
+
+        # Add the handler to the logger
+        self.logger.addHandler(self.file_handler)
+
+        self.logger.info(f"filename: {logfile_name}")
+        ##
 
     def __setattr_model__(self, name: str, value) -> None:
         """Implement this in model class to add specific __setattr__ there too."""
@@ -333,6 +377,40 @@ class ParticleTrackingManager:
                         self.__dict__["lon"] += 360
                         self.config_ptm["lon"]["value"] += 360  # this isn't really used
 
+            if name in ["output_file", "output_format"]:
+                # import pdb; pdb.set_trace()
+
+                # remove netcdf suffix if it is there to just have name
+                # by this point, output_file should already be a filename like what is
+                # available here, from OpenDrift (if run from there)
+                if self.output_file is not None:
+                    output_file = self.output_file.rstrip(".nc")
+                else:
+                    output_file = (
+                        f"output-results_{datetime.datetime.now():%Y-%m-%dT%H%M:%SZ}"
+                    )
+
+                # make new attribute for initial output file
+                if self.output_file_initial is None:
+                    self.output_file_initial = str(
+                        pathlib.Path(f"{output_file}_initial").with_suffix(".nc")
+                    )
+
+                if self.output_format is not None:
+                    if self.output_format == "netcdf":
+                        output_file = str(pathlib.Path(output_file).with_suffix(".nc"))
+                    elif self.output_format == "parquet":
+                        output_file = str(
+                            pathlib.Path(output_file).with_suffix(".parq")
+                        )
+                    else:
+                        raise ValueError(
+                            f"output_format {self.output_format} not recognized."
+                        )
+
+                self.__dict__["output_file"] = output_file
+                self.config_ptm["output_file"]["value"] = output_file
+
             if name == "surface_only" and value:
                 self.logger.info(
                     "Overriding values for do3D, z, and vertical_mixing because surface_only is True (to False, 0, False)."
@@ -340,6 +418,12 @@ class ParticleTrackingManager:
                 self.do3D = False
                 self.z = 0
                 self.vertical_mixing = False
+
+            # z should be a negative value, representing below the surface
+            if name == "z" and value > 0:
+                raise ValueError(
+                    "z should be a negative value, representing below the surface."
+                )
 
             # in case any of these are reset by user after surface_only is already set
             # if surface_only is True, do3D must be False
@@ -387,6 +471,29 @@ class ParticleTrackingManager:
                 )
                 self.seed_seafloor = False
 
+            # save interpolators to save time
+            if name == "use_cache":
+                if value:
+                    cache_dir = pathlib.Path(
+                        appdirs.user_cache_dir(
+                            appname="particle-tracking-manager",
+                            appauthor="axiom-data-science",
+                        )
+                    )
+                    cache_dir.mkdir(parents=True, exist_ok=True)
+                    self.cache_dir = cache_dir
+                    self.interpolator_filename = cache_dir / pathlib.Path(
+                        f"{self.ocean_model}_interpolator"
+                    )
+                    self.save_interpolator = True
+                    self.logger.info(
+                        f"Interpolators will be saved to {self.interpolator_filename}."
+                    )
+                else:
+                    self.save_interpolator = False
+                    self.interpolator_filename = None
+                    self.logger.info("Interpolators will not be saved.")
+
             # if reader, lon, and lat set, check inputs
             if (
                 name == "has_added_reader"
@@ -409,7 +516,10 @@ class ParticleTrackingManager:
             if name == "has_added_reader" and value and self.start_time is not None:
 
                 if self.ocean_model != "test":
-                    assert self.reader_metadata("start_time") <= self.start_time
+                    if self.reader_metadata("start_time") > self.start_time:
+                        raise ValueError(
+                            f"reader start_time {self.reader_metadata('start_time')} is after class start_time {self.start_time}."
+                        )
 
             # if reader, lon, and lat set, check inputs
             if name == "has_added_reader" and value:
@@ -501,6 +611,11 @@ class ParticleTrackingManager:
         )
 
         self.run_drifters()
+
+        # Remove the handler at the end of the loop
+        self.logger.removeHandler(self.file_handler)
+        self.file_handler.close()
+
         self.has_run = True
 
     def run_all(self):

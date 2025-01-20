@@ -12,6 +12,13 @@ import pytest
 import particle_tracking_manager as ptm
 
 
+def test_z_sign():
+    """z should be negative"""
+
+    with pytest.raises(ValueError):
+        m = ptm.OpenDriftModel(z=1)
+
+
 def test_order():
     """Have to configure before seeding."""
 
@@ -51,6 +58,16 @@ def test_seed():
     )
 
 
+def test_set_start_time_ahead():
+    """Test set start_time ahead when using start_time for local kerchunk file setup."""
+
+    m = ptm.OpenDriftModel(ocean_model="CIOFSOP", ocean_model_local=True)
+
+    # this causes the check
+    with pytest.raises(ValueError):
+        m.add_reader()
+
+
 @mock.patch(
     "particle_tracking_manager.models.opendrift.opendrift.OpenDriftModel.reader_metadata"
 )
@@ -79,7 +96,7 @@ def test_start_time_check(mock_reader_metadata):
     m = ptm.OpenDriftModel(start_time=datetime(1999, 1, 1))
 
     # this causes the check
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError):
         m.has_added_reader = True
 
 
@@ -207,7 +224,7 @@ def test_setattr_oceanmodel_lon0_360():
 
 def test_setattr_surface_only():
     """Test setting surface_only attribute."""
-    manager = ptm.OpenDriftModel(do3D=True, z=1, vertical_mixing=True)
+    manager = ptm.OpenDriftModel(do3D=True, z=-1, vertical_mixing=True)
     manager.surface_only = True
     assert manager.do3D == False
     assert manager.z == 0
@@ -221,6 +238,13 @@ def test_input_too_many_end_of_simulation():
             duration=pd.Timedelta("24h"),
             end_time=pd.Timestamp("1970-01-01T02:00"),
         )
+
+
+def test_no_cache():
+    """Test having no cache"""
+
+    m = ptm.OpenDriftModel(use_cache=False)
+    assert m.interpolator_filename is None
 
 
 def test_changing_end_of_simulation():
@@ -297,7 +321,7 @@ class TestManager(unittest.TestCase):
         self.m.surface_only = True
         self.m.do3D = True
         self.assertEqual(self.m.do3D, False)
-        self.m.z = 10
+        self.m.z = -10
         self.assertEqual(self.m.z, 0)
         self.m.vertical_mixing = True
         self.assertEqual(self.m.vertical_mixing, False)
@@ -319,8 +343,8 @@ class TestManager(unittest.TestCase):
         self.assertIsNone(self.m.z)
 
     def test_z_set(self):
-        self.m.z = 10
-        self.assertEqual(self.m.z, 10)
+        self.m.z = -10
+        self.assertEqual(self.m.z, -10)
         self.assertFalse(self.m.seed_seafloor)
 
     def test_has_added_reader_true_ocean_model_set(self):

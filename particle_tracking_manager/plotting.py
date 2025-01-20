@@ -3,14 +3,23 @@
 import opendrift
 
 
-def plot_dest(o, filename):
-    """This is copied from an opendrift example."""
+def plot_dest(o, filename=None, **kwargs):
+    """This is copied from an opendrift example.
+
+    ...and subsequently modified.
+
+    Parameters
+    ----------
+    kwargs : dict
+        Additional keyword arguments to pass to the plotting function.
+    """
 
     import cmocean
 
     cmap = cmocean.tools.crop_by_percent(cmocean.cm.amp, 20, which="max", N=None)
 
     od = opendrift.open_xarray(o.outfile_name)
+
     density = od.get_histogram(pixelsize_m=5000).isel(time=-1).isel(origin_marker=0)
     density = density.where(density > 0)
     density = density / density.sum() * 100
@@ -26,4 +35,5 @@ def plot_dest(o, filename):
         cmap=cmap,
         fast=True,
         filename=filename,
+        **kwargs
     )

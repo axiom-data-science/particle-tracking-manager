@@ -56,11 +56,20 @@
         "description": "Start time for drifter simulation.",
         "ptm_level": 1
     },
+    "start_time_end": {
+        "type": "datetime.datetime",
+        "default": "None",
+        "min": "datetime.datetime(1999,1,1)",
+        "max": "pd.Timestamp.now() + pd.Timedelta(\"48H\")",
+        "units": "time",
+        "description": "If used, this creates a range of start times for drifters, starting with `start_time` and ending with `start_time_end`. Drifters will be initialized linearly between the two start times.",
+        "ptm_level": 2
+    },
     "run_forward": {
         "type": "bool",
         "default": true,
         "description": "Run forward in time.",
-        "ptm_level": 1
+        "ptm_level": 2
     },
     "time_step": {
         "type": [
@@ -72,7 +81,7 @@
         "max": 86400,
         "units": "seconds",
         "description": "Interval between particles updates, in seconds or as timedelta.",
-        "ptm_level": 2
+        "ptm_level": 3
     },
     "time_step_output": {
         "type": [
@@ -84,7 +93,7 @@
         "max": 604800,
         "units": "seconds",
         "description": "Time step at which element properties are stored and eventually written to file.",
-        "ptm_level": 2
+        "ptm_level": 3
     },
     "steps": {
         "type": "int",
@@ -145,7 +154,7 @@
     "vertical_mixing": {
         "default": true,
         "od_mapping": "drift:vertical_mixing",
-        "ptm_level": 1
+        "ptm_level": 2
     },
     "z": {
         "default": 0,
@@ -160,13 +169,29 @@
     "use_static_masks": {
         "type": "bool",
         "default": true,
-        "ptm_level": 2,
+        "ptm_level": 3,
         "description": "Set to True to use static masks for known models instead of wetdry masks. If False, the masks are change in time."
     },
     "output_file": {
         "type": "str",
         "default": "None",
         "description": "Name of file to write output to. If None, default name is used.",
+        "ptm_level": 3
+    },
+    "output_format": {
+        "type": "enum",
+        "enum": [
+            "netcdf",
+            "parquet"
+        ],
+        "default": "netcdf",
+        "description": "Output file format. Options are \"netcdf\" or \"parquet\".",
+        "ptm_level": 2
+    },
+    "use_cache": {
+        "type": "bool",
+        "default": true,
+        "description": "Set to True to use cache for storing interpolators. This saves time on repeat simulations, may be used for other items in the future.",
         "ptm_level": 3
     }
 }

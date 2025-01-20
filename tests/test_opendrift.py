@@ -25,7 +25,7 @@ class TestOpenDriftModel(unittest.TestCase):
         self.assertEqual(
             self.odm.use_auto_landmask, config_model["use_auto_landmask"]["default"]
         )
-        self.assertEqual(self.odm.diffusivitymodel, None)
+        self.assertEqual(self.odm.diffusivitymodel, "windspeed_Large1994")
         self.assertEqual(self.odm.stokes_drift, config_model["stokes_drift"]["default"])
         self.assertEqual(
             self.odm.mixed_layer_depth, config_model["mixed_layer_depth"]["default"]
@@ -279,7 +279,7 @@ class TestTheManager(unittest.TestCase):
         self.m.vertical_mixing = False
         self.m.diffusivitymodel = "not_default"
         d = self.m.show_config(key="diffusivitymodel")
-        assert d["value"] == None
+        assert d["value"] == "windspeed_Large1994"
 
     def test_vertical_mixing_false_mixed_layer_depth_not_default(self):
         self.m.vertical_mixing = False
@@ -310,6 +310,26 @@ class TestOpenDriftModel_Leeway(unittest.TestCase):
         self.m.stokes_drift = True
         assert not self.m.stokes_drift
         # assert not self.m.show_config(key="stokes_drift")["value"]
+
+
+def test_output_format():
+    """Check output_format."""
+
+    m = OpenDriftModel(output_format="netcdf")
+    assert m.output_format == "netcdf"
+
+    m = OpenDriftModel(output_format="parquet")
+    assert m.output_format == "parquet"
+
+
+def test_output_file():
+    """make sure output file is parquet if output_format is parquet"""
+
+    m = OpenDriftModel(output_format="parquet")
+    assert m.output_file.endswith(".parq")
+
+    m = OpenDriftModel(output_format="netcdf")
+    assert m.output_file.endswith(".nc")
 
 
 def test_horizontal_diffusivity_logic():

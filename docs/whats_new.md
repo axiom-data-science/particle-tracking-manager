@@ -1,5 +1,43 @@
 # What's New
 
+## v0.9.6 (November 15, 2024)
+
+* made caching directory creation and saving to cache optional with input option `use_cache`.
+
+## v0.9.5 (November 14, 2024)
+
+* fixed error in output file
+
+## v0.9.4 (November 14, 2024)
+
+* Updated locations for local model output.
+
+## v0.9.3 (November 13, 2024)
+
+* Moved `output_format` parameter to manager config from model config
+* Changed source location for CIOFSOP local model output
+
+## v0.9.2 (November 11, 2024)
+
+* Added ability to save output files as parquet instead of netcdf.
+* Partially updated docs
+
+## v0.9.1 (October 25, 2024)
+
+* Added local model option of CIOFS Fresh for which kerchunk files also can be generated on the fly.
+
+## v0.9.0 (July 26, 2024)
+
+* Added utilities to generate kerchunk files on the fly for the time period of the simulation length for CIOFS and NWGOA. This has majorly sped up CIOFS simulations and modestly sped up NWGOA simulations.
+* depth z should be negative! Fixed this in tests.
+* added `start_time_end`, which adds OpenDrift capability for starting drifters over linear time frame
+* fixed so unique log file is output for each simulation even if run in a script, and has the same name as `output_file`.
+* small fix to histogram plot
+
+## v0.8.4 (April 24, 2024)
+
+* updated the `ptm_level` of a bunch of config parameters
+
 ## v0.8.3 (April 23, 2024)
 
 * removed `Dcrit` because realized it is not necessary

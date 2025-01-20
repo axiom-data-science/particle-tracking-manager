@@ -20,15 +20,38 @@ def test_add_new_reader():
 
 
 @pytest.mark.slow
-def test_run():
+def test_run_parquet():
     """Set up and run."""
 
     import xroms
 
     seeding_kwargs = dict(lon=-90, lat=28.7, number=1)
-    manager = ptm.OpenDriftModel(**seeding_kwargs, use_static_masks=True, steps=2)
+    manager = ptm.OpenDriftModel(
+        **seeding_kwargs, use_static_masks=True, steps=2, output_format="parquet"
+    )
     url = xroms.datasets.CLOVER.fetch("ROMS_example_full_grid.nc")
     ds = xr.open_dataset(url, decode_times=False)
     manager.add_reader(ds=ds, name="txla")
     manager.seed()
     manager.run()
+
+    assert "parq" in manager.o.outfile_name
+
+
+@pytest.mark.slow
+def test_run_netcdf():
+    """Set up and run."""
+
+    import xroms
+
+    seeding_kwargs = dict(lon=-90, lat=28.7, number=1)
+    manager = ptm.OpenDriftModel(
+        **seeding_kwargs, use_static_masks=True, steps=2, output_format="netcdf"
+    )
+    url = xroms.datasets.CLOVER.fetch("ROMS_example_full_grid.nc")
+    ds = xr.open_dataset(url, decode_times=False)
+    manager.add_reader(ds=ds, name="txla")
+    manager.seed()
+    manager.run()
+
+    assert "nc" in manager.o.outfile_name

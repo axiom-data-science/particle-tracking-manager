@@ -45,7 +45,7 @@ jobs:
       #     python -m pip install -e . --no-deps --force-reinstall
 
       - name: Setup Micromamba Python ${{ matrix.python-version }}
-        uses: mamba-org/setup-micromamba@v1
+        uses: mamba-org/setup-micromamba@v2
         with:
           init-shell: bash
           create-args: >-
@@ -65,7 +65,7 @@ jobs:
         run: |
           pytest --cov=./ --cov-report=xml
       - name: Upload code coverage to Codecov
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           file: ./coverage.xml
           flags: unittests

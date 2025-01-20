@@ -11,8 +11,6 @@ import tempfile
 from pathlib import Path
 from typing import Optional, Union
 
-import appdirs
-
 # using my own version of ROMS reader
 # from .reader_ROMS_native import Reader
 import pandas as pd
@@ -26,6 +24,7 @@ from opendrift.readers import reader_ROMS_native
 
 from ...cli import is_None
 from ...the_manager import _KNOWN_MODELS, ParticleTrackingManager
+from .utils import make_ciofs_kerchunk, make_nwgoa_kerchunk
 
 
 # from .cli import is_None
@@ -247,18 +246,32 @@ class OpenDriftModel(ParticleTrackingManager):
         # so do this before super initialization
         self.__dict__["drift_model"] = drift_model
 
+        # I left this code here but it isn't used for now
+        # it will be used if we can export to parquet/netcdf directly
+        # without needing to resave the file with extra config
+        # # need output_format defined right away
+        # self.__dict__["output_format"] = output_format
+
         # do this right away so I can query the object
+        # we don't actually input output_format here because we first output to netcdf, then
+        # resave as parquet after adding in extra config
         if self.drift_model == "Leeway":
-            o = Leeway(loglevel=self.loglevel)
+            o = Leeway(loglevel=self.loglevel)  # , output_format=self.output_format)
 
         elif self.drift_model == "OceanDrift":
-            o = OceanDrift(loglevel=self.loglevel)
+            o = OceanDrift(
+                loglevel=self.loglevel,
+            )  # , output_format=self.output_format)
 
         elif self.drift_model == "LarvalFish":
-            o = LarvalFish(loglevel=self.loglevel)
+            o = LarvalFish(
+                loglevel=self.loglevel
+            )  # , output_format=self.output_format)
 
         elif self.drift_model == "OpenOil":
-            o = OpenOil(loglevel=self.loglevel, weathering_model="noaa")
+            o = OpenOil(
+                loglevel=self.loglevel, weathering_model="noaa"
+            )  # , output_format=self.output_format)
 
         else:
             raise ValueError(f"Drifter model {self.drift_model} is not recognized.")
@@ -432,14 +445,19 @@ class OpenDriftModel(ParticleTrackingManager):
                 self.__dict__["vertical_mixing_timestep"] = None
                 self.config_model["vertical_mixing_timestep"]["value"] = None
 
-        # Make sure diffusivitymodel equals None if vertical_mixing False
+        # Make sure diffusivitymodel equals default value if vertical_mixing False
         if name in ["vertical_mixing", "diffusivitymodel"]:
-            if not self.vertical_mixing:
+            dmodeldef = self.config_model["diffusivitymodel"]["default"]
+            if (
+                not self.vertical_mixing
+                and self.diffusivitymodel != dmodeldef
+                and self.diffusivitymodel is not None
+            ):
                 self.logger.info(
-                    "vertical_mixing is False, so setting value of diffusivitymodel to None."
+                    "vertical_mixing is False, so resetting value of diffusivitymodel to default and not using."
                 )
-                self.__dict__["diffusivitymodel"] = None
-                self.config_model["diffusivitymodel"]["value"] = None
+                self.__dict__["diffusivitymodel"] = dmodeldef
+                self.config_model["diffusivitymodel"]["value"] = dmodeldef
 
         # Make sure mixed_layer_depth equals default value if vertical_mixing False
         if name in ["vertical_mixing", "mixed_layer_depth"]:
@@ -657,7 +675,19 @@ class OpenDriftModel(ParticleTrackingManager):
                     "snow_thick",
                 ]
 
-                loc_local = "/mnt/depot/data/packrat/prod/aoos/nwgoa/processed/nwgoa_kerchunk.parq"
+                if self.ocean_model_local:
+
+                    if self.start_time is None:
+                        raise ValueError(
+                            "Need to set start_time ahead of time to add local reader."
+                        )
+                    start_time = self.start_time
+                    start = f"{start_time.year}-{str(start_time.month).zfill(2)}-{str(start_time.day).zfill(2)}"
+                    end_time = self.end_time
+                    end = f"{end_time.year}-{str(end_time.month).zfill(2)}-{str(end_time.day).zfill(2)}"
+                    loc_local = make_nwgoa_kerchunk(start=start, end=end)
+
+                # loc_local = "/mnt/depot/data/packrat/prod/aoos/nwgoa/processed/nwgoa_kerchunk.parq"
                 loc_remote = (
                     "http://xpublish-nwgoa.srv.axds.co/datasets/nwgoa_all/zarr/"
                 )
@@ -670,8 +700,34 @@ class OpenDriftModel(ParticleTrackingManager):
                 ]
                 if self.ocean_model == "CIOFS":
 
-                    loc_local = "/mnt/vault/ciofs/HINDCAST/ciofs_kerchunk.parq"
+                    if self.ocean_model_local:
+
+                        if self.start_time is None:
+                            raise ValueError(
+                                "Need to set start_time ahead of time to add local reader."
+                            )
+                        start = f"{self.start_time.year}_{str(self.start_time.dayofyear - 1).zfill(4)}"
+                        end = f"{self.end_time.year}_{str(self.end_time.dayofyear).zfill(4)}"
+                        loc_local = make_ciofs_kerchunk(
+                            start=start, end=end, name="ciofs"
+                        )
                     loc_remote = "http://xpublish-ciofs.srv.axds.co/datasets/ciofs_hindcast/zarr/"
+
+                elif self.ocean_model == "CIOFSFRESH":
+
+                    if self.ocean_model_local:
+
+                        if self.start_time is None:
+                            raise ValueError(
+                                "Need to set start_time ahead of time to add local reader."
+                            )
+                        start = f"{self.start_time.year}_{str(self.start_time.dayofyear - 1).zfill(4)}"
+
+                        end = f"{self.end_time.year}_{str(self.end_time.dayofyear).zfill(4)}"
+                        loc_local = make_ciofs_kerchunk(
+                            start=start, end=end, name="ciofs_fresh"
+                        )
+                    loc_remote = None
 
                 elif self.ocean_model == "CIOFSOP":
 
@@ -682,7 +738,20 @@ class OpenDriftModel(ParticleTrackingManager):
                         }
                     )
 
-                    loc_local = "/mnt/depot/data/packrat/prod/noaa/coops/ofs/aws_ciofs/processed/aws_ciofs_kerchunk.parq"
+                    if self.ocean_model_local:
+
+                        if self.start_time is None:
+                            raise ValueError(
+                                "Need to set start_time ahead of time to add local reader."
+                            )
+                        start = f"{self.start_time.year}-{str(self.start_time.month).zfill(2)}-{str(self.start_time.day).zfill(2)}"
+                        end = f"{self.end_time.year}-{str(self.end_time.month).zfill(2)}-{str(self.end_time.day).zfill(2)}"
+
+                        loc_local = make_ciofs_kerchunk(
+                            start=start, end=end, name="aws_ciofs_with_angle"
+                        )
+                        # loc_local = "/mnt/depot/data/packrat/prod/noaa/coops/ofs/aws_ciofs/processed/aws_ciofs_kerchunk.parq"
+
                     loc_remote = "https://thredds.aoos.org/thredds/dodsC/AWS_CIOFS.nc"
 
             elif self.ocean_model == "user_input":
@@ -704,14 +773,22 @@ class OpenDriftModel(ParticleTrackingManager):
                     ds = xr.open_dataset(
                         loc_local,
                         engine="kerchunk",
-                        chunks={},
+                        # chunks={},  # Looks like it is faster not to include this for kerchunk
                         drop_variables=drop_vars,
                         decode_times=False,
+                    )
+
+                    self.logger.info(
+                        f"Opened local dataset starting {start} and ending {end} with number outputs {ds.ocean_time.size}."
                     )
 
                 # otherwise remote
                 else:
                     if ".nc" in loc_remote:
+
+                        if self.ocean_model == "CIOFSFRESH":
+                            raise NotImplementedError
+
                         ds = xr.open_dataset(
                             loc_remote,
                             chunks={},
@@ -725,6 +802,10 @@ class OpenDriftModel(ParticleTrackingManager):
                             drop_variables=drop_vars,
                             decode_times=False,
                         )
+
+                    self.logger.info(
+                        f"Opened remote dataset {loc_remote} with number outputs {ds.ocean_time.size}."
+                    )
 
             # For NWGOA, need to calculate wetdry mask from a variable
             if self.ocean_model == "NWGOA" and not self.use_static_masks:
@@ -757,32 +838,29 @@ class OpenDriftModel(ParticleTrackingManager):
                 dt_model = float(
                     ds.ocean_time[1] - ds.ocean_time[0]
                 )  # time step of the model output in seconds
-                start_time_num = (self.start_time - units_date).total_seconds()
+                # want to include the next ocean model output before the first drifter simulation time
+                # in case it starts before model times
+                start_time_num = (
+                    self.start_time - units_date
+                ).total_seconds() - dt_model
                 # want to include the next ocean model output after the last drifter simulation time
                 end_time_num = (self.end_time - units_date).total_seconds() + dt_model
                 ds = ds.sel(ocean_time=slice(start_time_num, end_time_num))
                 self.logger.info("Narrowed model output to simulation time")
+                if len(ds.ocean_time) == 0:
+                    raise ValueError(
+                        "No model output left for simulation time. Check start_time and end_time."
+                    )
             else:
                 raise ValueError(
                     "start_time and end_time must be set to narrow model output to simulation time"
                 )
 
-            # save interpolators to save time
-            cache_dir = Path(
-                appdirs.user_cache_dir(
-                    appname="particle-tracking-manager", appauthor="axiom-data-science"
-                )
-            )
-            cache_dir.mkdir(parents=True, exist_ok=True)
-            self.cache_dir = cache_dir
-            self.interpolator_filename = cache_dir / Path(
-                f"{self.ocean_model}_interpolator"
-            )
             reader = reader_ROMS_native.Reader(
                 filename=ds,
                 name=self.ocean_model,
                 standard_name_mapping=standard_name_mapping,
-                save_interpolator=True,
+                save_interpolator=self.save_interpolator,
                 interpolator_filename=self.interpolator_filename,
             )
 
@@ -818,10 +896,19 @@ class OpenDriftModel(ParticleTrackingManager):
             "drift:truncate_ocean_model_below_m",
         ]
 
+        if self.start_time_end is not None:
+            # time can be a list to start drifters linearly in time
+            time = [
+                self.start_time.to_pydatetime(),
+                self.start_time_end.to_pydatetime(),
+            ]
+        elif self.start_time is not None:
+            time = self.start_time.to_pydatetime()
+        else:
+            time = None
+
         _seed_kws = {
-            "time": self.start_time.to_pydatetime()
-            if self.start_time is not None
-            else None,
+            "time": time,
             "z": self.z,
         }
 
@@ -856,7 +943,6 @@ class OpenDriftModel(ParticleTrackingManager):
         """Actually seed drifters for model."""
 
         if self.seed_flag == "elements":
-
             self.o.seed_elements(**self.seed_kws)
 
         elif self.seed_flag == "geojson":
@@ -893,43 +979,48 @@ class OpenDriftModel(ParticleTrackingManager):
 
         self.o._config = config_input_to_opendrift  # only OpenDrift config
 
-        output_file_initial = (
-            f"{self.output_file}_initial"
-            or f"output-results_{datetime.datetime.utcnow():%Y-%m-%dT%H%M:%SZ}.nc"
-        )
+        # initially output to netcdf even if parquet has been selected
+        # since I do this weird 2 step saving process
+
+        # if self.output_format == "netcdf":
+        #     output_file_initial += ".nc"
+        # elif self.output_format == "parquet":
+        #     output_file_initial += ".parq"
+        # else:
+        #     raise ValueError(f"output_format {self.output_format} not recognized.")
 
         self.o.run(
             time_step=timedir * self.time_step,
             time_step_output=self.time_step_output,
             steps=self.steps,
             export_variables=self.export_variables,
-            outfile=output_file_initial,
+            outfile=self.output_file_initial,
         )
 
         self.o._config = full_config  # reinstate config
 
         # open outfile file and add config to it
         # config can't be present earlier because it breaks opendrift
-        ds = xr.open_dataset(output_file_initial)
+        ds = xr.open_dataset(self.output_file_initial)
         for k, v in self.drift_model_config():
             if isinstance(v, (bool, type(None), pd.Timestamp, pd.Timedelta)):
                 v = str(v)
             ds.attrs[f"ptm_config_{k}"] = v
 
-        # Make new output file
-        output_file = (
-            self.output_file
-            or f"output-results_{datetime.datetime.utcnow():%Y-%m-%dT%H%M:%SZ}.nc"
-        )
-
-        ds.to_netcdf(output_file)
+        if self.output_format == "netcdf":
+            ds.to_netcdf(self.output_file)
+        elif self.output_format == "parquet":
+            ds.to_dataframe().to_parquet(self.output_file)
+        else:
+            raise ValueError(f"output_format {self.output_format} not recognized.")
 
         # update with new path name
-        self.o.outfile_name = output_file
+        self.o.outfile_name = self.output_file
+        self.output_file = self.output_file
 
         try:
             # remove initial file to save space
-            os.remove(output_file_initial)
+            os.remove(self.output_file_initial)
         except PermissionError:
             # windows issue
             pass

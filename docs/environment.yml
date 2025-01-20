@@ -14,8 +14,9 @@ dependencies:
    # These are needed for the docs themselves
    - furo
    - jupytext
+   - kerchunk
    - numpydoc
-   - opendrift
+   - opendrift>=1.11.13
    - sphinx
    - sphinx_rtd_theme
    - ipython
