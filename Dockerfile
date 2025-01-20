@@ -1,4 +1,4 @@
-FROM mambaorg/micromamba:1.5.1-bullseye
+FROM mambaorg/micromamba:2.0.5-debian12
 
 ENV PROJECT_NAME=particle-tracking-manager
 ENV PROJECT_ROOT=/opt/particle-tracking-manager
