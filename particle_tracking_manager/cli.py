@@ -44,7 +44,7 @@ def is_datestr(s):
         out = pd.Timestamp(s)
         assert not pd.isnull(out)
         return True
-    except (ValueError, AssertionError):
+    except (ValueError, AssertionError, TypeError):
         return False
 
 
@@ -114,6 +114,12 @@ def main():
         default=False,
     )
 
+    parser.add_argument(
+        "--plots",
+        type=str,
+        help='Optional plots. Dictionary-style input, e.g. `{"spaghetti": {}}`.',
+    )
+
     args = parser.parse_args()
 
     to_bool = {
@@ -131,6 +137,10 @@ def main():
 
     log_file = args.kwargs["output_file"].replace(".nc", ".log")
 
+    # Convert the string representation of the dictionary to an actual dictionary
+    # not clear why I can't use `args.plots` in here but it isn't working
+    plots = ast.literal_eval(parser.parse_args().plots)
+
     # Create a file handler
     file_handler = logging.FileHandler(log_file)
 
@@ -140,7 +150,7 @@ def main():
     )
     file_handler.setFormatter(formatter)
 
-    m = ptm.OpenDriftModel(**args.kwargs)
+    m = ptm.OpenDriftModel(**args.kwargs, plots=plots)
 
     if args.dry_run:
 

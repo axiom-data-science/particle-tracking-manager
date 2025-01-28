@@ -250,6 +250,7 @@ class ParticleTrackingManager:
         assert self.__dict__["output_file"] is not None
         logfile_name = self.__dict__["output_file"] + ".log"
         self.file_handler = logging.FileHandler(logfile_name)
+        self.logfile_name = logfile_name
 
         # Create a formatter and add it to the handler
         formatter = logging.Formatter(
@@ -378,8 +379,6 @@ class ParticleTrackingManager:
                         self.config_ptm["lon"]["value"] += 360  # this isn't really used
 
             if name in ["output_file", "output_format"]:
-                # import pdb; pdb.set_trace()
-
                 # remove netcdf suffix if it is there to just have name
                 # by this point, output_file should already be a filename like what is
                 # available here, from OpenDrift (if run from there)
@@ -392,6 +391,13 @@ class ParticleTrackingManager:
 
                 # make new attribute for initial output file
                 if self.output_file_initial is None:
+                    self.output_file_initial = str(
+                        pathlib.Path(f"{output_file}_initial").with_suffix(".nc")
+                    )
+                elif (
+                    self.output_file_initial is not None
+                    and "initial" not in self.output_file_initial
+                ):
                     self.output_file_initial = str(
                         pathlib.Path(f"{output_file}_initial").with_suffix(".nc")
                     )

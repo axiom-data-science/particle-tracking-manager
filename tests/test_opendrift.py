@@ -444,5 +444,87 @@ def test_wind_drift():
     assert m.o._config["wind_drift_depth"]["value"] == 10
 
 
+def test_plots_linecolor():
+    with pytest.raises(ValueError):
+        m = OpenDriftModel(
+            drift_model="OceanDrift", plots={"spaghetti": {"linecolor": "x_wind"}}
+        )
+
+    m = OpenDriftModel(
+        drift_model="OceanDrift",
+        plots={"spaghetti": {"linecolor": "x_wind"}},
+        export_variables=["x_wind"],
+    )
+
+    # this should work bc "z" should already be included
+    m = OpenDriftModel(
+        drift_model="OceanDrift", plots={"spaghetti": {"linecolor": "z"}}
+    )
+
+
+def test_plots_background():
+    with pytest.raises(ValueError):
+        m = OpenDriftModel(
+            drift_model="OceanDrift",
+            plots={"animation": {"background": "sea_surface_height"}},
+        )
+
+    m = OpenDriftModel(
+        drift_model="OceanDrift",
+        plots={"animation": {"background": "sea_surface_height"}},
+        export_variables=["sea_surface_height"],
+    )
+
+
+def test_plots_oil():
+    with pytest.raises(ValueError):
+        m = OpenDriftModel(
+            drift_model="OpenOil", plots={"oil": {"show_wind_and_current": True}}
+        )
+
+    with pytest.raises(ValueError):
+        m = OpenDriftModel(drift_model="OceanDrift", plots={"oil": {}})
+
+    m = OpenDriftModel(
+        drift_model="OpenOil",
+        plots={"oil": {"show_wind_and_current": True}},
+        export_variables=[
+            "x_wind",
+            "y_sea_water_velocity",
+            "y_wind",
+            "x_sea_water_velocity",
+        ],
+    )
+
+
+def test_plots_property():
+    with pytest.raises(ValueError):
+        m = OpenDriftModel(
+            drift_model="LarvalFish",
+            do3D=True,
+            plots={"property": {"prop": "survival"}},
+        )
+
+    m = OpenDriftModel(
+        drift_model="LarvalFish",
+        do3D=True,
+        plots={"property": {"prop": "survival"}},
+        export_variables=["survival"],
+    )
+
+
+def test_plots_all():
+
+    with pytest.raises(ValueError):
+        m = OpenDriftModel(
+            drift_model="OceanDrift",
+            plots={
+                "all": {},
+                "spaghetti": {"line_color": "x_wind"},
+                "animation": {"background": "sea_surface_height"},
+            },
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

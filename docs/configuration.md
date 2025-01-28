@@ -225,7 +225,7 @@ m = ptm.OpenDriftModel(drift_model="OpenOil")
 
 This selection sets some of the configuration details and export variables that are relevant for the simulation.
 
-
+(config:export_variables)=
 #### Export Variables
 
 All possible variables will be exported by default into the outfiles and available in memory (`m.o.history` and `m.o.history_metadata` or `m.o.get_property(<key>)` for `OpenDriftModel`).
@@ -236,13 +236,44 @@ The full list of possible variables to be exported is available with
 m.all_export_variables()
 ```
 
-To limit the variables saved in the export file, input a list of just the variables that you want to save, keeping in mind that `['lon', 'lat', 'ID', 'status']` will also be included regardless. For example:
+To limit the variables saved in the export file, input a list of just the variables that you want to save, keeping in mind that `['lon', 'lat', 'ID', 'status','z']` will also be included regardless. For example:
 ```
 m = ptm.OpenDriftModel(export_variables=[])
 ```
 
-The default list of `export_variables` is set in `config_model` but is modified depending on the `drift_model` set.
+The default list of `export_variables` is set in `config_model` but is modified depending on the `drift_model` set and the `export_variables` input by the user.
 
+The export variables available for each model at time of running these docs is shown as follows.
+
+##### OceanDrift
+
+```{code-cell} ipython3
+import particle_tracking_manager as ptm
+
+m = ptm.OpenDriftModel(drift_model="Leeway")
+m.all_export_variables()
+```
+
+##### Leeway
+
+```{code-cell} ipython3
+m = ptm.OpenDriftModel(drift_model="Leeway")
+m.all_export_variables()
+```
+
+##### LarvalFish
+
+```{code-cell} ipython3
+m = ptm.OpenDriftModel(drift_model="LarvalFish", do3D=True)
+m.all_export_variables()
+```
+
+##### OpenOil
+
+```{code-cell} ipython3
+m = ptm.OpenDriftModel(drift_model="OpenOil")
+m.all_export_variables()
+```
 
 #### How to modify details for Stokes Drift
 

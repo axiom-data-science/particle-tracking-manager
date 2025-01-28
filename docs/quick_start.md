@@ -53,16 +53,22 @@ To just initialize the simulation and print the `OpenDrift` configuration to scr
 ptm lon=-151 lat=59 ocean_model=NWGOA steps=1 --dry-run
 ```
 
+You can choose to output one or more plots with the `--plot` flag. For example, the following will output a spaghetti plot made from the track file, using OpenDrift's plotting capabilities:
+
+```
+ptm lon=-151 lat=59 ocean_model=NWGOA steps=1 --plots="{'spaghetti': {}}"
+```
+
 `m.outfile_name` is printed to the screen after the command has been run. `ptm` is installed as an entry point with `particle-tracking-manager`.
 
 
 If you are running this locally (this is for Axiom people), you'll want to run it like this:
 
 ```
-ptm lon=-151 lat=59 ocean_model=NWGOA steps=1 ocean_model_local=True start_time=2000-1-1T01
+ptm lon=-151 lat=59 ocean_model=NWGOA steps=1 ocean_model_local=True start_time=2000-1-1T01 --plots="{'spaghetti': {}}"
 ```
 
-where you should include `ocean_model_local=True` since you are running the model locally on a server, if you are doing so, you need to input a `start_time` since it will create a kerchunk file on the fly for `ocean_model` that you select.
+where you should include `ocean_model_local=True` since you are running the model locally on a server, if you are doing so, you need to input a `start_time` since it will create a kerchunk file on the fly for `ocean_model` that you select. Note that each plot option should be input in a dictionary but then within a string to be correctly interpreted by the CLI. More information on plot options in PTM is available in {ref}`plots`. Many options are available, including animations (see [OpenDrift docs for more information](https://opendrift.github.io/)).
 
 Similarly you would do:
 
@@ -76,17 +82,18 @@ ptm lon=-151 lat=59 ocean_model=NWGOA steps=1 ocean_model_local=True start_time=
 (new_reader)=
 ## Python package with local model output
 
-This demo will run using easily-available ROMS model output from `xroms`.
+This demo will run using easily-available ROMS model output from `xroms` and create a spaghetti plot.
 
 ```{code-cell} ipython3
 
 import particle_tracking_manager as ptm
 import xroms
 import xarray as xr
+import ast
 
 
 m = ptm.OpenDriftModel(lon = -90, lat = 28.7, number=10, steps=20,
-                       use_static_masks=True)
+                       use_static_masks=True, plots={'spaghetti': {}})
 
 
 url = xroms.datasets.CLOVER.fetch("ROMS_example_full_grid.nc")
@@ -98,11 +105,12 @@ m.seed()
 m.run()
 ```
 
-Plot using `OpenDrift`'s built in plotting. Many options are available, including animations (see [OpenDrift docs for more information](https://opendrift.github.io/)).
+You can access the plot name as follows (note you need to use `ast.literal_eval()` because `plots` is stored as a string in the file).
 
 ```{code-cell} ipython3
-m.o.plot(fast=True)
+ast.literal_eval(m.plots)["spaghetti"]["filename"]
 ```
+
 
 ## Idealized simulation
 

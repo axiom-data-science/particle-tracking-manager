@@ -1,5 +1,9 @@
 # What's New
 
+## unreleased
+
+* Added built-in way to create plots for simulation using OpenDrift. Details available in {ref}`plots`.
+
 ## v0.9.6 (November 15, 2024)
 
 * made caching directory creation and saving to cache optional with input option `use_cache`.
