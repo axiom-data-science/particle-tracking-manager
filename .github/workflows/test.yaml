@@ -66,6 +66,8 @@ jobs:
           pytest --cov=./ --cov-report=xml
       - name: Upload code coverage to Codecov
         uses: codecov/codecov-action@v5
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         with:
           file: ./coverage.xml
           flags: unittests
