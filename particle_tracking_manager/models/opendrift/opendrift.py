@@ -24,6 +24,7 @@ from opendrift.readers import reader_ROMS_native
 
 from ...cli import is_None
 from ...the_manager import _KNOWN_MODELS, ParticleTrackingManager
+from .plot import check_plots, make_plots
 from .utils import make_ciofs_kerchunk, make_nwgoa_kerchunk
 
 
@@ -142,6 +143,9 @@ class OpenDriftModel(ParticleTrackingManager):
         Oil mass is biodegraded (eaten by bacteria).
     log : str, optional
         Options are "low" and "high" verbosity for log, by default "low"
+    plots : dict, optional
+        Dictionary of plot names, their filetypes, and any kwargs to pass along, by default None.
+        Available plot names are "spaghetti", "animation", "oil", "all".
 
     Notes
     -----
@@ -219,6 +223,7 @@ class OpenDriftModel(ParticleTrackingManager):
         ],
         biodegradation: bool = config_model["biodegradation"]["default"],
         log: str = config_model["log"]["default"],
+        plots: dict = config_model["plots"]["default"],
         **kw,
     ) -> None:
         """Inputs for OpenDrift model."""
@@ -294,6 +299,8 @@ class OpenDriftModel(ParticleTrackingManager):
         # o.get_configspec('vertical_mixing:timestep')
         # You can check required variables for a model with
         # o.required_variables
+
+        self.checked_plot = False
 
         # Set all attributes which will trigger some checks and changes in __setattr__
         # these will also update "value" in the config dict
@@ -504,33 +511,44 @@ class OpenDriftModel(ParticleTrackingManager):
 
         # Add export variables for certain drift_model values
         # drift_model is always set initially only
-        if name == "export_variables" and self.drift_model == "OpenOil":
-            oil_vars = [
-                "mass_oil",
-                "density",
-                "mass_evaporated",
-                "mass_dispersed",
-                "mass_biodegraded",
-                "viscosity",
-                "water_fraction",
-            ]
-            self.__dict__["export_variables"] += oil_vars
-            self.config_model["export_variables"]["value"] += oil_vars
-        elif name == "export_variables" and self.drift_model == "Leeway":
-            vars = ["object_type"]
-            self.__dict__["export_variables"] += vars
-            self.config_model["export_variables"]["value"] += vars
-        elif name == "export_variables" and self.drift_model == "LarvalFish":
-            vars = [
-                "diameter",
-                "neutral_buoyancy_salinity",
-                "stage_fraction",
-                "hatched",
-                "length",
-                "weight",
-            ]
-            self.__dict__["export_variables"] += vars
-            self.config_model["export_variables"]["value"] += vars
+        if name == "export_variables":
+            # always include z, add user-input variables too
+            self.__dict__["export_variables"] += ["z"]
+            self.config_model["export_variables"]["value"] += ["z"]
+
+            if self.drift_model == "OpenOil":
+                oil_vars = [
+                    "mass_oil",
+                    "density",
+                    "mass_evaporated",
+                    "mass_dispersed",
+                    "mass_biodegraded",
+                    "viscosity",
+                    "water_fraction",
+                ]
+                self.__dict__["export_variables"] += oil_vars
+                self.config_model["export_variables"]["value"] += oil_vars
+            elif self.drift_model == "Leeway":
+                vars = ["object_type"]
+                self.__dict__["export_variables"] += vars
+                self.config_model["export_variables"]["value"] += vars
+            elif self.drift_model == "LarvalFish":
+                vars = [
+                    "diameter",
+                    "neutral_buoyancy_salinity",
+                    "stage_fraction",
+                    "hatched",
+                    "length",
+                    "weight",
+                ]
+                self.__dict__["export_variables"] += vars
+                self.config_model["export_variables"]["value"] += vars
+
+        # check plots for any necessary export_variables
+        if self.plots and not self.checked_plot:
+            check_plots(self.plots, self.export_variables, self.drift_model)
+            self.checked_plot = True
+            self.logger.info("All plots have necessary export_variables.")
 
         self._update_config()
 
@@ -851,6 +869,10 @@ class OpenDriftModel(ParticleTrackingManager):
                     raise ValueError(
                         "No model output left for simulation time. Check start_time and end_time."
                     )
+                if len(ds.ocean_time) == 1:
+                    raise ValueError(
+                        "Only 1 model output left for simulation time. Check start_time and end_time."
+                    )
             else:
                 raise ValueError(
                     "start_time and end_time must be set to narrow model output to simulation time"
@@ -996,6 +1018,17 @@ class OpenDriftModel(ParticleTrackingManager):
             export_variables=self.export_variables,
             outfile=self.output_file_initial,
         )
+
+        # plot if requested
+        if self.plots:
+            # return plots because now contains the filenames for each plot
+            self.plots = make_plots(
+                self.plots, self.o, self.output_file.split(".")[0], self.drift_model
+            )
+
+            # convert plots dict into string representation to save in output file attributes
+            # https://github.com/pydata/xarray/issues/1307
+            self.plots = repr(self.plots)
 
         self.o._config = full_config  # reinstate config
 
