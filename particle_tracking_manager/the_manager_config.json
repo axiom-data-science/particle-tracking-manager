@@ -193,5 +193,11 @@
         "default": true,
         "description": "Set to True to use cache for storing interpolators. This saves time on repeat simulations, may be used for other items in the future.",
         "ptm_level": 3
+    },
+    "interpolator_filename": {
+        "type": "str",
+        "default": "None",
+        "description": "Filename to save interpolator to. The full path should be given, but no suffix. Use this to either read from an existing file at a non-default location or to save to a non-default location. If None and use_cache==True, default name is used. ",
+        "ptm_level": 3
     }
 }
