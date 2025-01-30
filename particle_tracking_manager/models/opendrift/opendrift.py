@@ -223,7 +223,7 @@ class OpenDriftModel(ParticleTrackingManager):
         ],
         biodegradation: bool = config_model["biodegradation"]["default"],
         log: str = config_model["log"]["default"],
-        plots: dict = config_model["plots"]["default"],
+        plots: Optional[dict] = config_model["plots"]["default"],
         **kw,
     ) -> None:
         """Inputs for OpenDrift model."""

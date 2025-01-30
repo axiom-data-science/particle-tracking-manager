@@ -1,8 +1,9 @@
 # What's New
 
-## unreleased
+## v0.10.1 (January 30, 2025)
 
 * Added built-in way to create plots for simulation using OpenDrift. Details available in {ref}`plots`.
+* User can now input a location to both save and read the interpolator, which avoids using the built-in cache location.
 
 ## v0.9.6 (November 15, 2024)
 
