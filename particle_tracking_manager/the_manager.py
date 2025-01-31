@@ -35,14 +35,6 @@ for key in config_ptm.keys():
         config_ptm[key]["default"] = None
 
 
-ciofs_operational_start_time = datetime.datetime(2021, 8, 31, 19, 0, 0)
-ciofs_operational_end_time = (pd.Timestamp.now() + pd.Timedelta("48H")).to_pydatetime()
-ciofs_end_time = datetime.datetime(2023, 1, 1, 0, 0, 0)
-nwgoa_end_time = datetime.datetime(2009, 1, 1, 0, 0, 0)
-overall_start_time = datetime.datetime(1999, 1, 1, 0, 0, 0)
-overall_end_time = ciofs_operational_end_time
-
-
 class ParticleTrackingManager:
     """Manager class that controls particle tracking model.
 
@@ -156,6 +148,13 @@ class ParticleTrackingManager:
 
     logger: logging.Logger
     ocean_model: str
+    overall_start_time: str
+    overall_end_time: str
+    ciofs_operational_start_time: str
+    ciofs_operational_end_time: str
+    ciofs_end_time: str
+    nwgoa_end_time: str
+
     lon: Union[int, float]
     lat: Union[int, float]
     surface_only: Optional[bool]
@@ -209,6 +208,17 @@ class ParticleTrackingManager:
         **kw,
     ) -> None:
         """Inputs necessary for any particle tracking."""
+
+        self.__dict__["ciofs_operational_start_time"] = datetime.datetime(
+            2021, 8, 31, 19, 0, 0
+        )
+        self.__dict__["ciofs_operational_end_time"] = (
+            pd.Timestamp.now() + pd.Timedelta("48H")
+        ).to_pydatetime()
+        self.__dict__["ciofs_end_time"] = datetime.datetime(2023, 1, 1, 0, 0, 0)
+        self.__dict__["nwgoa_end_time"] = datetime.datetime(2009, 1, 1, 0, 0, 0)
+        self.__dict__["overall_start_time"] = datetime.datetime(1999, 1, 1, 0, 0, 0)
+        self.__dict__["overall_end_time"] = self.__dict__["ciofs_operational_end_time"]
 
         # get all named parameters input to ParticleTrackingManager class
         from inspect import signature
@@ -409,14 +419,22 @@ class ParticleTrackingManager:
                 if self.start_time is not None and self.ocean_model is not None:
                     assert isinstance(self.start_time, pd.Timestamp)
                     if self.ocean_model == "NWGOA":
-                        assert overall_start_time <= self.start_time <= nwgoa_end_time
+                        assert (
+                            self.overall_start_time
+                            <= self.start_time
+                            <= self.nwgoa_end_time
+                        )
                     elif self.ocean_model == "CIOFS":
-                        assert overall_start_time <= self.start_time <= ciofs_end_time
+                        assert (
+                            self.overall_start_time
+                            <= self.start_time
+                            <= self.ciofs_end_time
+                        )
                     elif self.ocean_model == "CIOFSOP":
                         assert (
-                            ciofs_operational_start_time
+                            self.ciofs_operational_start_time
                             <= self.start_time
-                            <= ciofs_operational_end_time
+                            <= self.ciofs_operational_end_time
                         )
 
             # deal with if input longitudes need to be shifted due to model
