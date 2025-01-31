@@ -1,5 +1,9 @@
 # What's New
 
+## unreleased
+
+* Move known model hard-wired model times into the class so they are refreshed each time the library is read.
+
 ## v0.10.1 (January 30, 2025)
 
 * Added built-in way to create plots for simulation using OpenDrift. Details available in {ref}`plots`.
