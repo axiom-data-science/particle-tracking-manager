@@ -3,6 +3,7 @@
 import argparse
 import ast
 import logging
+
 from datetime import datetime
 
 import pandas as pd
@@ -130,9 +131,9 @@ def main():
 
     if "output_file" not in args.kwargs:
 
-        args.kwargs["output_file"] = (
-            f"output-results_{datetime.utcnow():%Y-%m-%dT%H%M:%SZ}.nc"
-        )
+        args.kwargs[
+            "output_file"
+        ] = f"output-results_{datetime.utcnow():%Y-%m-%dT%H%M:%SZ}.nc"
 
     # log_file = args.kwargs["output_file"].replace(".nc", ".log")
 
