@@ -35,14 +35,6 @@ for key in config_ptm.keys():
         config_ptm[key]["default"] = None
 
 
-ciofs_operational_start_time = datetime.datetime(2021, 8, 31, 19, 0, 0)
-ciofs_operational_end_time = (pd.Timestamp.now() + pd.Timedelta("48H")).to_pydatetime()
-ciofs_end_time = datetime.datetime(2023, 1, 1, 0, 0, 0)
-nwgoa_end_time = datetime.datetime(2009, 1, 1, 0, 0, 0)
-overall_start_time = datetime.datetime(1999, 1, 1, 0, 0, 0)
-overall_end_time = ciofs_operational_end_time
-
-
 class ParticleTrackingManager:
     """Manager class that controls particle tracking model.
 
@@ -142,6 +134,11 @@ class ParticleTrackingManager:
         Name of input/output module type to use for writing Lagrangian model output. Default is "netcdf".
     use_cache : bool
         Set to True to use cache for saving interpolators, by default True.
+    interpolator_filename : Optional[Union[pathlib.Path,str]], optional
+        Filename to save interpolators to, by default None. The full path should be given, but no suffix.
+        Use this to either read from an existing file at a non-default location or to save to a
+        non-default location. If None and use_cache==True, the filename is set to a built-in name to an
+        `appdirs` cache directory.
 
     Notes
     -----
@@ -151,6 +148,13 @@ class ParticleTrackingManager:
 
     logger: logging.Logger
     ocean_model: str
+    overall_start_time: str
+    overall_end_time: str
+    ciofs_operational_start_time: str
+    ciofs_operational_end_time: str
+    ciofs_end_time: str
+    nwgoa_end_time: str
+
     lon: Union[int, float]
     lat: Union[int, float]
     surface_only: Optional[bool]
@@ -198,9 +202,23 @@ class ParticleTrackingManager:
         output_file: Optional[str] = config_ptm["output_file"]["default"],
         output_format: str = config_ptm["output_format"]["default"],
         use_cache: bool = config_ptm["use_cache"]["default"],
+        interpolator_filename: Optional[Union[pathlib.Path, str]] = config_ptm[
+            "interpolator_filename"
+        ]["default"],
         **kw,
     ) -> None:
         """Inputs necessary for any particle tracking."""
+
+        self.__dict__["ciofs_operational_start_time"] = datetime.datetime(
+            2021, 8, 31, 19, 0, 0
+        )
+        self.__dict__["ciofs_operational_end_time"] = (
+            pd.Timestamp.now() + pd.Timedelta("48H")
+        ).to_pydatetime()
+        self.__dict__["ciofs_end_time"] = datetime.datetime(2023, 1, 1, 0, 0, 0)
+        self.__dict__["nwgoa_end_time"] = datetime.datetime(2009, 1, 1, 0, 0, 0)
+        self.__dict__["overall_start_time"] = datetime.datetime(1999, 1, 1, 0, 0, 0)
+        self.__dict__["overall_end_time"] = self.__dict__["ciofs_operational_end_time"]
 
         # get all named parameters input to ParticleTrackingManager class
         from inspect import signature
@@ -231,25 +249,18 @@ class ParticleTrackingManager:
 
         self.output_file_initial = None
 
-        # Set all attributes which will trigger some checks and changes in __setattr__
-        # these will also update "value" in the config dict
-        for key in sig.parameters.keys():
-            # no need to run through for init if value is None (already set to None)
-            if locals()[key] is not None:
-                self.__setattr__(key, locals()[key])
+        if output_file is None:
+            output_file = f"output-results_{datetime.datetime.now():%Y-%m-%dT%H%M:%SZ}"
 
-        self.kw = kw
-
-        if self.__dict__["output_file"] is None:
-            self.__dict__[
-                "output_file"
-            ] = f"output-results_{datetime.datetime.now():%Y-%m-%dT%H%M:%SZ}"
+        # want output_file to not include any suffix
+        output_file = output_file.rstrip(".nc").rstrip(".parq")
 
         ## set up log for this simulation
         # Create a file handler
-        assert self.__dict__["output_file"] is not None
-        logfile_name = self.__dict__["output_file"] + ".log"
+        assert output_file is not None
+        logfile_name = output_file + ".log"
         self.file_handler = logging.FileHandler(logfile_name)
+        self.logfile_name = logfile_name
 
         # Create a formatter and add it to the handler
         formatter = logging.Formatter(
@@ -262,6 +273,56 @@ class ParticleTrackingManager:
 
         self.logger.info(f"filename: {logfile_name}")
         ##
+
+        if interpolator_filename is not None and not use_cache:
+            raise ValueError(
+                "If interpolator_filename is input, use_cache must be True."
+            )
+
+        # deal with caching/interpolators
+        # save interpolators to save time
+        if use_cache:
+            cache_dir = pathlib.Path(
+                appdirs.user_cache_dir(
+                    appname="particle-tracking-manager",
+                    appauthor="axiom-data-science",
+                )
+            )
+            cache_dir.mkdir(parents=True, exist_ok=True)
+            cache_dir = cache_dir
+            if interpolator_filename is None:
+                interpolator_filename = cache_dir / pathlib.Path(
+                    f"{ocean_model}_interpolator"
+                ).with_suffix(".pickle")
+            else:
+                interpolator_filename = pathlib.Path(interpolator_filename).with_suffix(
+                    ".pickle"
+                )
+            interpolator_filename = str(interpolator_filename)
+            self.save_interpolator = True
+            # if interpolator_filename already exists, load that
+            if pathlib.Path(interpolator_filename).exists():
+                self.logger.info(
+                    f"Loading the interpolator from {interpolator_filename}."
+                )
+            else:
+                self.logger.info(
+                    f"A new interpolator will be saved to {interpolator_filename}."
+                )
+        else:
+            self.save_interpolator = False
+            # this is already None
+            # self.interpolator_filename = None
+            self.logger.info("Interpolators will not be saved.")
+
+        # Set all attributes which will trigger some checks and changes in __setattr__
+        # these will also update "value" in the config dict
+        for key in sig.parameters.keys():
+            # no need to run through for init if value is None (already set to None)
+            if locals()[key] is not None:
+                self.__setattr__(key, locals()[key])
+
+        self.kw = kw
 
     def __setattr_model__(self, name: str, value) -> None:
         """Implement this in model class to add specific __setattr__ there too."""
@@ -358,14 +419,22 @@ class ParticleTrackingManager:
                 if self.start_time is not None and self.ocean_model is not None:
                     assert isinstance(self.start_time, pd.Timestamp)
                     if self.ocean_model == "NWGOA":
-                        assert overall_start_time <= self.start_time <= nwgoa_end_time
+                        assert (
+                            self.overall_start_time
+                            <= self.start_time
+                            <= self.nwgoa_end_time
+                        )
                     elif self.ocean_model == "CIOFS":
-                        assert overall_start_time <= self.start_time <= ciofs_end_time
+                        assert (
+                            self.overall_start_time
+                            <= self.start_time
+                            <= self.ciofs_end_time
+                        )
                     elif self.ocean_model == "CIOFSOP":
                         assert (
-                            ciofs_operational_start_time
+                            self.ciofs_operational_start_time
                             <= self.start_time
-                            <= ciofs_operational_end_time
+                            <= self.ciofs_operational_end_time
                         )
 
             # deal with if input longitudes need to be shifted due to model
@@ -378,13 +447,12 @@ class ParticleTrackingManager:
                         self.config_ptm["lon"]["value"] += 360  # this isn't really used
 
             if name in ["output_file", "output_format"]:
-                # import pdb; pdb.set_trace()
-
                 # remove netcdf suffix if it is there to just have name
                 # by this point, output_file should already be a filename like what is
                 # available here, from OpenDrift (if run from there)
                 if self.output_file is not None:
-                    output_file = self.output_file.rstrip(".nc")
+                    output_file = self.output_file
+                    # output_file = self.output_file.rstrip(".nc")
                 else:
                     output_file = (
                         f"output-results_{datetime.datetime.now():%Y-%m-%dT%H%M:%SZ}"
@@ -392,6 +460,13 @@ class ParticleTrackingManager:
 
                 # make new attribute for initial output file
                 if self.output_file_initial is None:
+                    self.output_file_initial = str(
+                        pathlib.Path(f"{output_file}_initial").with_suffix(".nc")
+                    )
+                elif (
+                    self.output_file_initial is not None
+                    and "initial" not in self.output_file_initial
+                ):
                     self.output_file_initial = str(
                         pathlib.Path(f"{output_file}_initial").with_suffix(".nc")
                     )
@@ -470,29 +545,6 @@ class ParticleTrackingManager:
                     "setting `seed_seafloor` from True to False since now setting a non-None z value"
                 )
                 self.seed_seafloor = False
-
-            # save interpolators to save time
-            if name == "use_cache":
-                if value:
-                    cache_dir = pathlib.Path(
-                        appdirs.user_cache_dir(
-                            appname="particle-tracking-manager",
-                            appauthor="axiom-data-science",
-                        )
-                    )
-                    cache_dir.mkdir(parents=True, exist_ok=True)
-                    self.cache_dir = cache_dir
-                    self.interpolator_filename = cache_dir / pathlib.Path(
-                        f"{self.ocean_model}_interpolator"
-                    )
-                    self.save_interpolator = True
-                    self.logger.info(
-                        f"Interpolators will be saved to {self.interpolator_filename}."
-                    )
-                else:
-                    self.save_interpolator = False
-                    self.interpolator_filename = None
-                    self.logger.info("Interpolators will not be saved.")
 
             # if reader, lon, and lat set, check inputs
             if (

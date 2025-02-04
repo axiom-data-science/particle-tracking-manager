@@ -387,5 +387,24 @@ class TestManager(unittest.TestCase):
             self.m.seed()
 
 
+def test_interpolator_filename():
+    with pytest.raises(ValueError):
+        m = ptm.OpenDriftModel(interpolator_filename="test", use_cache=False)
+
+    m = ptm.OpenDriftModel(interpolator_filename="test")
+    assert m.interpolator_filename == "test.pickle"
+
+
+def test_log_name():
+    m = ptm.OpenDriftModel(output_file="newtest")
+    assert m.logfile_name == "newtest.log"
+
+    m = ptm.OpenDriftModel(output_file="newtest.nc")
+    assert m.logfile_name == "newtest.log"
+
+    m = ptm.OpenDriftModel(output_file="newtest.parq")
+    assert m.logfile_name == "newtest.log"
+
+
 if __name__ == "__main__":
     unittest.main()

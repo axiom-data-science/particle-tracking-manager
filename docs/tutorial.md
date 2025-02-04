@@ -56,7 +56,8 @@ This model can in 2D or 3D with or without horizontal or vertical mixing, wind d
 
 ```{code-cell} ipython3
 m = ptm.OpenDriftModel(lon=-90, lat=28.7, number=10, steps=40,
-                       z=-5, do3D=True, horizontal_diffusivity=100,)
+                       z=-5, do3D=True, horizontal_diffusivity=100,
+                       plots={'spaghetti': {'linecolor': 'z', 'cmap': cmo.deep}})
 ```
 
 The drift_model-specific parameters chosen by the user and PTM for this simulation are:
@@ -83,11 +84,6 @@ m.add_reader(ds=ds)
 m.run_all()
 ```
 
-#### Plot
-
-```{code-cell} ipython3
-m.o.plot(linecolor="z", fast=True, cmap=cmo.deep)
-```
 
 ### Leeway (Search and Rescue)
 
@@ -98,7 +94,8 @@ These are simulations of objects that stay at the surface and are transported by
 ```{code-cell} ipython3
 m = ptm.OpenDriftModel(drift_model="Leeway", lon = -89.8, lat = 29.08,
                        number=10, steps=40,
-                       object_type="Fishing vessel, general (mean values)")
+                       object_type="Fishing vessel, general (mean values)",
+                       plots={'spaghetti': {}})
 
 # This drift model requires wind data to be set which isn't present in model output
 m.o.set_config('environment:constant:x_wind', -1)
@@ -124,12 +121,6 @@ m.add_reader(ds=ds)
 m.run_all()
 ```
 
-#### Plot
-
-```{code-cell} ipython3
-m.o.plot(fast=True)
-```
-
 ### LarvalFish
 
 This model simulates eggs and larvae that move in 3D with the currents and some basic behavior and vertical movement. It also simulates some basic growth of the larvae.
@@ -150,7 +141,12 @@ An optional general flag is to initialize the drifters at the seabed, which migh
 
 ```{code-cell} ipython3
 m = ptm.OpenDriftModel(drift_model="LarvalFish", lon=-89.85, lat=28.8, number=10, steps=45,
-                       do3D=True, seed_seafloor=True)
+                       do3D=True, seed_seafloor=True,
+                       plots={'spaghetti': {'linecolor': 'z', 'cmap': cmo.deep},
+                              'property1': {'prop': 'length'},
+                              'property2': {'prop': 'weight'},
+                              'property3': {'prop': 'diameter'},
+                              'property4': {'prop': 'stage_fraction'}})
 ```
 
 The drift_model-specific parameters chosen by the user and PTM for this simulation are:
@@ -164,19 +160,6 @@ m.drift_model_config()
 ```{code-cell} ipython3
 m.add_reader(ds=ds)
 m.run_all()
-```
-
-##### Plot
-
-```{code-cell} ipython3
-m.o.plot(linecolor="z", fast=True, cmap=cmo.deep_r)
-```
-
-```{code-cell} ipython3
-m.o.plot_property('length')
-m.o.plot_property('weight')
-m.o.plot_property('diameter')
-m.o.plot_property('stage_fraction')
 ```
 
 Output from the simulation can be viewed in the history or elements, or from the output file.
@@ -199,7 +182,12 @@ m.o.elements
 
 ```{code-cell} ipython3
 m = ptm.OpenDriftModel(drift_model="LarvalFish", lon=-89.85, lat=28.8, number=10, steps=45,
-                       do3D=True, seed_seafloor=True, hatched=1)
+                       do3D=True, seed_seafloor=True, hatched=1,
+                       plots={'spaghetti': {'linecolor': 'z', 'cmap': cmo.deep},
+                              'property1': {'prop': 'length'},
+                              'property2': {'prop': 'weight'},
+                              'property3': {'prop': 'diameter'},
+                              'property4': {'prop': 'stage_fraction'}})
 ```
 
 The drift_model-specific parameters chosen by the user and PTM for this simulation are:
@@ -215,18 +203,6 @@ m.add_reader(ds=ds)
 m.run_all()
 ```
 
-##### Plot
-
-```{code-cell} ipython3
-m.o.plot(linecolor="z", fast=True, cmap=cmo.deep_r)
-```
-
-```{code-cell} ipython3
-m.o.plot_property('length')
-m.o.plot_property('weight')
-m.o.plot_property('diameter')
-m.o.plot_property('stage_fraction')
-```
 
 ### OpenOil
 
@@ -250,7 +226,9 @@ There are also specific seeding options for this model:
 
 ```{code-cell} ipython3
 m = ptm.OpenDriftModel(drift_model="OpenOil", lon=-89.85, lat=28.08, number=10, steps=45,
-                       z=-10, do3D=True, oil_type='GENERIC BUNKER C')
+                       z=-10, do3D=True, oil_type='GENERIC BUNKER C',
+                       plots={'spaghetti': {'linecolor': 'z', 'cmap': cmo.deep},
+                              'oil': {'show_wind_and_current': False}})
 m.o.set_config('environment:constant:x_wind', -1)
 m.o.set_config('environment:constant:y_wind', 1)
 ```
@@ -272,20 +250,4 @@ m.drift_model_config()
 ```{code-cell} ipython3
 m.add_reader(ds=ds)
 m.run_all()
-```
-
-#### Plot
-
-```{code-cell} ipython3
-m.o.plot(linecolor="z", fast=True, cmap=cmo.deep_r)
-```
-
-Plot the oil budget.
-
-```{code-cell} ipython3
-m.o.plot_oil_budget(show_wind_and_current=False)
-```
-
-```{code-cell} ipython3
-
 ```

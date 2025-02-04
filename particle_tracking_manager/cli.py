@@ -3,7 +3,6 @@
 import argparse
 import ast
 import logging
-
 from datetime import datetime
 
 import pandas as pd
@@ -44,7 +43,7 @@ def is_datestr(s):
         out = pd.Timestamp(s)
         assert not pd.isnull(out)
         return True
-    except (ValueError, AssertionError):
+    except (ValueError, AssertionError, TypeError):
         return False
 
 
@@ -114,6 +113,12 @@ def main():
         default=False,
     )
 
+    parser.add_argument(
+        "--plots",
+        type=str,
+        help='Optional plots. Dictionary-style input, e.g. `{"spaghetti": {}}`.',
+    )
+
     args = parser.parse_args()
 
     to_bool = {
@@ -125,22 +130,29 @@ def main():
 
     if "output_file" not in args.kwargs:
 
-        args.kwargs[
-            "output_file"
-        ] = f"output-results_{datetime.utcnow():%Y-%m-%dT%H%M:%SZ}.nc"
+        args.kwargs["output_file"] = (
+            f"output-results_{datetime.utcnow():%Y-%m-%dT%H%M:%SZ}.nc"
+        )
 
-    log_file = args.kwargs["output_file"].replace(".nc", ".log")
+    # log_file = args.kwargs["output_file"].replace(".nc", ".log")
 
-    # Create a file handler
-    file_handler = logging.FileHandler(log_file)
+    # Convert the string representation of the dictionary to an actual dictionary
+    # not clear why I can't use `args.plots` in here but it isn't working
+    if parser.parse_args().plots is not None:
+        plots = ast.literal_eval(parser.parse_args().plots)
+    else:
+        plots = None
 
-    # Create a formatter and add it to the handler
-    formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    )
-    file_handler.setFormatter(formatter)
+    # # Create a file handler
+    # file_handler = logging.FileHandler(log_file)
 
-    m = ptm.OpenDriftModel(**args.kwargs)
+    # # Create a formatter and add it to the handler
+    # formatter = logging.Formatter(
+    #     "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    # )
+    # file_handler.setFormatter(formatter)
+
+    m = ptm.OpenDriftModel(**args.kwargs, plots=plots)
 
     if args.dry_run:
 
@@ -150,10 +162,10 @@ def main():
 
     else:
 
-        # Add the handler to the logger
-        m.logger.addHandler(file_handler)
+        # # Add the handler to the logger
+        # m.logger.addHandler(file_handler)
 
-        m.logger.info(f"filename: {args.kwargs['output_file']}")
+        # m.logger.info(f"filename: {args.kwargs['output_file']}")
 
         m.add_reader()
         print(m.drift_model_config())
@@ -163,9 +175,9 @@ def main():
 
         print(m.outfile_name)
 
-    # Remove the handler at the end of the loop
-    m.logger.removeHandler(file_handler)
-    file_handler.close()
+    # # Remove the handler at the end of the loop
+    # m.logger.removeHandler(file_handler)
+    # file_handler.close()
 
 
 if __name__ == "__main__":
