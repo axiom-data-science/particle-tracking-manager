@@ -179,3 +179,7 @@ def main():
     # # Remove the handler at the end of the loop
     # m.logger.removeHandler(file_handler)
     # file_handler.close()
+
+
+if __name__ == "__main__":
+    main()
