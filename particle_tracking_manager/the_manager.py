@@ -213,7 +213,7 @@ class ParticleTrackingManager:
             2021, 8, 31, 19, 0, 0
         )
         self.__dict__["ciofs_operational_end_time"] = (
-            pd.Timestamp.now() + pd.Timedelta("48H")
+            pd.Timestamp.now() + pd.Timedelta("48h")
         ).to_pydatetime()
         self.__dict__["ciofs_end_time"] = datetime.datetime(2023, 1, 1, 0, 0, 0)
         self.__dict__["nwgoa_end_time"] = datetime.datetime(2009, 1, 1, 0, 0, 0)
@@ -253,7 +253,9 @@ class ParticleTrackingManager:
             output_file = f"output-results_{datetime.datetime.now():%Y-%m-%dT%H%M:%SZ}"
 
         # want output_file to not include any suffix
-        output_file = output_file.rstrip(".nc").rstrip(".parq")
+        output_file = (
+            output_file.replace(".nc", "").replace(".parquet", "").replace(".parq", "")
+        )
 
         ## set up log for this simulation
         # Create a file handler
@@ -476,7 +478,7 @@ class ParticleTrackingManager:
                         output_file = str(pathlib.Path(output_file).with_suffix(".nc"))
                     elif self.output_format == "parquet":
                         output_file = str(
-                            pathlib.Path(output_file).with_suffix(".parq")
+                            pathlib.Path(output_file).with_suffix(".parquet")
                         )
                     else:
                         raise ValueError(

@@ -1,5 +1,9 @@
 # What's New
 
+## Unreleased
+
+* Suffix for parquet file format is now ".parquet" instead of ".parq".
+
 ## v0.11.1 (February 4, 2025)
 
 * Move known model hard-wired model times into the class so they are refreshed each time the library is read.
