@@ -326,7 +326,7 @@ def test_output_file():
     """make sure output file is parquet if output_format is parquet"""
 
     m = OpenDriftModel(output_format="parquet")
-    assert m.output_file.endswith(".parq")
+    assert m.output_file.endswith(".parquet")
 
     m = OpenDriftModel(output_format="netcdf")
     assert m.output_file.endswith(".nc")

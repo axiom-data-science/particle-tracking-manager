@@ -254,7 +254,7 @@ class ParticleTrackingManager:
 
         # want output_file to not include any suffix
         output_file = (
-            output_file.replace(".nc", "").replace(".parq", "").replace(".parquet", "")
+            output_file.replace(".nc", "").replace(".parquet", "").replace(".parq", "")
         )
 
         ## set up log for this simulation
