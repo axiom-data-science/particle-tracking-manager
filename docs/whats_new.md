@@ -1,6 +1,6 @@
 # What's New
 
-## Unreleased
+## v0.11.2 (February 6, 2025)
 
 * Suffix for parquet file format is now ".parquet" instead of ".parq".
 * Added a method to run plots from saved OpenDrift output file; also available in CLI. Updated docs.
