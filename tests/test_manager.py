@@ -405,6 +405,9 @@ def test_log_name():
     m = ptm.OpenDriftModel(output_file="newtest.parq")
     assert m.logfile_name == "newtest.log"
 
+    m = ptm.OpenDriftModel(output_file="newtest.parquet")
+    assert m.logfile_name == "newtest.log"
+
 
 if __name__ == "__main__":
     unittest.main()
