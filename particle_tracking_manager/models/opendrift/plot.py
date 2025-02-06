@@ -44,42 +44,55 @@ def check_plots(which_plots, export_variables, drift_model):
             "If 'all' is specified for plots, it must be the only plot option."
         )
 
-    # flatten dict
-    which_plots_flat = pd.json_normalize(which_plots).to_dict(orient="records")
-
-    if len(which_plots_flat) == 0:
-        return
-
-    which_plots_flat = which_plots_flat[0]
-
     # check for cases that require an export variable
-    plot_options_to_check = ["linecolor", "color", "background", "prop", "markersize"]
-    missing_variables = []
-    for plot_option in plot_options_to_check:
-        variables = [
-            v
-            for k, v in which_plots_flat.items()
-            if plot_option == k.split(".")[1] and v not in export_variables
+    if export_variables is not None:
+
+        # flatten dict
+        which_plots_flat = pd.json_normalize(which_plots).to_dict(orient="records")
+
+        if len(which_plots_flat) == 0:
+            return
+
+        which_plots_flat = which_plots_flat[0]
+
+        plot_options_to_check = [
+            "linecolor",
+            "color",
+            "background",
+            "prop",
+            "markersize",
         ]
-        missing_variables.extend(variables)
+        missing_variables = []
+        for plot_option in plot_options_to_check:
+            variables = [
+                v
+                for k, v in which_plots_flat.items()
+                if plot_option == k.split(".")[1] and v not in export_variables
+            ]
+            missing_variables.extend(variables)
 
-    # handle oil budget separately
-    vars_needed = ["x_wind", "y_wind", "x_sea_water_velocity", "y_sea_water_velocity"]
-    variables = [
-        list(set(vars_needed) - set(export_variables))
-        for k, v in which_plots_flat.items()
-        if "show_wind_and_current" in k
-        and v
-        and (len(set(vars_needed) - set(export_variables)) > 0)
-    ]
-    if len(variables) > 0:
-        variables = variables[0]
-        missing_variables.extend(variables)
+        # handle oil budget separately
+        vars_needed = [
+            "x_wind",
+            "y_wind",
+            "x_sea_water_velocity",
+            "y_sea_water_velocity",
+        ]
+        variables = [
+            list(set(vars_needed) - set(export_variables))
+            for k, v in which_plots_flat.items()
+            if "show_wind_and_current" in k
+            and v
+            and (len(set(vars_needed) - set(export_variables)) > 0)
+        ]
+        if len(variables) > 0:
+            variables = variables[0]
+            missing_variables.extend(variables)
 
-    if len(missing_variables) > 0:
-        raise ValueError(
-            f"Missing export variables for the following plot options: {list(set(missing_variables))}"
-        )
+        if len(missing_variables) > 0:
+            raise ValueError(
+                f"Missing export variables for the following plot options: {list(set(missing_variables))}"
+            )
 
 
 def make_filename_string(plot_name, filename, kwargs):
@@ -241,3 +254,37 @@ def make_plots(which_plots, o, filename, drift_model):
         # save filename for plot
         which_plots[which_plot]["filename"] = filename_out
     return which_plots
+
+
+def make_plots_after_simulation(output_filepath, plots="all"):
+    """Make plots after a simulation has been run.
+
+    Parameters
+    ----------
+    output_filepath : str
+        Path to the output file from the simulation.
+    which_plots : dict
+        Dictionary of plot options.
+
+    Returns
+    -------
+    dict
+        Dictionary of plot options with the filename of each plot.
+    """
+    import opendrift as od
+
+    # load output file
+    o = od.open(output_filepath)
+
+    # want output_file to not include any suffix
+    output_filepath = (
+        output_filepath.replace(".nc", "").replace(".parquet", "").replace(".parq", "")
+    )
+
+    # figure out drift_model
+    drift_model = type(o).__name__
+
+    # make plots
+    plots = make_plots(plots, o, output_filepath, drift_model)
+
+    return plots

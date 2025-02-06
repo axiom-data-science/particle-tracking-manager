@@ -23,13 +23,15 @@ The available plot types are:
 * animation
 * animation profile
 
-To create a type of plot, the listed words must be in the plot dictionary key and it will work by word-matching. Each plot key must also be distinct. A basic version of each available plot (except "property", which requires an input property to plot) will be plotted for "all". Some examples will be demonstrated here, as well as how to get the plot whether using PTM as a Python package or through the CLI. Note that for the CLI, the `--plots` input needs to come before or after all other inputs besides `--dry-run`.
+To create a type of plot, the listed words must be in the plot dictionary key and it will work by word-matching. Each plot key must also be distinct. A basic version of each available plot (except "property", which requires an input property to plot) will be plotted for "all". Some examples will be demonstrated here, as well as how to get the plot whether using PTM as a Python package or through the CLI.
 
 Examples will be shown with code run at the bottom of this page. First we show options.
 
 To make two or more plots or animations of the same type for the same simulation, input multiple plot dictionaries. Just be sure that each plot key is distinct.
 
-A plot or animation option that uses a nondefault variable must also have access to that variable in the output file, which you accomplish by requesting it as an `export_variable`.
+A plot or animation option that uses a nondefault variable must also have access to that variable in the output file, which you accomplish by requesting it as an `export_variable`. By default, all possible variables are exported, but if you input a preferred list of variables to export, be sure it includes any you want to plot.
+
+If you hit an exception due to missing the reader, you probably need to run your requested plot or animation at the same time as the simulation in order to have access to the variable requested.
 
 ## Spaghetti
 
@@ -43,7 +45,7 @@ plots={'spaghetti': {}}
 
 To run this with the CLI, the plots section would be
 ```
---plots="{'spaghetti': {}}"
+plots="{'spaghetti': {}}"
 ```
 
 ### Options
@@ -65,12 +67,12 @@ import cmocean.cm as cmo
 ...
 
 ..., plots={'spaghetti': {},
-        'spaghetti2': {'linecolor': 'z', 'cmap': cmo.deep}}, ...
+        'spaghetti2': {'linecolor': 'z', 'cmap': 'cmo.deep'}}, ...
 ```
 
 For CLI use
 ```
---plots="{'spaghetti': {}, 'spaghetti2': {'linecolor': 'z', 'cmap': cmo.deep}}"
+plots="{'spaghetti': {}, 'spaghetti2': {'linecolor': 'z', 'cmap': 'cmo.deep'}}"
 ```
 
 
@@ -86,7 +88,7 @@ plots={'animation': {}}
 
 To run this with the CLI, the plots section would be
 ```
---plots="{'animation': {}}"
+plots="{'animation': {}}"
 ```
 
 ### Options
@@ -123,7 +125,7 @@ plots={'oil': {}}
 
 To run this with the CLI, the plots section would be
 ```
---plots="{'oil': {}}"
+plots="{'oil': {}}"
 ```
 
 ### Options
@@ -148,7 +150,7 @@ plots={'animation_profile': {}}
 
 To run this with the CLI, the plots section would be
 ```
---plots="{'animation_profile': {}}"
+plots="{'animation_profile': {}}"
 ```
 
 ### Options
@@ -174,7 +176,7 @@ plots={'property': {'prop': 'z'}}
 
 To run this with the CLI, the plots section would be
 ```
---plots="{'property': {'prop': 'z'}}"
+plots="{'property': {'prop': 'z'}}"
 ```
 
 ### Options
@@ -226,25 +228,15 @@ Image(filename=gif_filename)
 
 ### Demo with larval fish scenario
 
-This example plots particle tracks and additionally plots tracks colored by `sea_surface_height`.
+This example plots particle tracks and additionally plots tracks colored by a variable, and runs the plot after the simulation has been run.
 
 ```{code-cell} ipython3
 m = ptm.OpenDriftModel(drift_model="LarvalFish", lon=-90, lat=28.7, number=10, duration=pd.Timedelta("3h"),
                        do3D=True, use_static_masks=True,
                        hatched=1,
                        seed_seafloor=True,
-                       export_variables=["sea_floor_depth_below_sea_level", 'sea_water_temperature'],
-                       plots={'spaghetti': {},
-                              'spaghetti2': {'linecolor': 'sea_water_temperature', 'cmap': 'cmo.thermal'},
-                              'animation': {},
-                              'animation2': {'background': 'sea_floor_depth_below_sea_level',
-                                             'cmap': 'cmo.deep'},
-                              'animation_profile': {},
-                              'animation_profile2': {'markersize_scaling': 80, 'cmap': 'cmo.amp',
-                                                     'color': 'weight', 'fps': 4},
-                              'property': {'prop': 'z'},
-                              'propertymean': {'prop': 'z', 'mean': True},
-})
+                       export_variables=["sea_floor_depth_below_sea_level",
+                                          "sea_water_temperature"])
 
 
 url = xroms.datasets.CLOVER.fetch("ROMS_example_full_grid.nc")
@@ -254,28 +246,36 @@ m.add_reader(ds=ds)
 m.run_all()
 ```
 
+To create the plots:
+```{code-cell} ipython3
+import particle_tracking_manager.models.opendrift.plot as plot
+out_plots = plot.make_plots_after_simulation(m.output_file,
+          plots={'spaghetti': {},
+                  'spaghetti2': {'linecolor': 'sea_water_temperature', 'cmap': 'cmo.thermal'},
+                  'animation': {},
+                  'animation_profile': {},
+                  'animation_profile2': {'markersize_scaling': 80, 'cmap': 'cmo.amp',
+                                        'color': 'weight', 'fps': 4},
+                  'property': {'prop': 'z'},
+                  'propertymean': {'prop': 'z', 'mean': True},})
+```
+
 To show the animations:
 
 ```{code-cell} ipython3
 from IPython.display import Image
-import ast
 
-gif_filename = ast.literal_eval(m.plots)["animation"]["filename"]
+gif_filename = out_plots["animation"]["filename"]
 Image(filename=gif_filename)
 ```
 
 ```{code-cell} ipython3
-gif_filename = ast.literal_eval(m.plots)["animation2"]["filename"]
+gif_filename = out_plots["animation_profile"]["filename"]
 Image(filename=gif_filename)
 ```
 
 ```{code-cell} ipython3
-gif_filename = ast.literal_eval(m.plots)["animation_profile"]["filename"]
-Image(filename=gif_filename)
-```
-
-```{code-cell} ipython3
-gif_filename = ast.literal_eval(m.plots)["animation_profile2"]["filename"]
+gif_filename = out_plots["animation_profile2"]["filename"]
 Image(filename=gif_filename)
 
 ```
@@ -288,7 +288,6 @@ Image(filename=gif_filename)
 ```{code-cell} ipython3
 m = ptm.OpenDriftModel(drift_model="OpenOil", lon=-90, lat=28.7, number=10, duration=pd.Timedelta("3h"),
                        do3D=False, use_static_masks=True, z=0,
-                       export_variables=["sea_floor_depth_below_sea_level", "sea_water_salinity"],
                        plots={'spaghetti': {},
                               'spaghetti2': {'linecolor': 'viscosity', 'cmap': 'cmo.speed'},
                               'animation': {},

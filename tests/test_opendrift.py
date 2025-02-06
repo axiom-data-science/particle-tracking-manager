@@ -446,15 +446,20 @@ def test_wind_drift():
 
 
 def test_plots_linecolor():
+    # this should error if user inputs some export_variables, which
+    # changes the default from returning all variables to just those
+    # selected plus a short list of required variables
     with pytest.raises(ValueError):
         m = OpenDriftModel(
-            drift_model="OceanDrift", plots={"spaghetti": {"linecolor": "x_wind"}}
+            drift_model="OceanDrift",
+            plots={"spaghetti": {"linecolor": "x_wind"}},
+            export_variables=[],
         )
 
     m = OpenDriftModel(
         drift_model="OceanDrift",
         plots={"spaghetti": {"linecolor": "x_wind"}},
-        export_variables=["x_wind"],
+        export_variables=None,
     )
 
     # this should work bc "z" should already be included
@@ -464,53 +469,57 @@ def test_plots_linecolor():
 
 
 def test_plots_background():
+    # this should error if user inputs some export_variables, which
+    # changes the default from returning all variables to just those
+    # selected plus a short list of required variables
     with pytest.raises(ValueError):
         m = OpenDriftModel(
             drift_model="OceanDrift",
             plots={"animation": {"background": "sea_surface_height"}},
+            export_variables=[],
         )
 
     m = OpenDriftModel(
         drift_model="OceanDrift",
         plots={"animation": {"background": "sea_surface_height"}},
-        export_variables=["sea_surface_height"],
     )
 
 
 def test_plots_oil():
+    # this should error if user inputs some export_variables, which
+    # changes the default from returning all variables to just those
+    # selected plus a short list of required variables
     with pytest.raises(ValueError):
         m = OpenDriftModel(
-            drift_model="OpenOil", plots={"oil": {"show_wind_and_current": True}}
+            drift_model="OpenOil",
+            plots={"oil": {"show_wind_and_current": True}},
+            export_variables=[],
         )
+
+    m = OpenDriftModel(
+        drift_model="OpenOil", plots={"oil": {"show_wind_and_current": True}}
+    )
 
     with pytest.raises(ValueError):
         m = OpenDriftModel(drift_model="OceanDrift", plots={"oil": {}})
 
-    m = OpenDriftModel(
-        drift_model="OpenOil",
-        plots={"oil": {"show_wind_and_current": True}},
-        export_variables=[
-            "x_wind",
-            "y_sea_water_velocity",
-            "y_wind",
-            "x_sea_water_velocity",
-        ],
-    )
-
 
 def test_plots_property():
+    # this should error if user inputs some export_variables, which
+    # changes the default from returning all variables to just those
+    # selected plus a short list of required variables
     with pytest.raises(ValueError):
         m = OpenDriftModel(
             drift_model="LarvalFish",
             do3D=True,
             plots={"property": {"prop": "survival"}},
+            export_variables=["x_wind"],
         )
 
     m = OpenDriftModel(
         drift_model="LarvalFish",
         do3D=True,
         plots={"property": {"prop": "survival"}},
-        export_variables=["survival"],
     )
 
 
