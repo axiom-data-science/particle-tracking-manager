@@ -57,7 +57,7 @@ This model can in 2D or 3D with or without horizontal or vertical mixing, wind d
 ```{code-cell} ipython3
 m = ptm.OpenDriftModel(lon=-90, lat=28.7, number=10, steps=40,
                        z=-5, do3D=True, horizontal_diffusivity=100,
-                       plots={'spaghetti': {'linecolor': 'z', 'cmap': cmo.deep}})
+                       plots={'spaghetti': {'linecolor': 'z', 'cmap': 'cmo.deep'}})
 ```
 
 The drift_model-specific parameters chosen by the user and PTM for this simulation are:
@@ -142,7 +142,7 @@ An optional general flag is to initialize the drifters at the seabed, which migh
 ```{code-cell} ipython3
 m = ptm.OpenDriftModel(drift_model="LarvalFish", lon=-89.85, lat=28.8, number=10, steps=45,
                        do3D=True, seed_seafloor=True,
-                       plots={'spaghetti': {'linecolor': 'z', 'cmap': cmo.deep},
+                       plots={'spaghetti': {'linecolor': 'z', 'cmap': 'cmo.deep'},
                               'property1': {'prop': 'length'},
                               'property2': {'prop': 'weight'},
                               'property3': {'prop': 'diameter'},
@@ -183,7 +183,7 @@ m.o.elements
 ```{code-cell} ipython3
 m = ptm.OpenDriftModel(drift_model="LarvalFish", lon=-89.85, lat=28.8, number=10, steps=45,
                        do3D=True, seed_seafloor=True, hatched=1,
-                       plots={'spaghetti': {'linecolor': 'z', 'cmap': cmo.deep},
+                       plots={'spaghetti': {'linecolor': 'z', 'cmap': 'cmo.deep'},
                               'property1': {'prop': 'length'},
                               'property2': {'prop': 'weight'},
                               'property3': {'prop': 'diameter'},
@@ -227,8 +227,7 @@ There are also specific seeding options for this model:
 ```{code-cell} ipython3
 m = ptm.OpenDriftModel(drift_model="OpenOil", lon=-89.85, lat=28.08, number=10, steps=45,
                        z=-10, do3D=True, oil_type='GENERIC BUNKER C',
-                       plots={'spaghetti': {'linecolor': 'z', 'cmap': cmo.deep},
-                              'oil': {'show_wind_and_current': False}})
+                       )
 m.o.set_config('environment:constant:x_wind', -1)
 m.o.set_config('environment:constant:y_wind', 1)
 ```
@@ -250,4 +249,22 @@ m.drift_model_config()
 ```{code-cell} ipython3
 m.add_reader(ds=ds)
 m.run_all()
+```
+
+
+Run the plots after the simulation has finished:
+```{code-cell} ipython3
+import particle_tracking_manager.models.opendrift.plot as plot
+plots = plot.make_plots_after_simulation(m.output_file,
+                                 plots={'spaghetti': {'linecolor': 'z', 'cmap': 'cmo.deep'},
+                                        'oil': {'show_wind_and_current': True}})
+```
+
+To show the second plot:
+
+```{code-cell} ipython3
+from IPython.display import Image
+
+image_filename = plots["oil"]["filename"]
+Image(filename=image_filename)
 ```

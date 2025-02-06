@@ -114,12 +114,6 @@ def main():
         default=False,
     )
 
-    parser.add_argument(
-        "--plots",
-        type=str,
-        help='Optional plots. Dictionary-style input, e.g. `{"spaghetti": {}}`.',
-    )
-
     args = parser.parse_args()
 
     to_bool = {
@@ -137,12 +131,26 @@ def main():
 
     # log_file = args.kwargs["output_file"].replace(".nc", ".log")
 
+    # this is for running plots at the same time as a simulation
     # Convert the string representation of the dictionary to an actual dictionary
-    # not clear why I can't use `args.plots` in here but it isn't working
-    if parser.parse_args().plots is not None:
-        plots = ast.literal_eval(parser.parse_args().plots)
+    if "plots" in args.kwargs:
+        args.kwargs["plots"] = ast.literal_eval(args.kwargs["plots"])
     else:
-        plots = None
+        args.kwargs["plots"] = None
+
+    # this is for running plots for an existing simulation file.
+    # catch plots first
+    if (args.kwargs["plots"] is not None) and not (
+        set(args.kwargs) - set(["plots", "output_file"])
+    ):
+
+        import particle_tracking_manager.models.opendrift.plot as plot
+
+        plots_dict = plot.make_plots_after_simulation(
+            args.kwargs["output_file"], plots=args.kwargs["plots"]
+        )
+        print(plots_dict)
+        return
 
     # # Create a file handler
     # file_handler = logging.FileHandler(log_file)
@@ -153,7 +161,7 @@ def main():
     # )
     # file_handler.setFormatter(formatter)
 
-    m = ptm.OpenDriftModel(**args.kwargs, plots=plots)
+    m = ptm.OpenDriftModel(**args.kwargs)  # , plots=plots)
 
     if args.dry_run:
 

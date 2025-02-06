@@ -3,6 +3,7 @@
 ## Unreleased
 
 * Suffix for parquet file format is now ".parquet" instead of ".parq".
+* Added a method to run plots from saved OpenDrift output file; also available in CLI. Updated docs.
 
 ## v0.11.1 (February 4, 2025)
 

@@ -37,7 +37,7 @@ def test_run_parquet():
     manager.seed()
     manager.run()
 
-    assert "parq" in manager.o.outfile_name
+    assert "parquet" in manager.o.outfile_name
 
 
 @pytest.mark.slow
