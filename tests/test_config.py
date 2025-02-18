@@ -35,12 +35,6 @@ def test_show_config():
     )
 
 
-def test_surface_only():
-    """Make sure appropriate parameters are set if surface_only is True."""
-
-    m = ptm.OpenDriftModel(surface_only=True, z=-10)
-
-
 def test_default_overrides():
     """Make sure input to OpenDriftModel and to PTM are represented as values in config."""
 

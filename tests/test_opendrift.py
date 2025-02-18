@@ -247,19 +247,6 @@ class TestTheManager(unittest.TestCase):
         self.m.stokes_drift = True
         assert self.m.show_config(key="drift:use_tabularised_stokes_drift")
 
-    def test_surface_only_true_not_leeway(self):
-        self.m.surface_only = True
-        assert (
-            self.m.show_config(key="drift:truncate_ocean_model_below_m")["value"] == 0.5
-        )
-
-    def test_surface_only_false_not_leeway(self):
-        self.m.surface_only = False
-        assert (
-            self.m.show_config(key="drift:truncate_ocean_model_below_m")["value"]
-            is None
-        )
-
     def test_do3D_false_not_leeway(self):
         self.m.do3D = False
         assert not self.m.show_config(key="drift:vertical_advection")["value"]
@@ -360,13 +347,6 @@ def test_LarvalFish_disallowed_settings():
 
     with pytest.raises(ValueError):
         m = OpenDriftModel(drift_model="LarvalFish", vertical_mixing=False)
-
-    with pytest.raises(ValueError):
-        m = OpenDriftModel(drift_model="LarvalFish", surface_only=True)
-
-    m = OpenDriftModel(drift_model="LarvalFish", do3D=True)
-    with pytest.raises(ValueError):
-        m.surface_only = True
 
     with pytest.raises(ValueError):
         m = OpenDriftModel(drift_model="LarvalFish", do3D=False)

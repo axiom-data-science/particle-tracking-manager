@@ -171,25 +171,25 @@ class OpenDriftModel(ParticleTrackingManager):
         self,
         drift_model: str = config_model["drift_model"]["default"],
         export_variables: str = config_model["export_variables"]["default"],
-        radius: int = config_model["radius"]["default"],
-        radius_type: str = config_model["radius_type"]["default"],
-        horizontal_diffusivity: float = config_model["horizontal_diffusivity"][
-            "default"
-        ],
-        current_uncertainty: float = config_model["current_uncertainty"]["default"],
-        wind_uncertainty: float = config_model["wind_uncertainty"]["default"],
-        use_auto_landmask: bool = config_model["use_auto_landmask"]["default"],
-        diffusivitymodel: str = config_model["diffusivitymodel"]["default"],
-        stokes_drift: bool = config_model["stokes_drift"]["default"],
-        mixed_layer_depth: float = config_model["mixed_layer_depth"]["default"],
-        coastline_action: str = config_model["coastline_action"]["default"],
-        seafloor_action: str = config_model["seafloor_action"]["default"],
+        # radius: int = config_model["radius"]["default"],
+        # radius_type: str = config_model["radius_type"]["default"],
+        # horizontal_diffusivity: float = config_model["horizontal_diffusivity"][
+        #     "default"
+        # ],
+        # current_uncertainty: float = config_model["current_uncertainty"]["default"],
+        # wind_uncertainty: float = config_model["wind_uncertainty"]["default"],
+        # use_auto_landmask: bool = config_model["use_auto_landmask"]["default"],
+        # diffusivitymodel: str = config_model["diffusivitymodel"]["default"],
+        # stokes_drift: bool = config_model["stokes_drift"]["default"],
+        # mixed_layer_depth: float = config_model["mixed_layer_depth"]["default"],
+        # coastline_action: str = config_model["coastline_action"]["default"],
+        # seafloor_action: str = config_model["seafloor_action"]["default"],
         max_speed: int = config_model["max_speed"]["default"],
-        wind_drift_factor: float = config_model["wind_drift_factor"]["default"],
-        wind_drift_depth: float = config_model["wind_drift_depth"]["default"],
-        vertical_mixing_timestep: float = config_model["vertical_mixing_timestep"][
-            "default"
-        ],
+        # wind_drift_factor: float = config_model["wind_drift_factor"]["default"],
+        # wind_drift_depth: float = config_model["wind_drift_depth"]["default"],
+        # vertical_mixing_timestep: float = config_model["vertical_mixing_timestep"][
+        #     "default"
+        # ],
         object_type: str = config_model["object_type"]["default"],
         diameter: float = config_model["diameter"]["default"],
         neutral_buoyancy_salinity: float = config_model["neutral_buoyancy_salinity"][
@@ -222,7 +222,7 @@ class OpenDriftModel(ParticleTrackingManager):
             "default"
         ],
         biodegradation: bool = config_model["biodegradation"]["default"],
-        log: str = config_model["log"]["default"],
+        # log: str = config_model["log"]["default"],
         plots: Optional[dict] = config_model["plots"]["default"],
         **kw,
     ) -> None:
@@ -552,7 +552,8 @@ class OpenDriftModel(ParticleTrackingManager):
 
         self._update_config()
 
-    def run_add_reader(
+    # def run_add_reader(
+    def add_reader(
         self,
         ds=None,
         name=None,
@@ -894,6 +895,9 @@ class OpenDriftModel(ParticleTrackingManager):
 
         else:
             raise ValueError("reader did not set an ocean_model")
+        
+        self.has_added_reader = True
+
 
     @property
     def seed_kws(self):
@@ -961,16 +965,20 @@ class OpenDriftModel(ParticleTrackingManager):
         self._seed_kws = _seed_kws
         return self._seed_kws
 
-    def run_seed(self):
+
+    def seed(self):
         """Actually seed drifters for model."""
+
+        if not self.has_added_reader:
+            raise ValueError("first add reader with `manager.add_reader(**kwargs)`.")
 
         if self.seed_flag == "elements":
             self.o.seed_elements(**self.seed_kws)
 
         elif self.seed_flag == "geojson":
 
-            # geojson needs string representation of time
-            self.seed_kws["time"] = self.start_time.isoformat()
+            # # geojson needs string representation of time
+            # self.seed_kws["time"] = self.start_time.isoformat()
             self.geojson["properties"] = self.seed_kws
             json_string_dumps = json.dumps(self.geojson)
             self.o.seed_from_geojson(json_string_dumps)
@@ -980,18 +988,27 @@ class OpenDriftModel(ParticleTrackingManager):
 
         self.initial_drifters = self.o.elements_scheduled
 
-    def run_drifters(self):
+        self.has_run_seeding = True
+
+
+    # def run_drifters(self):
+    def run(self):
         """Run the drifters!"""
 
-        if self.steps is None and self.duration is None and self.end_time is None:
-            raise ValueError(
-                "Exactly one of steps, duration, or end_time must be input and not be None."
-            )
+        if not self.has_run_seeding:
+            raise ValueError("first run seeding with `manager.seed()`.")
 
-        if self.run_forward:
-            timedir = 1
-        else:
-            timedir = -1
+        self.logger.info(f"start_time: {self.config.start_time}, end_time: {self.config.end_time}, steps: {self.config.steps}, duration: {self.config.duration}")
+
+        # if self.steps is None and self.duration is None and self.end_time is None:
+        #     raise ValueError(
+        #         "Exactly one of steps, duration, or end_time must be input and not be None."
+            # )
+
+        # if self.run_forward:
+        #     timedir = 1
+        # else:
+        #     timedir = -1
 
         # drop non-OpenDrift parameters now so they aren't brought into simulation (they mess up the write step)
         full_config = copy.deepcopy(self._config)  # save
@@ -1057,6 +1074,11 @@ class OpenDriftModel(ParticleTrackingManager):
         except PermissionError:
             # windows issue
             pass
+
+        self.logger.removeHandler(self.file_handler)
+        self.file_handler.close()
+        self.has_run = True
+
 
     @property
     def _config(self):

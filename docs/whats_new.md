@@ -4,6 +4,11 @@
 
 * Suffix for parquet file format is now ".parquet" instead of ".parq".
 * Added a method to run plots from saved OpenDrift output file; also available in CLI. Updated docs.
+* Major refactoring:
+    * Removed `surface_only` flag.
+    * Changed default value for `vertical_mixing` to False to match `do3D` default of False.
+    * Moved some configuration parameters from the model "config.json" to "the_manager_config.json"
+
 
 ## v0.11.1 (February 4, 2025)
 

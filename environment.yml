@@ -20,6 +20,7 @@ dependencies:
   - netcdf4
   - pandas
   - pip
+  - pydantic
   - requests
   - matplotlib
   - zarr

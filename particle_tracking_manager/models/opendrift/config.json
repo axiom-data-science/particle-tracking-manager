@@ -11,86 +11,9 @@
         "type": "list",
         "description": "List of variables to export. Options available with `m.all_export_variables` for a given `drift_model`. ['lon', 'lat', 'ID', 'status', 'z'] will always be exported. Default of None means all possible variables are exported."
     },
-    "radius": {
-        "default": 1000.0,
-        "ptm_level": 2,
-        "type": "float",
-        "min": 0.0,
-        "max": 1000000,
-        "units": "m",
-        "description": "Radius around each lon-lat pair, within which particles will be randomly seeded. This is used by function `seed_elements`."
-    },
-    "radius_type": {
-        "default": "gaussian",
-        "ptm_level": 3,
-        "type": "enum - gaussian - uniform",
-        "description": "If 'gaussian' (default), the radius is the standard deviation in x-y-directions. If 'uniform', elements are spread evenly and always inside a circle with the given radius. This is used by function `seed_elements`."
-    },
-    "wind_drift_factor": {
-        "default": 0.02,
-        "ptm_level": 2,
-        "od_mapping": "seed:wind_drift_factor"
-    },
-    "diffusivitymodel": {
-        "default": "windspeed_Large1994",
-        "od_mapping": "vertical_mixing:diffusivitymodel",
-        "ptm_level": 3
-    },
-    "stokes_drift": {
-        "default": true,
-        "od_mapping": "drift:stokes_drift",
-        "ptm_level": 2
-    },
-    "use_auto_landmask": {
-        "default": false,
-        "od_mapping": "general:use_auto_landmask",
-        "ptm_level": 3
-    },
-    "mixed_layer_depth": {
-        "default": 30,
-        "od_mapping": "environment:fallback:ocean_mixed_layer_thickness",
-        "ptm_level": 3
-    },
-    "coastline_action": {
-        "default": "previous",
-        "od_mapping": "general:coastline_action",
-        "ptm_level": 2
-    },
-    "seafloor_action": {
-        "default": "previous",
-        "od_mapping": "general:seafloor_action",
-        "ptm_level": 2
-    },
     "max_speed": {
         "default": 5,
         "od_mapping": "drift:max_speed"
-    },
-    "horizontal_diffusivity": {
-        "default": "None",
-        "od_mapping": "drift:horizontal_diffusivity",
-        "ptm_level": 2
-    },
-    "current_uncertainty": {
-        "default": 0,
-        "value": 0,
-        "od_mapping": "drift:current_uncertainty",
-        "ptm_level": 2
-    },
-    "wind_uncertainty": {
-        "default": 0,
-        "value": 0,
-        "od_mapping": "drift:wind_uncertainty",
-        "ptm_level": 2
-    },
-    "wind_drift_depth": {
-        "default": 0.02,
-        "od_mapping": "drift:wind_drift_depth",
-        "ptm_level": 3
-    },
-    "vertical_mixing_timestep": {
-        "default": 60,
-        "od_mapping": "vertical_mixing:timestep",
-        "ptm_level": 3
     },
     "object_type": {
         "default": "Person-in-water (PIW), unknown state (mean values)",
@@ -191,16 +114,6 @@
         "default": true,
         "od_mapping": "processes:biodegradation",
         "ptm_level": 2
-    },
-    "log": {
-        "type": "enum",
-        "enum": [
-            "low",
-            "high"
-        ],
-        "default": "low",
-        "ptm_level": 3,
-        "description": "Log verbosity"
     },
     "plots": {
         "type": "dict",

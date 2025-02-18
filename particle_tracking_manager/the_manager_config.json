@@ -28,7 +28,7 @@
     },
     "geojson": {
         "type": "geojson",
-        "default": "None",
+        "default": null,
         "description": "GeoJSON describing a polygon within which to seed drifters. To use this parameter, also have `seed_flag==\"geojson\"`. If None, seed drifters at or around a single point defined by lon and lat along with seed_flag==\"elements\".",
         "ptm_level": 1
     },
@@ -43,24 +43,25 @@
         "description": "Method for seeding drifters. Options are \"elements\" or \"geojson\". If \"elements\", seed drifters at or around a single point defined by lon and lat. If \"geojson\", seed drifters within a polygon described by a GeoJSON object."
     },
     "number": {
+        "type": "int",
         "default": 100,
         "od_mapping": "seed:number",
         "ptm_level": 1
     },
     "start_time": {
         "type": "datetime.datetime",
-        "default": "pd.Timestamp.now()",
-        "min": "datetime.datetime(1999,1,1)",
-        "max": "pd.Timestamp.now() + pd.Timedelta(\"48H\")",
+        "default": "2022-01-01T00:00:00",
+        "min": "1999-01-01T00:00:00",
+        "max": "CIOFSOP_max",
         "units": "time",
         "description": "Start time for drifter simulation.",
         "ptm_level": 1
     },
     "start_time_end": {
         "type": "datetime.datetime",
-        "default": "None",
-        "min": "datetime.datetime(1999,1,1)",
-        "max": "pd.Timestamp.now() + pd.Timedelta(\"48H\")",
+        "default": null,
+        "min": "1999-01-01T00:00:00",
+        "max": "CIOFSOP_max",
         "units": "time",
         "description": "If used, this creates a range of start times for drifters, starting with `start_time` and ending with `start_time_end`. Drifters will be initialized linearly between the two start times.",
         "ptm_level": 2
@@ -72,53 +73,47 @@
         "ptm_level": 2
     },
     "time_step": {
-        "type": [
-            "float",
-            "datetime.timedelta"
-        ],
+        "type": "int",
         "default": 300,
         "min": 1,
         "max": 86400,
         "units": "seconds",
-        "description": "Interval between particles updates, in seconds or as timedelta.",
+        "description": "Interval between particles updates, in seconds.",
         "ptm_level": 3
     },
     "time_step_output": {
-        "type": [
-            "float",
-            "datetime.timedelta"
-        ],
+        "type": "int",
         "default": 3600,
         "min": 1,
         "max": 604800,
         "units": "seconds",
-        "description": "Time step at which element properties are stored and eventually written to file.",
+        "description": "Time step at which element properties are stored and eventually written to file. Must be a multiple of time_step.",
         "ptm_level": 3
     },
     "steps": {
         "type": "int",
-        "default": "None",
+        "default": null,
         "min": 1,
         "max": 10000,
-        "units": "None",
+        "units": null,
         "description": "Maximum number of steps. End of simulation will be start_time + steps*time_step. steps, end_time, or duration must be input by user.",
         "ptm_level": 1
     },
     "duration": {
         "type": "datetime.timedelta",
-        "default": "None",
-        "min": "None",
-        "max": "None",
-        "units": "None",
+        "default": null,
+        "min": null,
+        "max": null,
+        "units": null,
         "description": "The length of the simulation. steps, end_time, or duration must be input by user.",
         "ptm_level": 1
     },
     "end_time": {
         "type": "datetime.datetime",
-        "default": "None",
-        "min": "None",
-        "max": "None",
-        "units": "None",
+        "default": null,
+        "min": null,
+        "max": null,
+        "units": null,
         "description": "The end of the simulation. steps, end_time, or duration must be input by user.",
         "ptm_level": 1
     },
@@ -127,12 +122,67 @@
         "enum": [
             "NWGOA",
             "CIOFS",
-            "CIOFSOP"
+            "CIOFSOP",
+            "CIOFSFRESH"
         ],
-        "default": "None",
+        "default": "CIOFSOP",
         "ptm_level": 1,
-        "description": "Name of ocean model to use for driving drifter simulation, by default None. Use None for testing and set up. Otherwise input a string. Options are \"NWGOA\", \"CIOFS\", \"CIOFSOP\". Alternatively keep as None and set up a separate reader (see example in docs)."
+        "description": "Name of ocean model to use for driving drifter simulation, by default None. Use None for testing and set up. Otherwise input a string. Options are \"NWGOA\", \"CIOFS\", \"CIOFSOP\", \"CIOFSFRESH\". Alternatively keep as None and set up a separate reader (see example in docs)."
     },
+    "NWGOA_time_range": {
+        "type": "datetime.datetime",
+        "default": null,
+        "min": "1999-01-01T00:00:00",
+        "max": "2009-01-01T00:00:00"
+        },
+    "CIOFS_time_range": {
+        "type": "datetime.datetime",
+        "default": null,
+        "min": "1999-01-01T00:00:00",
+        "max": "2023-01-01T00:00:00"
+    },
+    "CIOFSOP_time_range": {
+        "type": "datetime.datetime",
+        "default": null,
+        "min": "2021-08-31T19:00:00",
+        "max": "CIOFSOP_max"
+    },
+    "NWGOA_lon_range": {
+        "type": "float",
+        "default": null,
+        "min": 199.66946652,
+        "max": 220.02187714
+        },
+    "NWGOA_lat_range": {
+        "type": "float",
+        "default": null,
+        "min": 52.25975392,
+        "max": 63.38656094
+        },
+    "CIOFSOP_lon_range": {
+        "type": "float",
+        "default": null,
+        "min": -156.485291,
+        "max": -148.925125
+        },
+    "CIOFSOP_lat_range": {
+        "type": "float",
+        "default": null,
+        "min": 56.7004919,
+        "max": 61.5247774
+        },
+    "CIOFS_lon_range": {
+        "type": "float",
+        "default": null,
+        "min": -156.485291,
+        "max": -148.925125
+        },
+    "CIOFS_lat_range": {
+        "type": "float",
+        "default": null,
+        "min": 56.7004919,
+        "max": 61.5247774
+        },
     "ocean_model_local": {
         "type": "bool",
         "default": false,
@@ -141,7 +191,7 @@
     },
     "surface_only": {
         "type": "bool",
-        "default": "None",
+        "default": null,
         "description": "Set to True to keep drifters at the surface, by default None. If this flag is set to not-None, it overrides do3D to False, vertical_mixing to False, and the z value(s) 0. If True, this flag also turns off reading model output below 0.5m if drift_model is not Leeway to save time.",
         "ptm_level": 1
     },
@@ -152,16 +202,21 @@
         "ptm_level": 1
     },
     "vertical_mixing": {
-        "default": true,
+        "type": "bool",
+        "default": false,
         "od_mapping": "drift:vertical_mixing",
         "ptm_level": 2
     },
     "z": {
+        "type": "float",
         "default": 0,
+        "min": -100000,
+        "max": 0,
         "od_mapping": "seed:z",
         "ptm_level": 1
     },
     "seed_seafloor": {
+        "type": "bool",
         "default": false,
         "od_mapping": "seed:seafloor",
         "ptm_level": 2
@@ -174,7 +229,7 @@
     },
     "output_file": {
         "type": "str",
-        "default": "None",
+        "default": null,
         "description": "Name of file to write output to. If None, default name is used.",
         "ptm_level": 3
     },
@@ -196,8 +251,111 @@
     },
     "interpolator_filename": {
         "type": "str",
-        "default": "None",
+        "default": null,
         "description": "Filename to save interpolator to. The full path should be given, but no suffix. Use this to either read from an existing file at a non-default location or to save to a non-default location. If None and use_cache==True, default name is used. ",
         "ptm_level": 3
+    },
+    "radius": {
+        "type": "float",
+        "default": 1000.0,
+        "ptm_level": 2,
+        "min": 0.0,
+        "max": 1000000,
+        "units": "m",
+        "description": "Radius around each lon-lat pair, within which particles will be randomly seeded. This is used by function `seed_elements`."
+    },
+    "radius_type": {
+        "type": "enum",
+        "enum": [
+            "gaussian",
+            "uniform"
+        ],
+        "default": "gaussian",
+        "ptm_level": 3,
+        "description": "If 'gaussian' (default), the radius is the standard deviation in x-y-directions. If 'uniform', elements are spread evenly and always inside a circle with the given radius. This is used by function `seed_elements`."
+    },
+    "wind_drift_factor": {
+        "type": "float",
+        "default": 0.02,
+        "ptm_level": 2,
+        "od_mapping": "seed:wind_drift_factor"
+    },
+    "diffusivitymodel": {
+        "type": "str",
+        "default": "windspeed_Large1994",
+        "od_mapping": "vertical_mixing:diffusivitymodel",
+        "ptm_level": 3
+    },
+    "stokes_drift": {
+        "type": "bool",
+        "default": true,
+        "od_mapping": "drift:stokes_drift",
+        "ptm_level": 2
+    },
+    "use_auto_landmask": {
+        "type": "bool",
+        "default": false,
+        "od_mapping": "general:use_auto_landmask",
+        "ptm_level": 3
+    },
+    "mixed_layer_depth": {
+        "type": "float",
+        "default": 30,
+        "od_mapping": "environment:fallback:ocean_mixed_layer_thickness",
+        "ptm_level": 3
+    },
+    "coastline_action": {
+        "type": "str",
+        "default": "previous",
+        "od_mapping": "general:coastline_action",
+        "ptm_level": 2
+    },
+    "seafloor_action": {
+        "type": "str",
+        "default": "previous",
+        "od_mapping": "general:seafloor_action",
+        "ptm_level": 2
+    },
+    "horizontal_diffusivity": {
+        "type": "float",
+        "default": null,
+        "od_mapping": "drift:horizontal_diffusivity",
+        "ptm_level": 2
+    },
+    "current_uncertainty": {
+        "type": "float",
+        "default": 0,
+        "value": 0,
+        "od_mapping": "drift:current_uncertainty",
+        "ptm_level": 2
+    },
+    "wind_uncertainty": {
+        "type": "float",
+        "default": 0,
+        "value": 0,
+        "od_mapping": "drift:wind_uncertainty",
+        "ptm_level": 2
+    },
+    "wind_drift_depth": {
+        "type": "float",
+        "default": 0.02,
+        "od_mapping": "drift:wind_drift_depth",
+        "ptm_level": 3
+    },
+    "vertical_mixing_timestep": {
+        "type": "int",
+        "default": 60,
+        "od_mapping": "vertical_mixing:timestep",
+        "ptm_level": 3
+    },
+    "log": {
+        "type": "enum",
+        "enum": [
+            "low",
+            "high"
+        ],
+        "default": "low",
+        "ptm_level": 3,
+        "description": "Log verbosity"
     }
 }
