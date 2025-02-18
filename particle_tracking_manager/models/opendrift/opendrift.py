@@ -23,7 +23,8 @@ from opendrift.models.openoil import OpenOil
 from opendrift.readers import reader_ROMS_native
 
 from ...cli import is_None
-from ...the_manager import _KNOWN_MODELS, ParticleTrackingManager
+from ...config import _KNOWN_MODELS
+from ...the_manager import ParticleTrackingManager
 from .plot import check_plots, make_plots
 from .utils import make_ciofs_kerchunk, make_nwgoa_kerchunk
 
@@ -309,22 +310,6 @@ class OpenDriftModel(ParticleTrackingManager):
             if locals()[key] is not None:
                 self.__setattr__(key, locals()[key])
 
-    def calc_known_horizontal_diffusivity(self):
-        """Calculate horizontal diffusivity based on known ocean_model."""
-
-        # dx: approximate horizontal grid resolution (meters), used to calculate horizontal diffusivity
-        if self.ocean_model == "NWGOA":
-            dx = 1500
-        elif "CIOFS" in self.ocean_model:
-            dx = 100
-
-        # horizontal diffusivity is calculated based on the mean horizontal grid resolution
-        # for the model being used.
-        # 0.1 is a guess for the magnitude of velocity being missed in the models, the sub-gridscale velocity
-        sub_gridscale_velocity = 0.1
-        horizontal_diffusivity = sub_gridscale_velocity * dx
-        return horizontal_diffusivity
-
     def __setattr_model__(self, name: str, value) -> None:
         """Implement my own __setattr__ but here to enforce actions."""
 
@@ -346,43 +331,6 @@ class OpenDriftModel(ParticleTrackingManager):
         ):
             self.config_model[name]["value"] = value
         self._update_config()
-
-        if name in ["ocean_model", "horizontal_diffusivity"]:
-
-            # just set the value and move on if purposely setting a non-None value
-            # of horizontal_diffusivity; specifying this for clarity (already set
-            # value above).
-            if name == "horizontal_diffusivity" and value is not None:
-                self.logger.info(
-                    f"Setting horizontal_diffusivity to user-selected value {value}."
-                )
-
-            # in all other cases that ocean_model is a known model, want to use the
-            # grid-dependent value
-            elif self.ocean_model in _KNOWN_MODELS:
-
-                hdiff = self.calc_known_horizontal_diffusivity()
-                self.logger.info(
-                    f"Setting horizontal_diffusivity parameter to one tuned to reader model of value {hdiff}."
-                )
-                # when editing the __dict__ directly have to also update config_model
-                self.__dict__["horizontal_diffusivity"] = hdiff
-                self.config_model["horizontal_diffusivity"]["value"] = hdiff
-
-            # if user not using a known ocean_model, change horizontal_diffusivity from None to 0
-            # so it has a value. User can subsequently overwrite it too.
-            elif (
-                self.ocean_model not in _KNOWN_MODELS
-                and self.horizontal_diffusivity is None
-            ):
-
-                self.logger.info(
-                    """Since ocean_model is user-input, changing horizontal_diffusivity parameter from None to 0.0.
-                    You can also set it to a specific value with `m.horizontal_diffusivity=[number]`."""
-                )
-
-                self.__dict__["horizontal_diffusivity"] = 0
-                self.config_model["horizontal_diffusivity"]["value"] = 0
 
         # turn on other things if using stokes_drift
         if name == "stokes_drift" and value:
@@ -896,7 +844,7 @@ class OpenDriftModel(ParticleTrackingManager):
         else:
             raise ValueError("reader did not set an ocean_model")
         
-        self.has_added_reader = True
+        self.state.has_added_reader = True
 
 
     @property
@@ -969,7 +917,7 @@ class OpenDriftModel(ParticleTrackingManager):
     def seed(self):
         """Actually seed drifters for model."""
 
-        if not self.has_added_reader:
+        if not self.state.has_added_reader:
             raise ValueError("first add reader with `manager.add_reader(**kwargs)`.")
 
         if self.seed_flag == "elements":
@@ -988,14 +936,14 @@ class OpenDriftModel(ParticleTrackingManager):
 
         self.initial_drifters = self.o.elements_scheduled
 
-        self.has_run_seeding = True
+        self.state.has_run_seeding = True
 
 
     # def run_drifters(self):
     def run(self):
         """Run the drifters!"""
 
-        if not self.has_run_seeding:
+        if not self.state.has_run_seeding:
             raise ValueError("first run seeding with `manager.seed()`.")
 
         self.logger.info(f"start_time: {self.config.start_time}, end_time: {self.config.end_time}, steps: {self.config.steps}, duration: {self.config.duration}")
@@ -1077,7 +1025,7 @@ class OpenDriftModel(ParticleTrackingManager):
 
         self.logger.removeHandler(self.file_handler)
         self.file_handler.close()
-        self.has_run = True
+        self.state.has_run = True
 
 
     @property
@@ -1373,7 +1321,7 @@ class OpenDriftModel(ParticleTrackingManager):
     def reader_metadata(self, key):
         """allow manager to query reader metadata."""
 
-        if not self.has_added_reader:
+        if not self.state.has_added_reader:
             raise ValueError("reader has not been added yet.")
         return self.o.env.readers[self.ocean_model].__dict__[key]
 
