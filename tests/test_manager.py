@@ -10,7 +10,47 @@ import pytest
 # import particle_tracking_manager as ptm
 from particle_tracking_manager.the_manager import ParticleTrackingManager
 from pydantic import ValidationError
+from particle_tracking_manager.config import PTMConfig
 
+
+class TestConfig(PTMConfig):
+    pass
+
+
+# Set up a subclass for testing
+class TestParticleTrackingManager(ParticleTrackingManager):
+    
+    def __init__(self, **kwargs):
+        # import pdb; pdb.set_trace()
+        super().__init__(**kwargs)
+        kwargs.update({"output_file": self.output_file})
+        self.config = TestConfig(**kwargs)
+        
+    def add_reader(self):
+        pass
+        # return "Tracking particles"
+
+    def seed(self):
+        pass
+        # return "Getting particle data"
+        
+    def run(self):
+        pass
+    
+    def _config(self, key):
+        pass
+    
+    def show_config_model(self, key):
+        pass
+    
+    def all_export_variables(self, key):
+        pass
+
+    def export_variables(self, key):
+        pass
+
+    def reader_metadata(self, key):
+        pass
 
 # the following few tests might not work for the manager because need to know
 # about the model too
@@ -132,12 +172,13 @@ from pydantic import ValidationError
 
 
 
+# # THIS ONE SHOULD BE IN OPENDRIFT SINCE THAT ONE EXCLUDES UNKNOWN INPUTS
+# def test_keyword_parameters():
+#     """Make sure unknown parameters are not input."""
 
-def test_keyword_parameters():
-    """Make sure unknown parameters are not input."""
-
-    with pytest.raises(ValidationError):
-        m = ParticleTrackingManager(unknown="test", steps=1, start_time="2022-01-01")
+#     with pytest.raises(ValidationError):
+#         m = TestParticleTrackingManager(unknown="test", steps=1, start_time="2022-01-01")
+#         # m = ParticleTrackingManager(unknown="test", steps=1, start_time="2022-01-01")
 
 
 def test_oceanmodel_lon0_360():
@@ -147,14 +188,14 @@ def test_oceanmodel_lon0_360():
     
     lon_in = -153
 
-    m = ParticleTrackingManager(steps=1, start_time="2022-01-01", lon=lon_in)
+    m = TestParticleTrackingManager(steps=1, start_time="2022-01-01", lon=lon_in)
     assert m.config.oceanmodel_lon0_360 == False
     assert m.config.lon == lon_in
 
-    m = ParticleTrackingManager(steps=1, start_time="2022-01-01", ocean_model="CIOFS")
+    m = TestParticleTrackingManager(steps=1, start_time="2022-01-01", ocean_model="CIOFS")
     assert m.config.oceanmodel_lon0_360 == False
 
-    m = ParticleTrackingManager(steps=1, start_time="2007-01-01", ocean_model="NWGOA", lon=lon_in)
+    m = TestParticleTrackingManager(steps=1, start_time="2007-01-01", ocean_model="NWGOA", lon=lon_in)
     assert m.config.oceanmodel_lon0_360 == True
     assert m.config.lon == lon_in + 360
 
@@ -164,19 +205,19 @@ def test_lon_lat():
     """Check for valid lon and lat values."""
 
     with pytest.raises(ValidationError):
-        m = ParticleTrackingManager(steps=1, start_time="2022-01-01", lon=-180.1)
+        m = TestParticleTrackingManager(steps=1, start_time="2022-01-01", lon=-180.1)
 
     with pytest.raises(ValidationError):
-        m = ParticleTrackingManager(steps=1, start_time="2022-01-01", lat=95)
+        m = TestParticleTrackingManager(steps=1, start_time="2022-01-01", lat=95)
 
-    m = ParticleTrackingManager(steps=1, lon=-152, lat=58, start_time="2022-01-01")
+    m = TestParticleTrackingManager(steps=1, lon=-152, lat=58, start_time="2022-01-01")
 
     with pytest.raises(ValidationError):
-        m = ParticleTrackingManager(steps=1, start_time="2022-01-01", ocean_model="NWGOA",
+        m = TestParticleTrackingManager(steps=1, start_time="2022-01-01", ocean_model="NWGOA",
                                     lon=185-360)
 
     with pytest.raises(ValidationError):
-        m = ParticleTrackingManager(steps=1, start_time="2022-01-01", ocean_model="CIOFS",
+        m = TestParticleTrackingManager(steps=1, start_time="2022-01-01", ocean_model="CIOFS",
                                     lon=-145)
 
 
@@ -184,9 +225,9 @@ def test_seed_flag_elements():
     """Check seed flag elements."""
     
     with pytest.raises(ValidationError):
-        m = ParticleTrackingManager(steps=1, start_time="2022-01-01", seed_flag="elements", lon=None, lat=None)
+        m = TestParticleTrackingManager(steps=1, start_time="2022-01-01", seed_flag="elements", lon=None, lat=None)
     
-    m = ParticleTrackingManager(steps=1, start_time="2022-01-01", seed_flag="elements")
+    m = TestParticleTrackingManager(steps=1, start_time="2022-01-01", seed_flag="elements")
 
 
 def test_seed_flag_geojson():
@@ -201,155 +242,139 @@ def test_seed_flag_geojson():
     }
     
     with pytest.raises(ValidationError):
-        m = ParticleTrackingManager(steps=1, start_time="2022-01-01", seed_flag="geojson", geojson=None)
+        m = TestParticleTrackingManager(steps=1, start_time="2022-01-01", seed_flag="geojson", geojson=None)
 
     with pytest.raises(ValidationError):
-        m = ParticleTrackingManager(steps=1, start_time="2022-01-01", seed_flag="geojson", geojson=geojson,
+        m = TestParticleTrackingManager(steps=1, start_time="2022-01-01", seed_flag="geojson", geojson=geojson,
                                     lon=50, lat=50)
         
-    m = ParticleTrackingManager(steps=1, start_time="2022-01-01", seed_flag="geojson", geojson=geojson, lon=None, lat=None)
+    m = TestParticleTrackingManager(steps=1, start_time="2022-01-01", seed_flag="geojson", geojson=geojson, lon=None, lat=None)
 
 
 def test_start_time_type():
     """Check start time type."""
-    m = ParticleTrackingManager(steps=1, start_time="2022-01-01 12:00:00")
+    m = TestParticleTrackingManager(steps=1, start_time="2022-01-01 12:00:00")
     assert m.config.start_time == pd.Timestamp("2022-01-01 12:00:00")
     
-    m = ParticleTrackingManager(steps=1, start_time=pd.Timestamp("2022-01-01 12:00:00"))
+    m = TestParticleTrackingManager(steps=1, start_time=pd.Timestamp("2022-01-01 12:00:00"))
     assert m.config.start_time == pd.Timestamp("2022-01-01 12:00:00")
     
-    m = ParticleTrackingManager(steps=1, start_time=datetime(2022, 1, 1, 12, 0, 0))
+    m = TestParticleTrackingManager(steps=1, start_time=datetime(2022, 1, 1, 12, 0, 0))
     assert m.config.start_time == pd.Timestamp("2022-01-01 12:00:00")
 
     with pytest.raises(ValidationError):
-        m = ParticleTrackingManager(steps=1, start_time=123)
+        m = TestParticleTrackingManager(steps=1, start_time=123)
 
 
 def test_time_calculations():
     with pytest.raises(ValidationError):
-        m = ParticleTrackingManager(steps=1, start_time=None)
+        m = TestParticleTrackingManager(steps=1, start_time=None)
     
     with pytest.raises(ValidationError):
-        m = ParticleTrackingManager(steps=1, duration=timedelta(days=1), start_time=None)
+        m = TestParticleTrackingManager(steps=1, duration=timedelta(days=1), start_time=None)
 
-    m = ParticleTrackingManager(steps=1, end_time="2022-01-01 12:00:00", start_time=None)
+    m = TestParticleTrackingManager(steps=1, end_time="2022-01-01 12:00:00", start_time=None)
     assert m.config.duration == timedelta(seconds=m.config.time_step*m.config.steps)
     assert m.config.start_time == m.config.end_time - m.config.duration
 
     with pytest.raises(ValidationError):
-        m = ParticleTrackingManager(steps=1, end_time="2000-01-02", start_time=pd.Timestamp("2000-1-1"), ocean_model="CIOFS")
+        m = TestParticleTrackingManager(steps=1, end_time="2000-01-02", start_time=pd.Timestamp("2000-1-1"), ocean_model="CIOFS")
 
-    m = ParticleTrackingManager(end_time="2000-01-02", start_time=pd.Timestamp("2000-1-1"), ocean_model="CIOFS")
+    m = TestParticleTrackingManager(end_time="2000-01-02", start_time=pd.Timestamp("2000-1-1"), ocean_model="CIOFS")
     assert m.config.steps == 288
     assert m.config.duration == pd.Timedelta("1 days 00:00:00")
 
-    m = ParticleTrackingManager(end_time="2023-01-02", start_time=pd.Timestamp("2023-1-1"), run_forward=True)
+    m = TestParticleTrackingManager(end_time="2023-01-02", start_time=pd.Timestamp("2023-1-1"), run_forward=True)
     assert m.config.timedir == 1
 
-    m = ParticleTrackingManager(end_time="2023-01-02", start_time=pd.Timestamp("2023-1-1"), run_forward=False)
+    m = TestParticleTrackingManager(end_time="2023-01-02", start_time=pd.Timestamp("2023-1-1"), run_forward=False)
     assert m.config.timedir == -1
 
 
 def test_start_time_NWGOA():
     with pytest.raises(ValueError):
-        m = ParticleTrackingManager(steps=1, start_time="2009-01-02 00:00:00", ocean_model="NWGOA")
+        m = TestParticleTrackingManager(steps=1, start_time="2009-01-02 00:00:00", ocean_model="NWGOA")
     with pytest.raises(ValueError):
-        m = ParticleTrackingManager(steps=1, start_time="1998-01-01 12:00:00", ocean_model="NWGOA")
-    m = ParticleTrackingManager(steps=1, start_time="2000-01-01 12:00:00", ocean_model="NWGOA")
+        m = TestParticleTrackingManager(steps=1, start_time="1998-01-01 12:00:00", ocean_model="NWGOA")
+    m = TestParticleTrackingManager(steps=1, start_time="2000-01-01 12:00:00", ocean_model="NWGOA")
 
 
 def test_start_time_CIOFS():
     with pytest.raises(ValueError):
-        m = ParticleTrackingManager(steps=1, start_time="1998-01-01 12:00:00", ocean_model="CIOFS")
+        m = TestParticleTrackingManager(steps=1, start_time="1998-01-01 12:00:00", ocean_model="CIOFS")
     with pytest.raises(ValueError):
-        m = ParticleTrackingManager(steps=1, start_time="2023-01-01 12:00:00", ocean_model="CIOFS")
-    m = ParticleTrackingManager(steps=1, start_time="2020-01-01 12:00:00", ocean_model="CIOFS")
+        m = TestParticleTrackingManager(steps=1, start_time="2023-01-01 12:00:00", ocean_model="CIOFS")
+    m = TestParticleTrackingManager(steps=1, start_time="2020-01-01 12:00:00", ocean_model="CIOFS")
 
 
 def test_start_time_CIOFSOP():
     with pytest.raises(ValueError):
-        m = ParticleTrackingManager(steps=1, start_time="2020-01-01 12:00:00", ocean_model="CIOFSOP")
+        m = TestParticleTrackingManager(steps=1, start_time="2020-01-01 12:00:00", ocean_model="CIOFSOP")
     with pytest.raises(ValueError):
         future_date = pd.Timestamp.now() + pd.Timedelta(days=10)
-        m = ParticleTrackingManager(steps=1, start_time=future_date, ocean_model="CIOFSOP")
-    m = ParticleTrackingManager(steps=1, start_time="2023-01-01 12:00:00", ocean_model="CIOFSOP")
+        m = TestParticleTrackingManager(steps=1, start_time=future_date, ocean_model="CIOFSOP")
+    m = TestParticleTrackingManager(steps=1, start_time="2023-01-01 12:00:00", ocean_model="CIOFSOP")
     
     assert m.config.start_time == pd.Timestamp("2023-01-01 12:00:00")
 
 def test_do3D():
-    m = ParticleTrackingManager(steps=1, do3D=True, start_time="2022-01-01", vertical_mixing=True)
-    m = ParticleTrackingManager(steps=1, do3D=True, start_time="2022-01-01", vertical_mixing=False)
+    m = TestParticleTrackingManager(steps=1, do3D=True, start_time="2022-01-01", vertical_mixing=True)
+    m = TestParticleTrackingManager(steps=1, do3D=True, start_time="2022-01-01", vertical_mixing=False)
     with pytest.raises(ValueError):
-        m = ParticleTrackingManager(steps=1, do3D=False, start_time="2022-01-01", vertical_mixing=True)
+        m = TestParticleTrackingManager(steps=1, do3D=False, start_time="2022-01-01", vertical_mixing=True)
 
 
 def test_z():
-    m = ParticleTrackingManager(steps=1, start_time="2022-01-01", z=-10)
+    m = TestParticleTrackingManager(steps=1, start_time="2022-01-01", z=-10)
     assert m.config.seed_seafloor == False
     
     with pytest.raises(ValueError):
-        m = ParticleTrackingManager(steps=1, start_time="2022-01-01", z=10)
+        m = TestParticleTrackingManager(steps=1, start_time="2022-01-01", z=10)
     
-    m = ParticleTrackingManager(steps=1, start_time="2022-01-01", z=None, seed_seafloor=True)
-    
-    with pytest.raises(ValidationError):
-        m = ParticleTrackingManager(steps=1, start_time="2022-01-01", z=None, seed_seafloor=False)
+    m = TestParticleTrackingManager(steps=1, start_time="2022-01-01", z=None, seed_seafloor=True)
     
     with pytest.raises(ValidationError):
-        m = ParticleTrackingManager(steps=1, start_time="2022-01-01", z=-10, seed_seafloor=True)
+        m = TestParticleTrackingManager(steps=1, start_time="2022-01-01", z=None, seed_seafloor=False)
+    
+    with pytest.raises(ValidationError):
+        m = TestParticleTrackingManager(steps=1, start_time="2022-01-01", z=-10, seed_seafloor=True)
 
 
-def test_interpolator_filename():
-    with pytest.raises(ValueError):
-        m = ParticleTrackingManager(interpolator_filename="test", steps=1, use_cache=False)
+# THIS IS SET IN OPENDRIFT NOW SO CHANGE TO TEST IN THAT FILE
+# def test_interpolator_filename():
+#     with pytest.raises(ValueError):
+#         m = TestParticleTrackingManager(interpolator_filename="test", steps=1, use_cache=False)
 
-    m = ParticleTrackingManager(interpolator_filename="test", steps=1)
-    assert m.config.interpolator_filename == "test.pickle"
+#     m = TestParticleTrackingManager(interpolator_filename="test", steps=1)
+#     assert m.config.interpolator_filename == "test.pickle"
 
-    m = ParticleTrackingManager(interpolator_filename=None, use_cache=False, steps=1)
+#     m = TestParticleTrackingManager(interpolator_filename=None, use_cache=False, steps=1)
 
 
 def test_log_name():
-    m = ParticleTrackingManager(output_file="newtest", steps=1)
+    m = TestParticleTrackingManager(output_file="newtest", steps=1)
     assert m.logfile_name == "newtest.log"
 
-    m = ParticleTrackingManager(output_file="newtest.nc", steps=1)
+    m = TestParticleTrackingManager(output_file="newtest.nc", steps=1)
     assert m.logfile_name == "newtest.log"
 
-    m = ParticleTrackingManager(output_file="newtest.parq", steps=1)
+    m = TestParticleTrackingManager(output_file="newtest.parq", steps=1)
     assert m.logfile_name == "newtest.log"
 
-    m = ParticleTrackingManager(output_file="newtest.parquet", steps=1)
+    m = TestParticleTrackingManager(output_file="newtest.parquet", steps=1)
     assert m.logfile_name == "newtest.log"
 
 
 def test_misc_parameters():
     """Test values of parameters being input."""
 
-    m = ParticleTrackingManager(steps=1, start_time="2022-01-01",
+    m = TestParticleTrackingManager(steps=1, start_time="2022-01-01",
                                 horizontal_diffusivity=1,
-                                radius=100, number=100, time_step=5,
-                                use_auto_landmask=True, mixed_layer_depth=10,
-                                diffusivitymodel="windspeed_Sundby1983",
-                                radius_type="uniform", wind_drift_factor=0.04,
-                                stokes_drift=False, coastline_action="previous",
-                                seafloor_action="previous", current_uncertainty=0.1,
-                                wind_uncertainty=0.1, wind_drift_depth=10,
-                                vertical_mixing_timestep=10, log="high")
+                                number=100, time_step=5,
+                                wind_drift_factor=0.04,
+                                stokes_drift=False, log="DEBUG",)
     
     assert m.config.horizontal_diffusivity == 1
-    assert m.config.radius == 100
     assert m.config.number == 100
     assert m.config.time_step == 5
-    assert m.config.use_auto_landmask == True
-    assert m.config.mixed_layer_depth == 10
-    assert m.config.diffusivitymodel == "windspeed_Sundby1983"
-    assert m.config.radius_type == "uniform"
     assert m.config.wind_drift_factor == 0.04
-    assert m.config.stokes_drift == False
-    assert m.config.coastline_action == "previous"
-    assert m.config.seafloor_action == "previous"
-    assert m.config.current_uncertainty == 0.1
-    assert m.config.wind_uncertainty == 0.1
-    assert m.config.wind_drift_depth == 10
-    assert m.config.vertical_mixing_timestep == 10

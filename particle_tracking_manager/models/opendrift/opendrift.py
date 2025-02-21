@@ -8,6 +8,7 @@ import os
 import platform
 import tempfile
 
+import appdirs
 from pathlib import Path
 from typing import Optional, Union
 
@@ -23,32 +24,14 @@ from opendrift.models.openoil import OpenOil
 from opendrift.readers import reader_ROMS_native
 
 from ...cli import is_None
-from ...config import _KNOWN_MODELS
+from ...config import OpenDriftConfig, _KNOWN_MODELS
 from ...the_manager import ParticleTrackingManager
+from ...config_logging import LoggerConfig
+
 from .plot import check_plots, make_plots
 from .utils import make_ciofs_kerchunk, make_nwgoa_kerchunk
 
 
-# from .cli import is_None
-# from .the_manager import ParticleTrackingManager
-
-
-# Read OpenDrift configuration information
-loc = Path(__file__).parent / Path("config.json")
-with open(loc, "r") as f:
-    # Load the JSON file into a Python object
-    config_model = json.load(f)
-
-# convert "None"s to Nones
-for key in config_model.keys():
-    if "default" in config_model[key] and is_None(config_model[key]["default"]):
-        config_model[key]["default"] = None
-
-
-# logger = logging.getLogger("opendrift")
-
-
-# @copydocstring( ParticleTrackingManager )
 class OpenDriftModel(ParticleTrackingManager):
     """Open drift particle tracking model.
 
@@ -64,9 +47,6 @@ class OpenDriftModel(ParticleTrackingManager):
         Radius around each lon-lat pair, within which particles will be randomly seeded. This is used by function `seed_elements`.
     radius_type : str
         If 'gaussian' (default), the radius is the standard deviation in x-y-directions. If 'uniform', elements are spread evenly and always inside a circle with the given radius. This is used by function `seed_elements`.
-
-    horizontal_diffusivity : float
-        Horizontal diffusivity is None by default but will be set to a grid-dependent value for known ocean_model values. This is calculated as 0.1 m/s sub-gridscale velocity that is missing from the model output and multiplied by an estimate of the horizontal grid resolution. This leads to a larger value for NWGOA which has a larger value for mean horizontal grid resolution (lower resolution). If the user inputs their own ocean_model information, they can input their own horizontal_diffusivity value. A user can use a known ocean_model and then overwrite the horizontal_diffusivity value to some value.
     current_uncertainty : float
         Add gaussian perturbation with this standard deviation to current components at each time step.
     wind_uncertainty : float
@@ -77,6 +57,7 @@ class OpenDriftModel(ParticleTrackingManager):
     diffusivitymodel : str
         Algorithm/source used for profile of vertical diffusivity. Environment means that diffusivity is acquired from readers or environment constants/fallback. Turned on if ``vertical_mixing==True``.
     stokes_drift : bool, optional
+        # TODO: move this to the relevant validator
         Set to True to turn on Stokes drift, by default True. This enables 3 settings in OpenDrift:
 
         * o.set_config('drift:use_tabularised_stokes_drift', True)
@@ -94,8 +75,6 @@ class OpenDriftModel(ParticleTrackingManager):
         are 'deactivate', 'previous', 'lift_to_seafloor'.
     max_speed : int
         Typical maximum speed of elements, used to estimate reader buffer size.
-    wind_drift_factor : float
-        Elements at surface are moved with this fraction of the wind vector, in addition to currents and Stokes drift.
     wind_drift_depth : float
         The direct wind drift (windage) is linearly decreasing from the surface value (wind_drift_factor) until 0 at this depth.
     vertical_mixing_timestep : float
@@ -142,8 +121,6 @@ class OpenDriftModel(ParticleTrackingManager):
         Oil film thickness is calculated at each time step. The alternative is that oil film thickness is kept constant with value provided at seeding.
     biodegradation : bool
         Oil mass is biodegraded (eaten by bacteria).
-    log : str, optional
-        Options are "low" and "high" verbosity for log, by default "low"
     plots : dict, optional
         Dictionary of plot names, their filetypes, and any kwargs to pass along, by default None.
         Available plot names are "spaghetti", "animation", "oil", "all".
@@ -153,104 +130,26 @@ class OpenDriftModel(ParticleTrackingManager):
     Docs available for more initialization options with ``ptm.ParticleTrackingManager?``
 
     """
+    # TODO: is kwargs needed in init? test this.
+    def __init__(self, **kwargs):
+        """Initialize OpenDriftModel."""
+        # TODO: I think there is no reason to have "model" defined in the_manager_config.json since the 
+        # model object is used to instantiate the combined object.
+        
+        # Initialize the parent class
+        # This sets up the logger and ParticleTrackingState.
+        super().__init__(**kwargs)
+        
+        # OpenDriftConfig is a subclass of PTMConfig so it knows about all the
+        # PTMConfig parameters. PTMConfig is run with OpenDriftConfig.
+        # output_file was altered in PTM when setting up logger, so want to use
+        # that version.
+        kwargs.update({"output_file": self.output_file})
+        self.config = OpenDriftConfig(**kwargs)
 
-    logger: logging.Logger
-    log: str
-    loglevel: str
-    vertical_mixing_timestep: float
-    diffusivitymodel: str
-    mixed_layer_depth: float
-    wind_drift_factor: float
-    wind_drift_depth: float
-    stokes_drift: bool
-    drift_model: str
-    o: Union[OceanDrift, Leeway, LarvalFish, OpenOil]
-    horizontal_diffusivity: Optional[float]
-    config_model: dict
+        self._setup_interpolator()
 
-    def __init__(
-        self,
-        drift_model: str = config_model["drift_model"]["default"],
-        export_variables: str = config_model["export_variables"]["default"],
-        # radius: int = config_model["radius"]["default"],
-        # radius_type: str = config_model["radius_type"]["default"],
-        # horizontal_diffusivity: float = config_model["horizontal_diffusivity"][
-        #     "default"
-        # ],
-        # current_uncertainty: float = config_model["current_uncertainty"]["default"],
-        # wind_uncertainty: float = config_model["wind_uncertainty"]["default"],
-        # use_auto_landmask: bool = config_model["use_auto_landmask"]["default"],
-        # diffusivitymodel: str = config_model["diffusivitymodel"]["default"],
-        # stokes_drift: bool = config_model["stokes_drift"]["default"],
-        # mixed_layer_depth: float = config_model["mixed_layer_depth"]["default"],
-        # coastline_action: str = config_model["coastline_action"]["default"],
-        # seafloor_action: str = config_model["seafloor_action"]["default"],
-        max_speed: int = config_model["max_speed"]["default"],
-        # wind_drift_factor: float = config_model["wind_drift_factor"]["default"],
-        # wind_drift_depth: float = config_model["wind_drift_depth"]["default"],
-        # vertical_mixing_timestep: float = config_model["vertical_mixing_timestep"][
-        #     "default"
-        # ],
-        object_type: str = config_model["object_type"]["default"],
-        diameter: float = config_model["diameter"]["default"],
-        neutral_buoyancy_salinity: float = config_model["neutral_buoyancy_salinity"][
-            "default"
-        ],
-        stage_fraction: float = config_model["stage_fraction"]["default"],
-        hatched: float = config_model["hatched"]["default"],
-        length: float = config_model["length"]["default"],
-        weight: float = config_model["weight"]["default"],
-        oil_type: str = config_model["oil_type"]["default"],
-        m3_per_hour: float = config_model["m3_per_hour"]["default"],
-        oil_film_thickness: float = config_model["oil_film_thickness"]["default"],
-        droplet_size_distribution: str = config_model["droplet_size_distribution"][
-            "default"
-        ],
-        droplet_diameter_mu: float = config_model["droplet_diameter_mu"]["default"],
-        droplet_diameter_sigma: float = config_model["droplet_diameter_sigma"][
-            "default"
-        ],
-        droplet_diameter_min_subsea: float = config_model[
-            "droplet_diameter_min_subsea"
-        ]["default"],
-        droplet_diameter_max_subsea: float = config_model[
-            "droplet_diameter_max_subsea"
-        ]["default"],
-        emulsification: bool = config_model["emulsification"]["default"],
-        dispersion: bool = config_model["dispersion"]["default"],
-        evaporation: bool = config_model["evaporation"]["default"],
-        update_oilfilm_thickness: bool = config_model["update_oilfilm_thickness"][
-            "default"
-        ],
-        biodegradation: bool = config_model["biodegradation"]["default"],
-        # log: str = config_model["log"]["default"],
-        plots: Optional[dict] = config_model["plots"]["default"],
-        **kw,
-    ) -> None:
-        """Inputs for OpenDrift model."""
-
-        # get all named parameters input to ParticleTrackingManager class
-        from inspect import signature
-
-        sig = signature(OpenDriftModel)
-
-        # initialize all class attributes to None without triggering the __setattr__ method
-        # which does a bunch more stuff
-        for key in sig.parameters.keys():
-            self.__dict__[key] = None
-
-        self.__dict__["config_model"] = config_model
-
-        model = "opendrift"
-
-        if log == "low":
-            self.__dict__["loglevel"] = 20
-        elif log == "high":
-            self.__dict__["loglevel"] = 0
-
-        # need drift_model defined for the log to work properly for both manager and model
-        # so do this before super initialization
-        self.__dict__["drift_model"] = drift_model
+        # model = "opendrift"
 
         # I left this code here but it isn't used for now
         # it will be used if we can export to parquet/netcdf directly
@@ -258,41 +157,44 @@ class OpenDriftModel(ParticleTrackingManager):
         # # need output_format defined right away
         # self.__dict__["output_format"] = output_format
 
+        LoggerConfig().merge_with_opendrift_log(self.logger)
+
         # do this right away so I can query the object
         # we don't actually input output_format here because we first output to netcdf, then
         # resave as parquet after adding in extra config
-        if self.drift_model == "Leeway":
-            o = Leeway(loglevel=self.loglevel)  # , output_format=self.output_format)
+        # TODO: should drift_model be instantiated in OpenDriftConfig or here?
+        if self.config.drift_model == "Leeway":
+            # getattr(logging, self.config.log_level) converts from, e.g., "INFO" to 20
+            o = Leeway(loglevel=getattr(logging, self.config.log_level))  # , output_format=self.output_format)
 
-        elif self.drift_model == "OceanDrift":
+        elif self.config.drift_model == "OceanDrift":
             o = OceanDrift(
-                loglevel=self.loglevel,
+                loglevel=getattr(logging, self.config.log_level),
             )  # , output_format=self.output_format)
 
-        elif self.drift_model == "LarvalFish":
+        elif self.config.drift_model == "LarvalFish":
             o = LarvalFish(
-                loglevel=self.loglevel
+                loglevel=getattr(logging, self.config.log_level)
             )  # , output_format=self.output_format)
 
-        elif self.drift_model == "OpenOil":
+        elif self.config.drift_model == "OpenOil":
             o = OpenOil(
-                loglevel=self.loglevel, weathering_model="noaa"
+                loglevel=getattr(logging, self.config.log_level), weathering_model="noaa"
             )  # , output_format=self.output_format)
 
         else:
-            raise ValueError(f"Drifter model {self.drift_model} is not recognized.")
+            raise ValueError(f"Drifter model {self.config.drift_model} is not recognized.")
+        # TODO: Should I keep this sort of ValueError when the input parameter has already been validated?
+        
+        self.o = o
 
-        self.__dict__["o"] = o
+        # self.__dict__["logger"] = logging.getLogger(
+        #     model
+        # )  # use this syntax to avoid __setattr__
 
-        self.__dict__["logger"] = logging.getLogger(
-            model
-        )  # use this syntax to avoid __setattr__
-
-        super().__init__(model, **kw)
-
-        # Extra keyword parameters are not currently allowed so they might be a typo
-        if len(self.kw) > 0:
-            raise KeyError(f"Unknown input parameter(s) {self.kw} input.")
+        # # Extra keyword parameters are not currently allowed so they might be a typo
+        # if len(self.kw) > 0:
+        #     raise KeyError(f"Unknown input parameter(s) {self.kw} input.")
 
         # Note that you can see configuration possibilities for a given model with
         # o.list_configspec()
@@ -301,206 +203,67 @@ class OpenDriftModel(ParticleTrackingManager):
         # You can check required variables for a model with
         # o.required_variables
 
+        # TODO: streamline this
         self.checked_plot = False
-
-        # Set all attributes which will trigger some checks and changes in __setattr__
-        # these will also update "value" in the config dict
-        for key in sig.parameters.keys():
-            # no need to run through for init if value is None (already set to None)
-            if locals()[key] is not None:
-                self.__setattr__(key, locals()[key])
-
-    def __setattr_model__(self, name: str, value) -> None:
-        """Implement my own __setattr__ but here to enforce actions."""
-
-        # don't allow drift_model to be reset, have to reinitialize object instead
-        # check for type of m.o and drift_model matching to enforce this
-        if (name in ["o", "drift_model"]) and (
-            self.drift_model not in str(type(self.o))
-        ):
-            raise KeyError(
-                "Can't overwrite `drift_model`; instead initialize OpenDriftModel with desired drift_model."
-            )
-
-        # create/update "value" keyword in config to keep it up to date
-        if (
-            self.config_model is not None
-            # and name != "config_model"
-            # and name != "config_ptm"
-            and name in self.config_model.keys()
-        ):
-            self.config_model[name]["value"] = value
-        self._update_config()
-
+        
+        # TODO: move ocean_model setup to another function/class
+        
+        
+        # TODO: where to put these things
         # turn on other things if using stokes_drift
-        if name == "stokes_drift" and value:
-            if self.drift_model != "Leeway":
-                self.o.set_config("drift:use_tabularised_stokes_drift", True)
+        if self.config.stokes_drift:
+            self.o.set_config("drift:use_tabularised_stokes_drift", True)
             # self.o.set_config('drift:tabularised_stokes_drift_fetch', '25000')  # default
             # self.o.set_config('drift:stokes_drift_profile', 'Phillips')  # default
 
-        # too soon to do this, need to run it later
-        # Leeway model doesn't have this option built in
-        if name in ["surface_only", "drift_model"]:
-            if self.surface_only and self.drift_model != "Leeway":
-                self.logger.info("Truncating model output below 0.5 m.")
-                self.o.set_config("drift:truncate_ocean_model_below_m", 0.5)
-            elif (
-                not self.surface_only
-                and self.drift_model != "Leeway"
-                and self.show_config(key="drift:truncate_ocean_model_below_m")["value"]
-                is not None
-            ):
-                self.logger.info("Un-truncating model output below 0.5 m.")
-                self.o.set_config("drift:truncate_ocean_model_below_m", None)
+        # If 2D surface simulation (and not Leeway since not available), truncate model output below 0.5 m
+        if not self.config.do3D and self.config.z == 0 and self.config.drift_model != "Leeway":
+            self.o.set_config("drift:truncate_ocean_model_below_m", 0.5)
+            self.logger.info("Truncating model output below 0.5 m.")
 
-        # Leeway doesn't have this option available
-        if name == "do3D" and not value and self.drift_model != "Leeway":
-            self.logger.info("do3D is False so disabling vertical motion.")
-            self.o.disable_vertical_motion()
-        elif name == "do3D" and not value and self.drift_model == "Leeway":
-            self.logger.info(
-                "do3D is False but drift_model is Leeway so doing nothing."
-            )
 
-        if name == "do3D" and value and self.drift_model != "Leeway":
-            self.logger.info("do3D is True so turning on vertical advection.")
+        # If 2D simulation (and not Leeway since not available), turn off vertical advection
+        if not self.config.do3D and self.config.drift_model != "Leeway":
+            self.o.set_config("drift:vertical_advection", False)
+            self.logger.info("Disabling vertical advection.")
+        
+         
+
+        # If 3D simulation, turn on vertical advection
+        if self.config.do3D:
             self.o.set_config("drift:vertical_advection", True)
-        elif name == "do3D" and value and self.drift_model == "Leeway":
-            self.logger.info(
-                "do3D is True but drift_model is Leeway so changing do3D to False."
-            )
-            self.do3D = False
+            self.logger.info("do3D is True so turning on vertical advection.")
 
-        # if drift_model is LarvalFish, vertical_mixing has to be True
-        if name == "vertical_mixing" and not value and self.drift_model == "LarvalFish":
-            raise ValueError(
-                "drift_model is LarvalFish which always has vertical mixing on in OpenDrift so vertical_mixing must be True."
-            )
+        # TODO: setup OpenDrift config and how to blend with this config
 
-        # if drift_model is LarvalFish, surface_only can't be True
-        if name == "surface_only" and value and self.drift_model == "LarvalFish":
-            raise ValueError(
-                "drift_model is LarvalFish which is always 3D in OpenDrift so surface_only must be False."
-            )
+        # for handler in self.logger.handlers[:]:
+        #     handler.close()
+        #     self.logger.removeHandler(handler)
 
-        # if drift_model is LarvalFish, do3D has to be True
-        if name == "do3D" and not value and self.drift_model == "LarvalFish":
-            raise ValueError(
-                "drift_model is LarvalFish which is always 3D in OpenDrift so do3D must be True."
-            )
 
-        # Make sure vertical_mixing_timestep equals None if vertical_mixing False
-        if name in ["vertical_mixing", "vertical_mixing_timestep"]:
-            if not self.vertical_mixing:
-                self.logger.info(
-                    "vertical_mixing is False, so setting value of vertical_mixing_timestep "
-                    "to None."
-                )
-                self.__dict__["vertical_mixing_timestep"] = None
-                self.config_model["vertical_mixing_timestep"]["value"] = None
+    def _setup_interpolator(self):
+        """Setup interpolator."""
+        if self.config.use_cache:
+            cache_dir = Path(appdirs.user_cache_dir(appname="particle-tracking-manager", appauthor="axiom-data-science"))
+            cache_dir.mkdir(parents=True, exist_ok=True)
+            if self.config.interpolator_filename is None:
+                self.config.interpolator_filename = cache_dir / Path(f"{self.config.ocean_model}_interpolator").with_suffix(".pickle")
+            else:
+                self.config.interpolator_filename = Path(self.config.interpolator_filename).with_suffix(".pickle")
+            self.save_interpolator = True
+            
+            # change interpolator_filename to string
+            self.config.interpolator_filename = str(self.config.interpolator_filename)
+            
+            if Path(self.config.interpolator_filename).exists():
+                self.logger.info(f"Loading the interpolator from {self.config.interpolator_filename}.")
+            else:
+                self.logger.info(f"A new interpolator will be saved to {self.config.interpolator_filename}.")
+        else:
+            self.save_interpolator = False
+            self.logger.info("Interpolators will not be saved.")
 
-        # Make sure diffusivitymodel equals default value if vertical_mixing False
-        if name in ["vertical_mixing", "diffusivitymodel"]:
-            dmodeldef = self.config_model["diffusivitymodel"]["default"]
-            if (
-                not self.vertical_mixing
-                and self.diffusivitymodel != dmodeldef
-                and self.diffusivitymodel is not None
-            ):
-                self.logger.info(
-                    "vertical_mixing is False, so resetting value of diffusivitymodel to default and not using."
-                )
-                self.__dict__["diffusivitymodel"] = dmodeldef
-                self.config_model["diffusivitymodel"]["value"] = dmodeldef
 
-        # Make sure mixed_layer_depth equals default value if vertical_mixing False
-        if name in ["vertical_mixing", "mixed_layer_depth"]:
-            mlddef = self.config_model["mixed_layer_depth"]["default"]
-            if (
-                not self.vertical_mixing
-                and self.mixed_layer_depth != mlddef
-                and self.mixed_layer_depth is not None
-            ):
-                self.logger.info(
-                    "vertical_mixing is False, so resetting value of mixed_layer_depth to default and not using."
-                )
-                self.__dict__["mixed_layer_depth"] = mlddef
-                self.config_model["mixed_layer_depth"]["value"] = mlddef
-
-        # make sure user isn't try to use Leeway or LarvalFish and "wind_drift_factor" at the same time
-        if name == "wind_drift_factor":
-            if self.drift_model in ["Leeway", "LarvalFish"]:
-                self.logger.info(
-                    "wind_drift_factor cannot be used with Leeway or LarvalFish models, "
-                    "so setting to None."
-                )
-                self.__dict__["wind_drift_factor"] = None
-                self.config_model["wind_drift_factor"]["value"] = None
-
-        # make sure user isn't try to use Leeway or LarvalFish models and "wind_drift_depth" at the same time
-        if name == "wind_drift_depth":
-            if self.drift_model in ["Leeway", "LarvalFish"]:
-                self.logger.info(
-                    "wind_drift_depth cannot be used with Leeway or LarvalFish models, "
-                    "so setting to None."
-                )
-                self.__dict__["wind_drift_depth"] = None
-                self.config_model["wind_drift_depth"]["value"] = None
-
-        # make sure user isn't try to use Leeway and "stokes_drift" at the same time
-        if name == "stokes_drift":
-            if self.drift_model == "Leeway" and self.stokes_drift:
-                self.logger.info(
-                    "stokes_drift cannot be used with Leeway model, so changing to False."
-                )
-                self.__dict__["stokes_drift"] = False
-                self.config_model["stokes_drift"]["value"] = False
-
-        # Add export variables for certain drift_model values
-        # drift_model is always set initially only
-        if name == "export_variables":
-            # always include z, add user-input variables too
-            self.__dict__["export_variables"] += ["z"]
-            self.config_model["export_variables"]["value"] += ["z"]
-
-            if self.drift_model == "OpenOil":
-                oil_vars = [
-                    "mass_oil",
-                    "density",
-                    "mass_evaporated",
-                    "mass_dispersed",
-                    "mass_biodegraded",
-                    "viscosity",
-                    "water_fraction",
-                ]
-                self.__dict__["export_variables"] += oil_vars
-                self.config_model["export_variables"]["value"] += oil_vars
-            elif self.drift_model == "Leeway":
-                vars = ["object_type"]
-                self.__dict__["export_variables"] += vars
-                self.config_model["export_variables"]["value"] += vars
-            elif self.drift_model == "LarvalFish":
-                vars = [
-                    "diameter",
-                    "neutral_buoyancy_salinity",
-                    "stage_fraction",
-                    "hatched",
-                    "length",
-                    "weight",
-                ]
-                self.__dict__["export_variables"] += vars
-                self.config_model["export_variables"]["value"] += vars
-
-        # check plots for any necessary export_variables
-        if self.plots and not self.checked_plot:
-            check_plots(self.plots, self.export_variables, self.drift_model)
-            self.checked_plot = True
-            self.logger.info("All plots have necessary export_variables.")
-
-        self._update_config()
-
-    # def run_add_reader(
     def add_reader(
         self,
         ds=None,
@@ -524,8 +287,8 @@ class OpenDriftModel(ParticleTrackingManager):
         """
 
         if (
-            self.ocean_model not in _KNOWN_MODELS
-            and self.ocean_model != "test"
+            self.config.ocean_model not in _KNOWN_MODELS
+            and self.config.ocean_model != "test"
             and ds is None
         ):
             raise ValueError(
@@ -536,30 +299,30 @@ class OpenDriftModel(ParticleTrackingManager):
 
         if ds is not None:
             if name is None:
-                self.ocean_model = "user_input"
+                self.config.ocean_model = "user_input"
             else:
-                self.ocean_model = name
+                self.config.ocean_model = name
 
-        if self.ocean_model == "test":
+        if self.config.ocean_model == "test":
             pass
             # oceanmodel_lon0_360 = True
             # loc = "test"
             # kwargs_xarray = dict()
 
-        elif self.ocean_model is not None or ds is not None:
-            if self.ocean_model_local:
+        elif self.config.ocean_model is not None or ds is not None:
+            if self.config.ocean_model_local:
                 self.logger.info(
-                    f"Using local output for ocean_model {self.ocean_model}"
+                    f"Using local output for ocean_model {self.config.ocean_model}"
                 )
             else:
                 self.logger.info(
-                    f"Using remote output for ocean_model {self.ocean_model}"
+                    f"Using remote output for ocean_model {self.config.ocean_model}"
                 )
 
             # set drop_vars initial values based on the PTM settings, then add to them for the specific model
             drop_vars = []
             # don't need w if not 3D movement
-            if not self.do3D:
+            if not self.config.do3D:
                 drop_vars += ["w"]
                 self.logger.info("Dropping vertical velocity (w) because do3D is False")
             else:
@@ -569,11 +332,11 @@ class OpenDriftModel(ParticleTrackingManager):
             # It's possible that winds aren't required for every OpenOil simulation but seems like
             # they would usually be required and the cases are tricky to navigate so also skipping for that case.
             if (
-                not self.stokes_drift
-                and self.wind_drift_factor == 0
-                and self.wind_uncertainty == 0
-                and self.drift_model != "OpenOil"
-                and not self.vertical_mixing
+                not self.config.stokes_drift
+                and self.config.wind_drift_factor == 0
+                and self.config.wind_uncertainty == 0
+                and self.config.drift_model != "OpenOil"
+                and not self.config.vertical_mixing
             ):
                 drop_vars += ["Uwind", "Vwind", "Uwind_eastward", "Vwind_northward"]
                 self.logger.info(
@@ -585,7 +348,7 @@ class OpenDriftModel(ParticleTrackingManager):
                 )
 
             # only keep salt and temp for LarvalFish or OpenOil
-            if self.drift_model not in ["LarvalFish", "OpenOil"]:
+            if self.config.drift_model not in ["LarvalFish", "OpenOil"]:
                 drop_vars += ["salt", "temp"]
                 self.logger.info(
                     "Dropping salt and temp variables because drift_model is not LarvalFish nor OpenOil"
@@ -596,7 +359,7 @@ class OpenDriftModel(ParticleTrackingManager):
                 )
 
             # keep some ice variables for OpenOil (though later see if these are used)
-            if self.drift_model != "OpenOil":
+            if self.config.drift_model != "OpenOil":
                 drop_vars += ["aice", "uice_eastward", "vice_northward"]
                 self.logger.info(
                     "Dropping ice variables because drift_model is not OpenOil"
@@ -608,7 +371,7 @@ class OpenDriftModel(ParticleTrackingManager):
 
             # if using static masks, drop wetdry masks.
             # if using wetdry masks, drop static masks.
-            if self.use_static_masks:
+            if self.config.use_static_masks:
                 standard_name_mapping.update({"mask_rho": "land_binary_mask"})
                 drop_vars += ["wetdry_mask_rho", "wetdry_mask_u", "wetdry_mask_v"]
                 self.logger.info(
@@ -621,7 +384,7 @@ class OpenDriftModel(ParticleTrackingManager):
                     "Dropping mask_rho, mask_u, mask_v, mask_psi because using wetdry masks instead."
                 )
 
-            if self.ocean_model == "NWGOA":
+            if self.config.ocean_model == "NWGOA":
                 oceanmodel_lon0_360 = True
 
                 standard_name_mapping.update(
@@ -642,15 +405,15 @@ class OpenDriftModel(ParticleTrackingManager):
                     "snow_thick",
                 ]
 
-                if self.ocean_model_local:
+                if self.config.ocean_model_local:
 
-                    if self.start_time is None:
+                    if self.config.start_time is None:
                         raise ValueError(
                             "Need to set start_time ahead of time to add local reader."
                         )
-                    start_time = self.start_time
+                    start_time = self.config.start_time
                     start = f"{start_time.year}-{str(start_time.month).zfill(2)}-{str(start_time.day).zfill(2)}"
-                    end_time = self.end_time
+                    end_time = self.config.end_time
                     end = f"{end_time.year}-{str(end_time.month).zfill(2)}-{str(end_time.day).zfill(2)}"
                     loc_local = make_nwgoa_kerchunk(start=start, end=end)
 
@@ -659,44 +422,44 @@ class OpenDriftModel(ParticleTrackingManager):
                     "http://xpublish-nwgoa.srv.axds.co/datasets/nwgoa_all/zarr/"
                 )
 
-            elif "CIOFS" in self.ocean_model:
+            elif "CIOFS" in self.config.ocean_model:
                 oceanmodel_lon0_360 = False
 
                 drop_vars += [
                     "wetdry_mask_psi",
                 ]
-                if self.ocean_model == "CIOFS":
+                if self.config.ocean_model == "CIOFS":
 
-                    if self.ocean_model_local:
+                    if self.config.ocean_model_local:
 
-                        if self.start_time is None:
+                        if self.config.start_time is None:
                             raise ValueError(
                                 "Need to set start_time ahead of time to add local reader."
                             )
-                        start = f"{self.start_time.year}_{str(self.start_time.dayofyear - 1).zfill(4)}"
-                        end = f"{self.end_time.year}_{str(self.end_time.dayofyear).zfill(4)}"
+                        start = f"{self.config.start_time.year}_{str(self.config.start_time.dayofyear - 1).zfill(4)}"
+                        end = f"{self.config.end_time.year}_{str(self.config.end_time.dayofyear).zfill(4)}"
                         loc_local = make_ciofs_kerchunk(
                             start=start, end=end, name="ciofs"
                         )
                     loc_remote = "http://xpublish-ciofs.srv.axds.co/datasets/ciofs_hindcast/zarr/"
 
-                elif self.ocean_model == "CIOFSFRESH":
+                elif self.config.ocean_model == "CIOFSFRESH":
 
-                    if self.ocean_model_local:
+                    if self.config.ocean_model_local:
 
-                        if self.start_time is None:
+                        if self.config.start_time is None:
                             raise ValueError(
                                 "Need to set start_time ahead of time to add local reader."
                             )
-                        start = f"{self.start_time.year}_{str(self.start_time.dayofyear - 1).zfill(4)}"
+                        start = f"{self.config.start_time.year}_{str(self.config.start_time.dayofyear - 1).zfill(4)}"
 
-                        end = f"{self.end_time.year}_{str(self.end_time.dayofyear).zfill(4)}"
+                        end = f"{self.config.end_time.year}_{str(self.config.end_time.dayofyear).zfill(4)}"
                         loc_local = make_ciofs_kerchunk(
                             start=start, end=end, name="ciofs_fresh"
                         )
                     loc_remote = None
 
-                elif self.ocean_model == "CIOFSOP":
+                elif self.config.ocean_model == "CIOFSOP":
 
                     standard_name_mapping.update(
                         {
@@ -705,14 +468,14 @@ class OpenDriftModel(ParticleTrackingManager):
                         }
                     )
 
-                    if self.ocean_model_local:
+                    if self.config.ocean_model_local:
 
-                        if self.start_time is None:
+                        if self.config.start_time is None:
                             raise ValueError(
                                 "Need to set start_time ahead of time to add local reader."
                             )
-                        start = f"{self.start_time.year}-{str(self.start_time.month).zfill(2)}-{str(self.start_time.day).zfill(2)}"
-                        end = f"{self.end_time.year}-{str(self.end_time.month).zfill(2)}-{str(self.end_time.day).zfill(2)}"
+                        start = f"{self.config.start_time.year}-{str(self.config.start_time.month).zfill(2)}-{str(self.config.start_time.day).zfill(2)}"
+                        end = f"{self.config.end_time.year}-{str(self.config.end_time.month).zfill(2)}-{str(self.config.end_time.day).zfill(2)}"
 
                         loc_local = make_ciofs_kerchunk(
                             start=start, end=end, name="aws_ciofs_with_angle"
@@ -721,12 +484,12 @@ class OpenDriftModel(ParticleTrackingManager):
 
                     loc_remote = "https://thredds.aoos.org/thredds/dodsC/AWS_CIOFS.nc"
 
-            elif self.ocean_model == "user_input":
+            elif self.config.ocean_model == "user_input":
 
-                # check for case that self.use_static_masks False (which is the default)
+                # check for case that self.config.use_static_masks False (which is the default)
                 # but user input doesn't have wetdry masks
                 # then raise exception and tell user to set use_static_masks True
-                if "wetdry_mask_rho" not in ds.data_vars and not self.use_static_masks:
+                if "wetdry_mask_rho" not in ds.data_vars and not self.config.use_static_masks:
                     raise ValueError(
                         "User input does not have wetdry_mask_rho variable. Set use_static_masks True to use static masks instead."
                     )
@@ -735,7 +498,7 @@ class OpenDriftModel(ParticleTrackingManager):
 
             # if local and not a user-input ds
             if ds is None:
-                if self.ocean_model_local:
+                if self.config.ocean_model_local:
 
                     ds = xr.open_dataset(
                         loc_local,
@@ -753,7 +516,7 @@ class OpenDriftModel(ParticleTrackingManager):
                 else:
                     if ".nc" in loc_remote:
 
-                        if self.ocean_model == "CIOFSFRESH":
+                        if self.config.ocean_model == "CIOFSFRESH":
                             raise NotImplementedError
 
                         ds = xr.open_dataset(
@@ -775,12 +538,12 @@ class OpenDriftModel(ParticleTrackingManager):
                     )
 
             # For NWGOA, need to calculate wetdry mask from a variable
-            if self.ocean_model == "NWGOA" and not self.use_static_masks:
+            if self.config.ocean_model == "NWGOA" and not self.config.use_static_masks:
                 ds["wetdry_mask_rho"] = (~ds.zeta.isnull()).astype(int)
 
             # For CIOFSOP need to rename u/v to have "East" and "North" in the variable names
             # so they aren't rotated in the ROMS reader (the standard names have to be x/y not east/north)
-            elif self.ocean_model == "CIOFSOP":
+            elif self.config.ocean_model == "CIOFSOP":
                 ds = ds.rename_vars({"urot": "u_eastward", "vrot": "v_northward"})
                 # grid = xr.open_dataset("/mnt/vault/ciofs/HINDCAST/nos.ciofs.romsgrid.nc")
                 # ds["angle"] = grid["angle"]
@@ -793,25 +556,25 @@ class OpenDriftModel(ParticleTrackingManager):
             units_date = pd.Timestamp(datestr)
 
             # use reader start time if not otherwise input
-            if self.start_time is None:
+            if self.config.start_time is None:
                 self.logger.info("setting reader start_time as simulation start_time")
-                # self.start_time = reader.start_time
+                # self.config.start_time = reader.start_time
                 # convert using pandas instead of netCDF4
-                self.start_time = units_date + pd.to_timedelta(
+                self.config.start_time = units_date + pd.to_timedelta(
                     ds.ocean_time[0].values, unit="s"
                 )
             # narrow model output to simulation time if possible before sending to Reader
-            if self.start_time is not None and self.end_time is not None:
+            if self.config.start_time is not None and self.config.end_time is not None:
                 dt_model = float(
                     ds.ocean_time[1] - ds.ocean_time[0]
                 )  # time step of the model output in seconds
                 # want to include the next ocean model output before the first drifter simulation time
                 # in case it starts before model times
                 start_time_num = (
-                    self.start_time - units_date
+                    self.config.start_time - units_date
                 ).total_seconds() - dt_model
                 # want to include the next ocean model output after the last drifter simulation time
-                end_time_num = (self.end_time - units_date).total_seconds() + dt_model
+                end_time_num = (self.config.end_time - units_date).total_seconds() + dt_model
                 ds = ds.sel(ocean_time=slice(start_time_num, end_time_num))
                 self.logger.info("Narrowed model output to simulation time")
                 if len(ds.ocean_time) == 0:
@@ -829,7 +592,7 @@ class OpenDriftModel(ParticleTrackingManager):
 
             reader = reader_ROMS_native.Reader(
                 filename=ds,
-                name=self.ocean_model,
+                name=self.config.ocean_model,
                 standard_name_mapping=standard_name_mapping,
                 save_interpolator=self.save_interpolator,
                 interpolator_filename=self.interpolator_filename,
@@ -837,7 +600,7 @@ class OpenDriftModel(ParticleTrackingManager):
 
             self.o.add_reader([reader])
             self.reader = reader
-            # can find reader at manager.o.env.readers[self.ocean_model]
+            # can find reader at manager.o.env.readers[self.config.ocean_model]
 
             self.oceanmodel_lon0_360 = oceanmodel_lon0_360
 
@@ -870,20 +633,20 @@ class OpenDriftModel(ParticleTrackingManager):
             "drift:truncate_ocean_model_below_m",
         ]
 
-        if self.start_time_end is not None:
+        if self.config.start_time_end is not None:
             # time can be a list to start drifters linearly in time
             time = [
-                self.start_time.to_pydatetime(),
-                self.start_time_end.to_pydatetime(),
+                self.config.start_time.to_pydatetime(),
+                self.config.start_time_end.to_pydatetime(),
             ]
-        elif self.start_time is not None:
-            time = self.start_time.to_pydatetime()
+        elif self.config.start_time is not None:
+            time = self.config.start_time.to_pydatetime()
         else:
             time = None
 
         _seed_kws = {
             "time": time,
-            "z": self.z,
+            "z": self.config.z,
         }
 
         # update seed_kws with drift_model-specific seed parameters
@@ -896,10 +659,10 @@ class OpenDriftModel(ParticleTrackingManager):
             # add additional seed parameters
             _seed_kws.update(
                 {
-                    "lon": self.lon,
-                    "lat": self.lat,
-                    "radius": self.radius,
-                    "radius_type": self.radius_type,
+                    "lon": self.config.lon,
+                    "lat": self.config.lat,
+                    "radius": self.config.radius,
+                    "radius_type": self.config.radius_type,
                 }
             )
 
@@ -907,7 +670,7 @@ class OpenDriftModel(ParticleTrackingManager):
 
             # geojson needs string representation of time
             _seed_kws["time"] = (
-                self.start_time.isoformat() if self.start_time is not None else None
+                self.config.start_time.isoformat() if self.config.start_time is not None else None
             )
 
         self._seed_kws = _seed_kws
@@ -920,26 +683,24 @@ class OpenDriftModel(ParticleTrackingManager):
         if not self.state.has_added_reader:
             raise ValueError("first add reader with `manager.add_reader(**kwargs)`.")
 
-        if self.seed_flag == "elements":
+        if self.config.seed_flag == "elements":
             self.o.seed_elements(**self.seed_kws)
 
         elif self.seed_flag == "geojson":
 
             # # geojson needs string representation of time
-            # self.seed_kws["time"] = self.start_time.isoformat()
+            # self.seed_kws["time"] = self.config.start_time.isoformat()
             self.geojson["properties"] = self.seed_kws
             json_string_dumps = json.dumps(self.geojson)
             self.o.seed_from_geojson(json_string_dumps)
 
         else:
-            raise ValueError(f"seed_flag {self.seed_flag} not recognized.")
+            raise ValueError(f"seed_flag {self.config.seed_flag} not recognized.")
 
         self.initial_drifters = self.o.elements_scheduled
 
         self.state.has_run_seeding = True
 
-
-    # def run_drifters(self):
     def run(self):
         """Run the drifters!"""
 
@@ -948,7 +709,7 @@ class OpenDriftModel(ParticleTrackingManager):
 
         self.logger.info(f"start_time: {self.config.start_time}, end_time: {self.config.end_time}, steps: {self.config.steps}, duration: {self.config.duration}")
 
-        # if self.steps is None and self.duration is None and self.end_time is None:
+        # if self.steps is None and self.duration is None and self.config.end_time is None:
         #     raise ValueError(
         #         "Exactly one of steps, duration, or end_time must be input and not be None."
             # )
@@ -977,11 +738,11 @@ class OpenDriftModel(ParticleTrackingManager):
         #     raise ValueError(f"output_format {self.output_format} not recognized.")
 
         self.o.run(
-            time_step=timedir * self.time_step,
-            time_step_output=self.time_step_output,
-            steps=self.steps,
-            export_variables=self.export_variables,
-            outfile=self.output_file_initial,
+            time_step=self.config.time_step,
+            time_step_output=self.config.time_step_output,
+            steps=self.config.steps,
+            export_variables=self.config.export_variables,
+            outfile=self.config.output_file_initial,
         )
 
         # plot if requested
@@ -1005,16 +766,16 @@ class OpenDriftModel(ParticleTrackingManager):
                 v = str(v)
             ds.attrs[f"ptm_config_{k}"] = v
 
-        if self.output_format == "netcdf":
-            ds.to_netcdf(self.output_file)
-        elif self.output_format == "parquet":
-            ds.to_dataframe().to_parquet(self.output_file)
+        if self.config.output_format == "netcdf":
+            ds.to_netcdf(self.config.output_file)
+        elif self.config.output_format == "parquet":
+            ds.to_dataframe().to_parquet(self.config.output_file)
         else:
-            raise ValueError(f"output_format {self.output_format} not recognized.")
+            raise ValueError(f"output_format {self.config.output_format} not recognized.")
 
         # update with new path name
         self.o.outfile_name = self.output_file
-        self.output_file = self.output_file
+        # self.output_file = self.output_file
 
         try:
             # remove initial file to save space
@@ -1023,8 +784,9 @@ class OpenDriftModel(ParticleTrackingManager):
             # windows issue
             pass
 
-        self.logger.removeHandler(self.file_handler)
-        self.file_handler.close()
+        LoggerConfig().close_loggers(self.logger)
+        # self.logger.removeHandler(self.logger.handlers[0])
+        # self.logger.handlers[0].close()
         self.state.has_run = True
 
 
@@ -1038,85 +800,87 @@ class OpenDriftModel(ParticleTrackingManager):
 
         return self.o._config
 
-    def _add_ptm_config(self):
-        """Add PTM config to overall config."""
+    # # dictC is the same as dictB except the names are the PTM/OpenDriftModel names instead of the
+    # # original OpenDrift names
+    # def _add_ptm_config(self):
+    #     """Add PTM config to overall config."""
 
-        dict1 = copy.deepcopy(self._config)
-        dict2 = copy.deepcopy(self.config_ptm)
+    #     dict1 = copy.deepcopy(self._config)
+    #     dict2 = copy.deepcopy(self.config_ptm)
 
-        # dictB has the od_mapping version of the keys of dict2
-        # e.g.  'processes:emulsification' instead of 'emulsification'
-        # dictB values are the OpenDriftModel config parameters with config_od parameters added on top
-        dictB = {
-            v["od_mapping"]: (
-                {**dict1[v["od_mapping"]], **v}
-                if "od_mapping" in v and v["od_mapping"] in dict1.keys()
-                else {**v}
-            )
-            for k, v in dict2.items()
-            if "od_mapping" in v
-        }
+    #     # dictB has the od_mapping version of the keys of dict2
+    #     # e.g.  'processes:emulsification' instead of 'emulsification'
+    #     # dictB values are the OpenDriftModel config parameters with config_od parameters added on top
+    #     dictB = {
+    #         v["od_mapping"]: (
+    #             {**dict1[v["od_mapping"]], **v}
+    #             if "od_mapping" in v and v["od_mapping"] in dict1.keys()
+    #             else {**v}
+    #         )
+    #         for k, v in dict2.items()
+    #         if "od_mapping" in v
+    #     }
 
-        # dictC is the same as dictB except the names are the PTM/OpenDriftModel names instead of the
-        # original OpenDrift names
-        dictC = {
-            k: {**dict1[v["od_mapping"]], **v}
-            if "od_mapping" in v and v["od_mapping"] in dict1.keys()
-            else {**v}
-            for k, v in dict2.items()
-            if "od_mapping" in v
-        }
+    #     # dictC is the same as dictB except the names are the PTM/OpenDriftModel names instead of the
+    #     # original OpenDrift names
+    #     dictC = {
+    #         k: {**dict1[v["od_mapping"]], **v}
+    #         if "od_mapping" in v and v["od_mapping"] in dict1.keys()
+    #         else {**v}
+    #         for k, v in dict2.items()
+    #         if "od_mapping" in v
+    #     }
 
-        # this step copies in parameter info from config_ptm to _config
-        self._config.update(dict2)
+    #     # this step copies in parameter info from config_ptm to _config
+    #     self._config.update(dict2)
 
-        # this step brings config overrides from config_ptm into the overall config
-        self._config.update(dictB)
-        # this step brings other model config (plus additions from mapped parameter config) into the overall config
-        self._config.update(dictC)
-        # # this step brings other model config into the overall config
-        # self._config.update(dict2)
+    #     # this step brings config overrides from config_ptm into the overall config
+    #     self._config.update(dictB)
+    #     # this step brings other model config (plus additions from mapped parameter config) into the overall config
+    #     self._config.update(dictC)
+    #     # # this step brings other model config into the overall config
+    #     # self._config.update(dict2)
 
-    def _add_model_config(self):
-        """Goal is to combine the config both directions:
+    # def _add_model_config(self):
+    #     """Goal is to combine the config both directions:
 
-        * override OpenDrift config defaults with those from opendrift_config as well
-          as include extra information like ptm_level
-        * bring OpenDrift config parameter metadata into config_model so application
-          could query it to get the ranges, options, etc.
-        """
+    #     * override OpenDrift config defaults with those from opendrift_config as well
+    #       as include extra information like ptm_level
+    #     * bring OpenDrift config parameter metadata into config_model so application
+    #       could query it to get the ranges, options, etc.
+    #     """
 
-        dict1 = copy.deepcopy(self._config)
-        dict2 = copy.deepcopy(self.config_model)
+    #     dict1 = copy.deepcopy(self._config)
+    #     dict2 = copy.deepcopy(self.config_model)
 
-        # dictB has the od_mapping version of the keys of dict2
-        # e.g.  'processes:emulsification' instead of 'emulsification'
-        # dictB values are the OpenDrift config parameters with config_od parameters added on top
-        dictB = {
-            v["od_mapping"]: {**dict1[v["od_mapping"]], **v}
-            if "od_mapping" in v and v["od_mapping"] in dict1.keys()
-            else {**v}
-            for k, v in dict2.items()
-            if "od_mapping" in v
-        }
+    #     # dictB has the od_mapping version of the keys of dict2
+    #     # e.g.  'processes:emulsification' instead of 'emulsification'
+    #     # dictB values are the OpenDrift config parameters with config_od parameters added on top
+    #     dictB = {
+    #         v["od_mapping"]: {**dict1[v["od_mapping"]], **v}
+    #         if "od_mapping" in v and v["od_mapping"] in dict1.keys()
+    #         else {**v}
+    #         for k, v in dict2.items()
+    #         if "od_mapping" in v
+    #     }
 
-        # dictC is the same as dictB except the names are the PTM/OpenDriftModel names instead of the
-        # original OpenDrift names
-        dictC = {
-            k: {**dict1[v["od_mapping"]], **v}
-            if "od_mapping" in v and v["od_mapping"] in dict1.keys()
-            else {**v}
-            for k, v in dict2.items()
-            if "od_mapping" in v
-        }
+    #     # dictC is the same as dictB except the names are the PTM/OpenDriftModel names instead of the
+    #     # original OpenDrift names
+    #     dictC = {
+    #         k: {**dict1[v["od_mapping"]], **v}
+    #         if "od_mapping" in v and v["od_mapping"] in dict1.keys()
+    #         else {**v}
+    #         for k, v in dict2.items()
+    #         if "od_mapping" in v
+    #     }
 
-        # this step copies in parameter info from config_ptm to _config
-        self._config.update(dict2)
+    #     # this step copies in parameter info from config_ptm to _config
+    #     self._config.update(dict2)
 
-        # this step brings config overrides from config_model into the overall config
-        self._config.update(dictB)
-        # this step brings other model config (plus additions from mapped parameter config) into the overall config
-        self._config.update(dictC)
+    #     # this step brings config overrides from config_model into the overall config
+    #     self._config.update(dictB)
+    #     # this step brings other model config (plus additions from mapped parameter config) into the overall config
+    #     self._config.update(dictC)
 
     def all_export_variables(self):
         """Output list of all possible export variables."""
@@ -1323,10 +1087,10 @@ class OpenDriftModel(ParticleTrackingManager):
 
         if not self.state.has_added_reader:
             raise ValueError("reader has not been added yet.")
-        return self.o.env.readers[self.ocean_model].__dict__[key]
+        return self.o.env.readers[self.config.ocean_model].__dict__[key]
 
-    @property
-    def outfile_name(self):
-        """Output file name."""
+    # @property
+    # def outfile_name(self):
+    #     """Output file name."""
 
-        return self.o.outfile_name
+    #     return self.o.outfile_name

@@ -182,7 +182,7 @@ def main():
         m.seed()
         m.run()
 
-        print(m.outfile_name)
+        print(m.config.outfile_name)
 
     # # Remove the handler at the end of the loop
     # m.logger.removeHandler(file_handler)

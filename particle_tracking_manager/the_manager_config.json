@@ -185,7 +185,7 @@
         },
     "ocean_model_local": {
         "type": "bool",
-        "default": false,
+        "default": true,
         "ptm_level": 3,
         "description": "Set to True to use local version of known `ocean_model` instead of remote version."
     },
@@ -255,65 +255,16 @@
         "description": "Filename to save interpolator to. The full path should be given, but no suffix. Use this to either read from an existing file at a non-default location or to save to a non-default location. If None and use_cache==True, default name is used. ",
         "ptm_level": 3
     },
-    "radius": {
-        "type": "float",
-        "default": 1000.0,
-        "ptm_level": 2,
-        "min": 0.0,
-        "max": 1000000,
-        "units": "m",
-        "description": "Radius around each lon-lat pair, within which particles will be randomly seeded. This is used by function `seed_elements`."
-    },
-    "radius_type": {
-        "type": "enum",
-        "enum": [
-            "gaussian",
-            "uniform"
-        ],
-        "default": "gaussian",
-        "ptm_level": 3,
-        "description": "If 'gaussian' (default), the radius is the standard deviation in x-y-directions. If 'uniform', elements are spread evenly and always inside a circle with the given radius. This is used by function `seed_elements`."
-    },
     "wind_drift_factor": {
         "type": "float",
         "default": 0.02,
         "ptm_level": 2,
         "od_mapping": "seed:wind_drift_factor"
     },
-    "diffusivitymodel": {
-        "type": "str",
-        "default": "windspeed_Large1994",
-        "od_mapping": "vertical_mixing:diffusivitymodel",
-        "ptm_level": 3
-    },
     "stokes_drift": {
         "type": "bool",
         "default": true,
         "od_mapping": "drift:stokes_drift",
-        "ptm_level": 2
-    },
-    "use_auto_landmask": {
-        "type": "bool",
-        "default": false,
-        "od_mapping": "general:use_auto_landmask",
-        "ptm_level": 3
-    },
-    "mixed_layer_depth": {
-        "type": "float",
-        "default": 30,
-        "od_mapping": "environment:fallback:ocean_mixed_layer_thickness",
-        "ptm_level": 3
-    },
-    "coastline_action": {
-        "type": "str",
-        "default": "previous",
-        "od_mapping": "general:coastline_action",
-        "ptm_level": 2
-    },
-    "seafloor_action": {
-        "type": "str",
-        "default": "previous",
-        "od_mapping": "general:seafloor_action",
         "ptm_level": 2
     },
     "horizontal_diffusivity": {
@@ -322,39 +273,16 @@
         "od_mapping": "drift:horizontal_diffusivity",
         "ptm_level": 2
     },
-    "current_uncertainty": {
-        "type": "float",
-        "default": 0,
-        "value": 0,
-        "od_mapping": "drift:current_uncertainty",
-        "ptm_level": 2
-    },
-    "wind_uncertainty": {
-        "type": "float",
-        "default": 0,
-        "value": 0,
-        "od_mapping": "drift:wind_uncertainty",
-        "ptm_level": 2
-    },
-    "wind_drift_depth": {
-        "type": "float",
-        "default": 0.02,
-        "od_mapping": "drift:wind_drift_depth",
-        "ptm_level": 3
-    },
-    "vertical_mixing_timestep": {
-        "type": "int",
-        "default": 60,
-        "od_mapping": "vertical_mixing:timestep",
-        "ptm_level": 3
-    },
-    "log": {
+    "log_level": {
         "type": "enum",
         "enum": [
-            "low",
-            "high"
+            "DEBUG",
+            "INFO",
+            "WARNING",
+            "ERROR",
+            "CRITICAL"
         ],
-        "default": "low",
+        "default": "INFO",
         "ptm_level": 3,
         "description": "Log verbosity"
     }
