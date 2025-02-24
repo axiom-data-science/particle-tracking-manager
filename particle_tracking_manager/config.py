@@ -1,101 +1,26 @@
 """Configuration setup for particle tracking manager."""
 
+"""Configuration setup for particle tracking manager."""
+
 import datetime
 import json
 import logging
 import pathlib
 from enum import Enum
-from typing import Any, ClassVar, Dict, Optional, Union
+from typing import Any, Dict, Optional, Union
 
 import xarray as xr
 from dateutil.parser import parse
 from pydantic import (
     BaseModel,
-    BeforeValidator,
     ConfigDict,
-    Extra,
     Field,
-    AfterValidator,
     create_model,
-    field_validator,
     model_validator,
-    validator,
 )
 from typing_extensions import Self
 
 from .utils import calc_known_horizontal_diffusivity
-
-
-
-# class LoggerConfig:
-#     """Logger configuration."""
-    
-#     def __init__(self):#, log_level: str):
-#         pass
-
-#     def assign_output_file_if_needed(self, value: Optional[str]) -> str: 
-#         if value is None:
-#             value = generate_default_output_file()
-#         return value
-
-#     def clean_output_file(self, value: str) -> str:
-#         value = value.replace(".nc", "").replace(".parquet", "").replace(".parq", "")
-#         return value    
-
-#     def close_loggers(self, logger):
-#         """Close and remove all handlers from the logger."""
-#         for handler in logger.handlers[:]:
-#             handler.close()
-#             logger.removeHandler(handler)
-
-#     def setup_logger(self, output_file: Optional[str], log_level: str) -> (logging.Logger, str):
-#         """Setup logger."""
-
-#         output_file = self.assign_output_file_if_needed(output_file)
-#         output_file = self.clean_output_file(output_file)
-#         # self.output_file = output_file
-
-#         logger = logging.getLogger(__package__)
-#         if logger.handlers:
-#             self.close_loggers(logger)
-            
-#         logger.setLevel(getattr(logging, log_level))
-
-#         # Add handlers from the main logger to the OpenDrift logger if not already added
-        
-#         # Create file handler to save log to file
-#         logfile_name = output_file + ".log"
-#         file_handler = logging.FileHandler(logfile_name)
-#         fmt = "%(asctime)s %(levelname)-7s %(name)s.%(module)s.%(funcName)s:%(lineno)d: %(message)s"
-#         datefmt = '%Y-%m-%d %H:%M:%S'
-#         formatter = logging.Formatter(fmt, datefmt)
-#         file_handler.setFormatter(formatter)
-#         logger.addHandler(file_handler)
-
-#         # Create stream handler
-#         stream_handler = logging.StreamHandler()
-#         stream_handler.setFormatter(formatter)
-#         logger.addHandler(stream_handler)
-        
-#         logger.info("Particle tracking manager simulation.")
-#         logger.info(f"Output filename: {output_file}")
-#         logger.info(f"Log filename: {logfile_name}")
-#         return logger, output_file
-
-#     def merge_with_opendrift_log(self, logger: logging.Logger) -> None:
-#         """Merge the OpenDrift logger with the main logger."""
-
-#         for logger_name in logging.root.manager.loggerDict:
-#             if logger_name.startswith("opendrift"):
-#                 od_logger = logging.getLogger(logger_name)
-#                 if od_logger.handlers:
-#                     self.close_loggers(od_logger)
-
-#                 # Add handlers from the main logger to the OpenDrift logger
-#                 for handler in logger.handlers:
-#                     od_logger.addHandler(handler)
-#                 od_logger.setLevel(logger.level)
-#                 od_logger.propagate = False
 
 
 class ParticleTrackingState(BaseModel):
@@ -109,10 +34,6 @@ class ParticleTrackingState(BaseModel):
 def load_config(file_path: str) -> Dict[str, Any]:
     with open(file_path, "r") as f:
         return json.load(f)
-
-
-def generate_default_output_file():
-    return f"output-results_{datetime.datetime.now():%Y-%m-%dT%H%M%SZ}"
 
 
 def calculate_CIOFSOP_max():
@@ -215,8 +136,7 @@ def add_special_fields_and_validators_manager(fields: Dict[str, Any], validators
 
     @model_validator(mode="after")
     def assign_output_file_initial(self) -> Self:
-        self.output_file_initial = str(pathlib.Path(f"{self.output_file}_initial"))#.with_suffix(".nc"))
-        print("\nNOTE: ", self.output_file_initial, self.output_file, "\n")
+        self.output_file_initial = str(pathlib.Path(f"{self.output_file}_initial"))
         return self
 
     @model_validator(mode='after')
@@ -393,6 +313,18 @@ def add_special_fields_and_validators_manager(fields: Dict[str, Any], validators
 
         return self
     
+    @model_validator(mode='after')
+    def check_config_ocean_model_local(self) -> Self:
+        if self.ocean_model_local:
+            self.logger.info(
+                f"Using local output for ocean_model {self.ocean_model}"
+            )
+        else:
+            self.logger.info(
+                f"Using remote output for ocean_model {self.ocean_model}"
+            )
+        return self
+    
     # validators["assign_output_file_if_needed"] = assign_output_file_if_needed
     # validators["clean_output_file"] = clean_output_file
     validators["assign_output_file_initial"] = assign_output_file_initial
@@ -425,26 +357,6 @@ def create_manager_pydantic_model(config: Dict[str, Any], add_special_fields_and
                          **fields
 )
     return model
-
-
-
-
-# def setup_ptm_config():
-#     """Setup PTMConfig and OpenDriftConfig."""
-#     # Read PTM configuration information
-#     config_path = pathlib.Path(__file__).parent / "the_manager_config.json"
-#     config_data = load_config(config_path)
-#     PTMConfig = create_manager_pydantic_model(config_data, add_special_fields_and_validators_manager, "PTMConfig", dict(__config__=ConfigDict(use_enum_values=True)))
-#     return PTMConfig
-#     # # Read OpenDrift configuration file
-#     # opendrift_config_path = pathlib.Path(__file__).parent / "models" / "opendrift" / "config.json"
-#     # opendrift_config_data = load_config(opendrift_config_path)
-#     # OpenDriftConfig = create_manager_pydantic_model(opendrift_config_data, add_special_fields_and_validators_opendrift, "OpenDriftConfig", {"__base__": PTMConfig})
-
-#     # return PTMConfig, OpenDriftConfig, _KNOWN_MODELS
-
-# PTMConfig = setup_ptm_config()
-# _KNOWN_MODELS = PTMConfig.model_fields["ocean_model"].json_schema_extra["enum"]
 
 
 # Read PTM configuration information
@@ -487,20 +399,7 @@ def add_special_fields_and_validators_opendrift(fields: Dict[str, Any], validato
         return self    
 
 
-
-
-
-
 # Read OpenDrift configuration file
 opendrift_config_path = pathlib.Path(__file__).parent / "models" / "opendrift" / "config.json"
 opendrift_config_data = load_config(opendrift_config_path)
 OpenDriftConfig = create_manager_pydantic_model(opendrift_config_data, add_special_fields_and_validators_opendrift, "OpenDriftConfig", {"__base__": PTMConfig})#, "__config__": ConfigDict(extra=Extra.forbid)})
-# # Add a custom __init__ method for OpenDriftConfig
-# def custom_init(self, **kwargs):
-#     # Custom initialization logic
-#     super(OpenDriftConfig, self).__init__(**kwargs)
-#     # print(f"OpenDriftConfig initialized with param1={self.param1}, param2={self.param2}, additional_param={self.additional_param}")
-
-# # Attach the custom __init__ to the dynamically created model
-# OpenDriftConfig.__init__ = custom_init
-

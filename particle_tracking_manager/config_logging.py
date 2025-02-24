@@ -1,9 +1,7 @@
 
-import logging
-from typing import Any, ClassVar, Dict, Optional, Union
 import datetime
-from pydantic import BaseModel, Field
-
+import logging
+from typing import Optional
 
 def generate_default_output_file():
     return f"output-results_{datetime.datetime.now():%Y-%m-%dT%H%M%SZ}"

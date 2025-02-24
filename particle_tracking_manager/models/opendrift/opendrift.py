@@ -7,16 +7,12 @@ import logging
 import os
 import platform
 import tempfile
-
-import appdirs
 from pathlib import Path
 from typing import Optional, Union
 
-# using my own version of ROMS reader
-# from .reader_ROMS_native import Reader
+import appdirs
 import pandas as pd
 import xarray as xr
-
 from opendrift.models.larvalfish import LarvalFish
 from opendrift.models.leeway import Leeway
 from opendrift.models.oceandrift import OceanDrift
@@ -27,10 +23,8 @@ from ...cli import is_None
 from ...config import OpenDriftConfig, _KNOWN_MODELS
 from ...the_manager import ParticleTrackingManager
 from ...config_logging import LoggerConfig
-
 from .plot import check_plots, make_plots
 from .utils import make_ciofs_kerchunk, make_nwgoa_kerchunk
-
 
 class OpenDriftModel(ParticleTrackingManager):
     """Open drift particle tracking model.
@@ -136,6 +130,8 @@ class OpenDriftModel(ParticleTrackingManager):
         # TODO: I think there is no reason to have "model" defined in the_manager_config.json since the 
         # model object is used to instantiate the combined object.
         
+        # OpenDriftConfig, _KNOWN_MODELS = setup_opendrift_config(**kwargs)
+        
         # Initialize the parent class
         # This sets up the logger and ParticleTrackingState.
         super().__init__(**kwargs)
@@ -158,7 +154,51 @@ class OpenDriftModel(ParticleTrackingManager):
         # self.__dict__["output_format"] = output_format
 
         LoggerConfig().merge_with_opendrift_log(self.logger)
+        
+        self._create_opendrift_model_object()
+        self._modify_opendrift_model_object()
 
+        # # Extra keyword parameters are not currently allowed so they might be a typo
+        # if len(self.kw) > 0:
+        #     raise KeyError(f"Unknown input parameter(s) {self.kw} input.")
+
+        # Note that you can see configuration possibilities for a given model with
+        # o.list_configspec()
+        # You can check the metadata for a given configuration with (min/max/default/type)
+        # o.get_configspec('vertical_mixing:timestep')
+        # You can check required variables for a model with
+        # o.required_variables
+
+        # TODO: streamline this
+        self.checked_plot = False
+        
+        # TODO: move ocean_model setup to another function/class
+        # TODO: setup OpenDrift config and how to blend with this config
+
+
+    def _setup_interpolator(self):
+        """Setup interpolator."""
+        if self.config.use_cache:
+            cache_dir = Path(appdirs.user_cache_dir(appname="particle-tracking-manager", appauthor="axiom-data-science"))
+            cache_dir.mkdir(parents=True, exist_ok=True)
+            if self.config.interpolator_filename is None:
+                self.config.interpolator_filename = cache_dir / Path(f"{self.config.ocean_model}_interpolator").with_suffix(".pickle")
+            else:
+                self.config.interpolator_filename = Path(self.config.interpolator_filename).with_suffix(".pickle")
+            self.save_interpolator = True
+            
+            # change interpolator_filename to string
+            self.config.interpolator_filename = str(self.config.interpolator_filename)
+            
+            if Path(self.config.interpolator_filename).exists():
+                self.logger.info(f"Loading the interpolator from {self.config.interpolator_filename}.")
+            else:
+                self.logger.info(f"A new interpolator will be saved to {self.config.interpolator_filename}.")
+        else:
+            self.save_interpolator = False
+            self.logger.info("Interpolators will not be saved.")
+
+    def _create_opendrift_model_object(self):
         # do this right away so I can query the object
         # we don't actually input output_format here because we first output to netcdf, then
         # resave as parquet after adding in extra config
@@ -188,26 +228,7 @@ class OpenDriftModel(ParticleTrackingManager):
         
         self.o = o
 
-        # self.__dict__["logger"] = logging.getLogger(
-        #     model
-        # )  # use this syntax to avoid __setattr__
-
-        # # Extra keyword parameters are not currently allowed so they might be a typo
-        # if len(self.kw) > 0:
-        #     raise KeyError(f"Unknown input parameter(s) {self.kw} input.")
-
-        # Note that you can see configuration possibilities for a given model with
-        # o.list_configspec()
-        # You can check the metadata for a given configuration with (min/max/default/type)
-        # o.get_configspec('vertical_mixing:timestep')
-        # You can check required variables for a model with
-        # o.required_variables
-
-        # TODO: streamline this
-        self.checked_plot = False
-        
-        # TODO: move ocean_model setup to another function/class
-        
+    def _modify_opendrift_model_object(self):
         
         # TODO: where to put these things
         # turn on other things if using stokes_drift
@@ -226,42 +247,11 @@ class OpenDriftModel(ParticleTrackingManager):
         if not self.config.do3D and self.config.drift_model != "Leeway":
             self.o.set_config("drift:vertical_advection", False)
             self.logger.info("Disabling vertical advection.")
-        
-         
 
         # If 3D simulation, turn on vertical advection
         if self.config.do3D:
             self.o.set_config("drift:vertical_advection", True)
             self.logger.info("do3D is True so turning on vertical advection.")
-
-        # TODO: setup OpenDrift config and how to blend with this config
-
-        # for handler in self.logger.handlers[:]:
-        #     handler.close()
-        #     self.logger.removeHandler(handler)
-
-
-    def _setup_interpolator(self):
-        """Setup interpolator."""
-        if self.config.use_cache:
-            cache_dir = Path(appdirs.user_cache_dir(appname="particle-tracking-manager", appauthor="axiom-data-science"))
-            cache_dir.mkdir(parents=True, exist_ok=True)
-            if self.config.interpolator_filename is None:
-                self.config.interpolator_filename = cache_dir / Path(f"{self.config.ocean_model}_interpolator").with_suffix(".pickle")
-            else:
-                self.config.interpolator_filename = Path(self.config.interpolator_filename).with_suffix(".pickle")
-            self.save_interpolator = True
-            
-            # change interpolator_filename to string
-            self.config.interpolator_filename = str(self.config.interpolator_filename)
-            
-            if Path(self.config.interpolator_filename).exists():
-                self.logger.info(f"Loading the interpolator from {self.config.interpolator_filename}.")
-            else:
-                self.logger.info(f"A new interpolator will be saved to {self.config.interpolator_filename}.")
-        else:
-            self.save_interpolator = False
-            self.logger.info("Interpolators will not be saved.")
 
 
     def add_reader(
@@ -310,14 +300,8 @@ class OpenDriftModel(ParticleTrackingManager):
             # kwargs_xarray = dict()
 
         elif self.config.ocean_model is not None or ds is not None:
-            if self.config.ocean_model_local:
-                self.logger.info(
-                    f"Using local output for ocean_model {self.config.ocean_model}"
-                )
-            else:
-                self.logger.info(
-                    f"Using remote output for ocean_model {self.config.ocean_model}"
-                )
+            
+            # TODO: should I change to computed_fields and where should this go?
 
             # set drop_vars initial values based on the PTM settings, then add to them for the specific model
             drop_vars = []
