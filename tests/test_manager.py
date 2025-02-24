@@ -10,21 +10,24 @@ import pytest
 # import particle_tracking_manager as ptm
 from particle_tracking_manager.the_manager import ParticleTrackingManager
 from pydantic import ValidationError
-from particle_tracking_manager.config import PTMConfig
+from particle_tracking_manager.config_replacement import PTMConfig
 
 
 class TestConfig(PTMConfig):
     pass
 
 
-# Set up a subclass for testing
+# Set up a subclass for testing. This is meant to be a simple version of the
+# OpenDriftModel.
 class TestParticleTrackingManager(ParticleTrackingManager):
     
     def __init__(self, **kwargs):
         # import pdb; pdb.set_trace()
-        super().__init__(**kwargs)
-        kwargs.update({"output_file": self.output_file})
+
         self.config = TestConfig(**kwargs)
+        self.logger = self.config.logger  # this is where logger is expected to be found
+        super().__init__(**kwargs)
+        # kwargs.update({"output_file": self.output_file})
         
     def add_reader(self):
         pass

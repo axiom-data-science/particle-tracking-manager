@@ -145,18 +145,18 @@ def add_special_fields_and_validators_manager(fields: Dict[str, Any], validators
             raise ValueError("If interpolator_filename is input, use_cache must be True.")
         return self
 
-    @model_validator(mode="after")
-    def add_output_file_extension(self) -> Self:
-        if self.output_format is not None:
-            if self.output_format == "netcdf":
-                self.output_file = str(pathlib.Path(self.output_file).with_suffix(".nc"))
-                self.output_file_initial = str(pathlib.Path(self.output_file_initial).with_suffix(".nc"))
-            elif self.output_format == "parquet":
-                self.output_file = str(pathlib.Path(self.output_file).with_suffix(".parquet"))
-                self.output_file_initial = str(pathlib.Path(self.output_file_initial).with_suffix(".parquet"))
-            else:
-                raise ValueError(f"output_format {self.output_format} not recognized.")
-        return self
+    # @model_validator(mode="after")
+    # def add_output_file_extension(self) -> Self:
+    #     if self.output_format is not None:
+    #         if self.output_format == "netcdf":
+    #             self.output_file = str(pathlib.Path(self.output_file).with_suffix(".nc"))
+    #             self.output_file_initial = str(pathlib.Path(self.output_file_initial).with_suffix(".nc"))
+    #         elif self.output_format == "parquet":
+    #             self.output_file = str(pathlib.Path(self.output_file).with_suffix(".parquet"))
+    #             self.output_file_initial = str(pathlib.Path(self.output_file_initial).with_suffix(".parquet"))
+    #         else:
+    #             raise ValueError(f"output_format {self.output_format} not recognized.")
+    #     return self
 
     @model_validator(mode='after')
     def check_config_seed_flag_elements(self) -> Self:

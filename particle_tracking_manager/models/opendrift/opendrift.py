@@ -20,9 +20,10 @@ from opendrift.models.openoil import OpenOil
 from opendrift.readers import reader_ROMS_native
 
 from ...cli import is_None
-from ...config import OpenDriftConfig, _KNOWN_MODELS
+from ...config_replacement import OpenDriftConfig, _KNOWN_MODELS, LoggerMethods
+# from ...config import OpenDriftConfig, _KNOWN_MODELS
 from ...the_manager import ParticleTrackingManager
-from ...config_logging import LoggerConfig
+# from ...config_logging import LoggerConfig
 from .plot import check_plots, make_plots
 from .utils import make_ciofs_kerchunk, make_nwgoa_kerchunk
 
@@ -132,16 +133,18 @@ class OpenDriftModel(ParticleTrackingManager):
         
         # OpenDriftConfig, _KNOWN_MODELS = setup_opendrift_config(**kwargs)
         
-        # Initialize the parent class
-        # This sets up the logger and ParticleTrackingState.
-        super().__init__(**kwargs)
-        
         # OpenDriftConfig is a subclass of PTMConfig so it knows about all the
         # PTMConfig parameters. PTMConfig is run with OpenDriftConfig.
         # output_file was altered in PTM when setting up logger, so want to use
         # that version.
-        kwargs.update({"output_file": self.output_file})
+        # kwargs.update({"output_file": self.output_file})
         self.config = OpenDriftConfig(**kwargs)
+        self.logger = self.config.logger  # this is where logger is expected to be found
+
+        
+        # Initialize the parent class
+        # This sets up the logger and ParticleTrackingState.
+        super().__init__(**kwargs)
 
         self._setup_interpolator()
 
@@ -153,7 +156,7 @@ class OpenDriftModel(ParticleTrackingManager):
         # # need output_format defined right away
         # self.__dict__["output_format"] = output_format
 
-        LoggerConfig().merge_with_opendrift_log(self.logger)
+        LoggerMethods().merge_with_opendrift_log(self.logger)
         
         self._create_opendrift_model_object()
         self._modify_opendrift_model_object()

@@ -1,8 +1,9 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
 
-from .config import PTMConfig, ParticleTrackingState, config_data
-from .config_logging import LoggerConfig
+from .config_replacement import PTMConfig, ParticleTrackingState, config_data
+# from .config import PTMConfig, ParticleTrackingState, config_data
+# from .config_logging import LoggerConfig
 
 
 class ParticleTrackingManager(ABC):
@@ -128,12 +129,16 @@ class ParticleTrackingManager(ABC):
     # since won't be able to anymore
 
     def __init__(self, **kwargs):
+        
+        # self.files = SetupOutputFiles(**kwargs)
 
-        # output_file is processed in setup_logger() so it is put into kwargs so it can be subsequently
-        # used in PTMConfig. This is not ideal to have one configuration parameter dealt with first but makes it so 
-        # that the logger can be set up before the rest of the configuration is processed and used during configuration.
-        self.logger, self.output_file = LoggerConfig().setup_logger(output_file=kwargs.get("output_file", config_data["output_file"]["default"]), 
-                                                                         log_level=kwargs.get("log_level", config_data["log_level"]["default"]))
+        # # output_file is processed in setup_logger() so it is put into kwargs so it can be subsequently
+        # # used in PTMConfig. This is not ideal to have one configuration parameter dealt with first but makes it so 
+        # # that the logger can be set up before the rest of the configuration is processed and used during configuration.
+        # self.logger = LoggerConfig().setup_logger(output_file=self.files.output_file, 
+        #                                                             log_level=kwargs.get("log_level", config_data["log_level"]["default"]))
+        # self.logger, self.output_file = LoggerConfig().setup_logger(output_file=kwargs.get("output_file", config_data["output_file"]["default"]), 
+        #                                                             log_level=kwargs.get("log_level", config_data["log_level"]["default"]))
 
         self.logfile_name = Path(self.logger.handlers[0].baseFilename).name
         self.state = ParticleTrackingState()
