@@ -12,7 +12,7 @@
         "description": "Which model in OpenDrift to use. This corresponds to the type of drift scenario the user wants to run."
     },
     "export_variables": {
-        "default": "None",
+        "default": null,
         "ptm_level": 3,
         "type": "list",
         "description": "List of variables to export. Options available with `m.all_export_variables` for a given `drift_model`. ['lon', 'lat', 'ID', 'status', 'z'] will always be exported. Default of None means all possible variables are exported."
@@ -144,7 +144,7 @@
     },
     "plots": {
         "type": "dict",
-        "default": "None",
+        "default": null,
         "ptm_level": 1,
         "description": "Dictionary of plots to generate using OpenDrift. See OpenDrift documentation for available plots and syntax."
     },

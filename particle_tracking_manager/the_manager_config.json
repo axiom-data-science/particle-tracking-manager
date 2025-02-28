@@ -111,8 +111,8 @@
     "end_time": {
         "type": "datetime.datetime",
         "default": null,
-        "min": null,
-        "max": null,
+        "min": "1999-01-01T00:00:00",
+        "max": "CIOFSOP_max",
         "units": null,
         "description": "The end of the simulation. steps, end_time, or duration must be input by user.",
         "ptm_level": 1

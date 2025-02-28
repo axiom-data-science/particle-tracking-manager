@@ -4,10 +4,85 @@
 # copied to /mnt/vault/ciofs/HINDCAST/ciofs_kerchunk_to2012.json
 
 from pathlib import Path
+import xarray as xr
+import datetime
+import logging
+import pandas as pd
 
 import fsspec
 
 from kerchunk.combine import MultiZarrToZarr
+
+
+def narrow_dataset_to_simulation_time(ds: xr.Dataset, start_time: datetime.datetime, end_time: datetime.datetime) -> xr.Dataset:
+    """Narrow the dataset to the simulation time."""
+    try:
+        units = ds.ocean_time.attrs["units"]
+    except KeyError:
+        units = ds.ocean_time.encoding["units"]
+    datestr = units.split("since ")[1]
+    units_date = pd.Timestamp(datestr)
+
+    # narrow model output to simulation time if possible before sending to Reader
+    if start_time is not None and end_time is not None:
+        dt_model = float(
+            ds.ocean_time[1] - ds.ocean_time[0]
+        )  # time step of the model output in seconds
+        # want to include the next ocean model output before the first drifter simulation time
+        # in case it starts before model times
+        start_time_num = (
+            start_time - units_date
+        ).total_seconds() - dt_model
+        # want to include the next ocean model output after the last drifter simulation time
+        end_time_num = (end_time - units_date).total_seconds() + dt_model
+        ds = ds.sel(ocean_time=slice(start_time_num, end_time_num))
+
+        if len(ds.ocean_time) == 0:
+            raise ValueError(
+                "No model output left for simulation time. Check start_time and end_time."
+            )
+        if len(ds.ocean_time) == 1:
+            raise ValueError(
+                "Only 1 model output left for simulation time. Check start_time and end_time."
+            )
+    else:
+        raise ValueError(
+            "start_time and end_time must be set to narrow model output to simulation time"
+        )
+    return ds
+
+def apply_known_ocean_model_specific_changes(ds: xr.Dataset, ocean_model: str, use_static_masks: bool) -> xr.Dataset:
+    """Apply ocean model specific changes to the dataset.
+
+    This includes renaming variables, adding variables, etc.
+    """
+    # For NWGOA, need to calculate wetdry mask from a variable
+    if ocean_model == "NWGOA" and not use_static_masks:
+        ds["wetdry_mask_rho"] = (~ds.zeta.isnull()).astype(int)
+
+    # For CIOFSOP need to rename u/v to have "East" and "North" in the variable names
+    # so they aren't rotated in the ROMS reader (the standard names have to be x/y not east/north)
+    elif ocean_model == "CIOFSOP":
+        ds = ds.rename_vars({"urot": "u_eastward", "vrot": "v_northward"})
+    return ds
+
+def apply_user_input_ocean_model_specific_changes(ds: xr.Dataset, ocean_model: str) -> xr.Dataset:
+    """Apply user input ocean model specific changes to the dataset.
+
+    This includes renaming variables, adding variables, etc.
+    """
+
+    # check for case that self.config.use_static_masks False (which is the default)
+    # but user input doesn't have wetdry masks
+    # then raise exception and tell user to set use_static_masks True
+    if "wetdry_mask_rho" not in ds.data_vars and not self.config.use_static_masks:
+        raise ValueError(
+            "User input does not have wetdry_mask_rho variable. Set use_static_masks True to use static masks instead."
+        )
+
+    ds = ds.drop_vars(self.config.drop_vars, errors="ignore")
+    
+    return ds
 
 
 def make_ciofs_kerchunk(start, end, name):

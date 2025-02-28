@@ -1,10 +1,20 @@
 from abc import ABC, abstractmethod
-from pathlib import Path
+# from pathlib import Path
 
-from .config_replacement import PTMConfig, ParticleTrackingState, config_data
+from .the_manager_config import TheManagerConfig
+from .config_replacement import ParticleTrackingState, SetupOutputFiles, LoggerMethods
+# from .config_replacement import PTMConfig, ParticleTrackingState, config_data
 # from .config import PTMConfig, ParticleTrackingState, config_data
 # from .config_logging import LoggerConfig
+from .ocean_model_config import SetupNWGOA
+from pydantic import BaseModel
+import logging
 
+logger = logging.getLogger(__name__)
+
+
+# class PTMConfig(BaseModel):
+#     pass
 
 class ParticleTrackingManager(ABC):
     """Manager class that controls particle tracking model.
@@ -128,9 +138,47 @@ class ParticleTrackingManager(ABC):
     # TODO: update docs and tests to not demonstrate doing things in steps
     # since won't be able to anymore
 
-    def __init__(self, **kwargs):
+    """
+    user_input_config
+        ocean_model
+        lat
+        lon
+        polygon
+        ...
+    
+    """
+    # ocean_model
+    # lat/lon
+    # Polygon
+
+
+
+    def __init__(self, #user_config: UserConfig, 
+                #  output_file,
+                 **kwargs):
         
-        # self.files = SetupOutputFiles(**kwargs)
+        # Set up strings for the output files, which will be used in Logger setup and for all other output files.
+        inputs = {key: kwargs[key] for key in ["output_file", "output_format"] if key in kwargs}
+        self.files = SetupOutputFiles(**inputs)
+
+        # Setup logging, this also contains the log_level parameter
+        logger = LoggerMethods().setup_logger(output_file=self.files.output_file)
+        # TODO: check logger files
+        
+        # inputs = {key: kwargs[key] for key in ["ocean_model"] if key in kwargs}
+        # self.ocean_models = OceanModelConfig(inputs)
+        
+        self.manager_config = TheManagerConfig(**kwargs)
+        
+        inputs = {key: getattr(self.manager_config,key) for key in ["start_time", "end_time", "lat", "lon", "ocean_model_local"]}
+        self.ocean_model = SetupNWGOA(**inputs)
+
+
+        # self.config = config
+        
+        
+        # self.logger = PTMConfig(logger=self.logger, output_file_config=dict(output_file=self.files.output_file,
+        #                                                     output_format=kwargs.get("output_format", config_data["output_format"]["default"]),))
 
         # # output_file is processed in setup_logger() so it is put into kwargs so it can be subsequently
         # # used in PTMConfig. This is not ideal to have one configuration parameter dealt with first but makes it so 
@@ -140,64 +188,64 @@ class ParticleTrackingManager(ABC):
         # self.logger, self.output_file = LoggerConfig().setup_logger(output_file=kwargs.get("output_file", config_data["output_file"]["default"]), 
         #                                                             log_level=kwargs.get("log_level", config_data["log_level"]["default"]))
 
-        self.logfile_name = Path(self.logger.handlers[0].baseFilename).name
+        # self.logfile_name = Path(self.logger.handlers[0].baseFilename).name
         self.state = ParticleTrackingState()
         
         # TODO: alphabetize config files
         # TODO: update docstrings
     
 
+    # @abstractmethod
+    # def add_reader(self, **kwargs):
+    #     """Here is where the model output is opened.
+        
+    #     Subclasses must implement this method and:
+        
+    #     * Set `self.has_added_reader = True` at the end of the method.
+    #     """
+    #     pass
+
+    # # TODO: change methods to _methods as appropriate
+
+    # @abstractmethod
+    # def seed(self, lon=None, lat=None, z=None):
+    #     """Initialize the drifters in space and time.
+        
+    #     Subclasses must implement this method and:
+        
+    #     * Raise a ValueError if not self.has_added_reader
+    #     * Set `self.has_run_seeding = True` at the end of the method.
+    #     """
+    #     pass
+
     @abstractmethod
-    def add_reader(self, **kwargs):
-        """Here is where the model output is opened.
+    def run_all(self):
+        """Call all methods necessary for model run.
         
         Subclasses must implement this method and:
         
-        * Set `self.has_added_reader = True` at the end of the method.
-        """
-        pass
-
-    # TODO: change methods to _methods as appropriate
-
-    @abstractmethod
-    def seed(self, lon=None, lat=None, z=None):
-        """Initialize the drifters in space and time.
-        
-        Subclasses must implement this method and:
-        
-        * Raise a ValueError if not self.has_added_reader
-        * Set `self.has_run_seeding = True` at the end of the method.
-        """
-        pass
-
-    @abstractmethod
-    def run(self):
-        """Call model run function.
-        
-        Subclasses must implement this method and:
-        
-        * Raise a ValueError if not self.has_run_seeding
+        * Include a log entry stating basic information about the run.
         * Set `self.has_run = True` at the end of the method.
         * Should close the file handler and logger.
         """
         pass
 
-    def run_all(self):
-        """Run all steps."""
-        if not self.state.has_added_reader:
-            self.add_reader()
-        if not self.state.has_run_seeding:
-            self.seed()
-        if not self.state.has_run:
-            self.run()
+    # def run_all(self):
+    #     """Run all steps."""
+    #     if not self.state.has_added_reader:
+    #         self.add_reader()
+    #     if not self.state.has_run_seeding:
+    #         self.seed()
+    #     if not self.state.has_run:
+    #         self.run()
 
     # def output(self):
     #     """Hold for future output function."""
     #     pass
 
     @abstractmethod
-    def _config(self):
-        """Model should have its own version which returns variable config."""
+    def _model_config(self):
+        """Model (like OpenDrift) should have its own config."""
         pass
 
     # @abstractmethod
@@ -214,17 +262,21 @@ class ParticleTrackingManager(ABC):
     #     """Update configuration between model, PTM additions, and model additions."""
     #     self._add_ptm_config()
     #     self._add_model_config()
+    
+    # TODO: which methods should be abstract
 
     @abstractmethod
-    def show_config_model(self):
-        """Define in child class."""
+    def show_all_config(self):
+        """Show all configuration, combined.
+        
+        Define in child class."""
         pass
 
-    def show_config(self, **kwargs) -> dict:
-        """Show parameter configuration across both model and PTM."""
-        # self._update_config()
-        config = self.show_config_model(**kwargs)
-        return config
+    # def show_config(self, **kwargs) -> dict:
+    #     """Show parameter configuration across both model and PTM."""
+    #     # self._update_config()
+    #     config = self.show_config_model(**kwargs)
+    #     return config
 
     @abstractmethod
     def reader_metadata(self, key):
@@ -252,3 +304,6 @@ class ParticleTrackingManager(ABC):
     # def outfile_name(self):
     #     """Output file name."""
     #     pass
+
+# simulation_config = PTMConfig(...)
+# simulation = ParticleTrackingManager(config=simulation_config)
