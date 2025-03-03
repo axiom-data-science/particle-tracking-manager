@@ -32,7 +32,9 @@ def narrow_dataset_to_simulation_time(ds: xr.Dataset, start_time: datetime.datet
         # in case it starts before model times
         start_time_num = (
             start_time - units_date
-        ).total_seconds() - dt_model
+        ).total_seconds()
+        if start_time_num > dt_model:
+            start_time_num -= dt_model
         # want to include the next ocean model output after the last drifter simulation time
         end_time_num = (end_time - units_date).total_seconds() + dt_model
         ds = ds.sel(ocean_time=slice(start_time_num, end_time_num))
@@ -113,21 +115,23 @@ def make_ciofs_kerchunk(start, end, name):
     fs2 = fsspec.filesystem("")  # local file system to save final jsons to
 
     # select the single file Jsons to combine
-    json_list = sorted(
-        fs2.glob(f"{output_dir_single_files}/*.json")
-    )  # combine single json files
+    # json_list = sorted(
+    #     fs2.glob(f"{output_dir_single_files}/*.json")
+    # )  # combine single json files
 
     if name in ["ciofs", "ciofs_fresh"]:
-        json_list = sorted(
-            fs2.glob(f"{output_dir_single_files}/*.json")
-        )  # combine single json files
+        json_list = fs2.glob(f"{output_dir_single_files}/*.json")
+        # json_list = sorted(
+        #     fs2.glob(f"{output_dir_single_files}/*.json")
+        # )  # combine single json files
         json_list = [
             j for j in json_list if Path(j).stem >= start and Path(j).stem <= end
         ]
     elif name == "aws_ciofs_with_angle":
-        json_list = sorted(
-            fs2.glob(f"{output_dir_single_files}/ciofs_*.json")
-        )  # combine single json files
+        json_list = fs2.glob(f"{output_dir_single_files}/ciofs_*.json")
+        # json_list = sorted(
+        #     fs2.glob(f"{output_dir_single_files}/ciofs_*.json")
+        # )  # combine single json files
         json_list = [
             j
             for j in json_list
@@ -275,9 +279,10 @@ def make_nwgoa_kerchunk(start, end):
     fs2 = fsspec.filesystem("")  # local file system to save final jsons to
 
     # select the single file Jsons to combine
-    json_list = sorted(
-        fs2.glob(f"{output_dir_single_files}/nwgoa*.json")
-    )  # combine single json files
+    json_list = fs2.glob(f"{output_dir_single_files}/nwgoa*.json")  # combine single json files
+    # json_list = sorted(
+    #     fs2.glob(f"{output_dir_single_files}/nwgoa*.json")
+    # )  # combine single json files
     json_list = [
         j
         for j in json_list

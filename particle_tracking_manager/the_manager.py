@@ -1,20 +1,18 @@
 from abc import ABC, abstractmethod
-# from pathlib import Path
 
-from .the_manager_config import TheManagerConfig
-from .config_replacement import ParticleTrackingState, SetupOutputFiles, LoggerMethods
-# from .config_replacement import PTMConfig, ParticleTrackingState, config_data
-# from .config import PTMConfig, ParticleTrackingState, config_data
-# from .config_logging import LoggerConfig
-from .ocean_model_config import SetupNWGOA
+from .config_the_manager import TheManagerConfig
+from .config_misc import ParticleTrackingState, SetupOutputFiles
+from .config_logging import LoggerMethods
+from .config_ocean_model import select_ocean_model
 from pydantic import BaseModel
 import logging
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger()
 
+# Set log levels for third paries to WARNING
+logging.getLogger('fsspec').setLevel(logging.WARNING)
+logging.getLogger('kerchunk').setLevel(logging.WARNING)
 
-# class PTMConfig(BaseModel):
-#     pass
 
 class ParticleTrackingManager(ABC):
     """Manager class that controls particle tracking model.
@@ -162,16 +160,20 @@ class ParticleTrackingManager(ABC):
         self.files = SetupOutputFiles(**inputs)
 
         # Setup logging, this also contains the log_level parameter
-        logger = LoggerMethods().setup_logger(output_file=self.files.output_file)
+        inputs = {key: kwargs[key] for key in ["log_level"] if key in kwargs}
+        LoggerMethods(**inputs).setup_logger(logfile_name=self.files.logfile_name)
+        # logger = LoggerMethods(**inputs).setup_logger(logfile_name=self.files.logfile_name)
         # TODO: check logger files
+        # import pdb; pdb.set_trace()
         
         # inputs = {key: kwargs[key] for key in ["ocean_model"] if key in kwargs}
         # self.ocean_models = OceanModelConfig(inputs)
-        
         self.manager_config = TheManagerConfig(**kwargs)
         
-        inputs = {key: getattr(self.manager_config,key) for key in ["start_time", "end_time", "lat", "lon", "ocean_model_local"]}
-        self.ocean_model = SetupNWGOA(**inputs)
+        keys = ["start_time", "end_time", "lat", "lon", "ocean_model_local", "ocean_model", "timedir"]
+        inputs = {key: getattr(self.manager_config,key) for key in keys}
+        self.ocean_model = select_ocean_model(**inputs)
+        # self.ocean_model = SetupNWGOA(**inputs)
 
 
         # self.config = config
