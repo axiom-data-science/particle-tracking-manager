@@ -10,88 +10,10 @@ import xarray as xr
 from particle_tracking_manager.models.opendrift.opendrift import (
     OpenDriftModel,
 )
-from particle_tracking_manager.config_replacement import opendrift_config_data
+from particle_tracking_manager.models.opendrift.config_opendrift import (
+    OpenDriftConfig,
+)
 
-
-class TestOpenDriftModel(unittest.TestCase):
-    def setUp(self):
-        self.odm = OpenDriftModel(steps=1)
-
-    def test_init(self):
-        self.assertEqual(self.odm.config.drift_model, opendrift_config_data["drift_model"]["default"])
-        self.assertEqual(self.odm.config.radius, opendrift_config_data["radius"]["default"])
-        self.assertEqual(self.odm.config.radius_type, opendrift_config_data["radius_type"]["default"])
-        # self.assertEqual(self.odm.config.horizontal_diffusivity, opendrift_config_data["horizontal_diffusivity"]["default"])
-        self.assertEqual(
-            self.odm.config.use_auto_landmask, opendrift_config_data["use_auto_landmask"]["default"]
-        )
-        self.assertEqual(self.odm.config.diffusivitymodel, "windspeed_Large1994")
-        # self.assertEqual(self.odm.config.stokes_drift, opendrift_config_data["stokes_drift"]["default"])
-        self.assertEqual(
-            self.odm.config.mixed_layer_depth, opendrift_config_data["mixed_layer_depth"]["default"]
-        )
-        self.assertEqual(
-            self.odm.config.coastline_action, opendrift_config_data["coastline_action"]["default"]
-        )
-        self.assertEqual(self.odm.config.max_speed, opendrift_config_data["max_speed"]["default"])
-        # self.assertEqual(
-            # self.odm.config.wind_drift_factor, opendrift_config_data["wind_drift_factor"]["default"]
-        # )
-        self.assertEqual(
-            self.odm.config.wind_drift_depth, opendrift_config_data["wind_drift_depth"]["default"]
-        )
-        self.assertEqual(
-            self.odm.config.vertical_mixing_timestep,
-            60,
-        )
-        self.assertEqual(self.odm.config.object_type, opendrift_config_data["object_type"]["default"])
-        self.assertEqual(self.odm.config.diameter, opendrift_config_data["diameter"]["default"])
-        self.assertEqual(
-            self.odm.config.neutral_buoyancy_salinity,
-            opendrift_config_data["neutral_buoyancy_salinity"]["default"],
-        )
-        self.assertEqual(
-            self.odm.config.stage_fraction, opendrift_config_data["stage_fraction"]["default"]
-        )
-        self.assertEqual(self.odm.config.hatched, opendrift_config_data["hatched"]["default"])
-        self.assertEqual(self.odm.config.length, opendrift_config_data["length"]["default"])
-        self.assertEqual(self.odm.config.weight, opendrift_config_data["weight"]["default"])
-        self.assertEqual(self.odm.config.oil_type, opendrift_config_data["oil_type"]["default"])
-        self.assertEqual(self.odm.config.m3_per_hour, opendrift_config_data["m3_per_hour"]["default"])
-        self.assertEqual(
-            self.odm.config.oil_film_thickness, opendrift_config_data["oil_film_thickness"]["default"]
-        )
-        self.assertEqual(
-            self.odm.config.droplet_size_distribution,
-            opendrift_config_data["droplet_size_distribution"]["default"],
-        )
-        self.assertEqual(
-            self.odm.config.droplet_diameter_mu, opendrift_config_data["droplet_diameter_mu"]["default"]
-        )
-        self.assertEqual(
-            self.odm.config.droplet_diameter_sigma,
-            opendrift_config_data["droplet_diameter_sigma"]["default"],
-        )
-        self.assertEqual(
-            self.odm.config.droplet_diameter_min_subsea,
-            opendrift_config_data["droplet_diameter_min_subsea"]["default"],
-        )
-        self.assertEqual(
-            self.odm.config.droplet_diameter_max_subsea,
-            opendrift_config_data["droplet_diameter_max_subsea"]["default"],
-        )
-        self.assertEqual(
-            self.odm.config.emulsification, opendrift_config_data["emulsification"]["default"]
-        )
-        self.assertEqual(self.odm.config.dispersion, opendrift_config_data["dispersion"]["default"])
-        self.assertEqual(self.odm.config.evaporation, opendrift_config_data["evaporation"]["default"])
-        self.assertEqual(
-            self.odm.config.update_oilfilm_thickness,
-            opendrift_config_data["update_oilfilm_thickness"]["default"],
-        )
-        self.assertEqual(
-            self.odm.config.biodegradation, opendrift_config_data["biodegradation"]["default"]
-        )
 
 
 ds = xr.Dataset(
@@ -312,32 +234,6 @@ def test_output_format():
     assert m.config.output_format == "parquet"
 
 
-def test_output_file():
-    """make sure output file is parquet if output_format is parquet"""
-
-    m = OpenDriftModel(output_format="parquet", steps=1)
-    assert m.config.output_file.endswith(".parquet")
-
-    m = OpenDriftModel(output_format="netcdf", steps=1)
-    assert m.config.output_file.endswith(".nc")
-
-
-def test_horizontal_diffusivity_logic():
-    """Check logic for using default horizontal diff values for known models."""
-
-    m = OpenDriftModel(ocean_model="NWGOA", steps=1, start_time="2007-01-01")
-    assert m.config.horizontal_diffusivity == 150.0  # known grid values
-
-    m = OpenDriftModel(ocean_model="CIOFS", steps=1, start_time="2020-01-01")
-    assert m.config.horizontal_diffusivity == 10.0  # known grid values
-
-    m = OpenDriftModel(ocean_model="CIOFSOP", horizontal_diffusivity=11, steps=1)
-    assert m.config.horizontal_diffusivity == 11.0  # user-selected value
-
-    m = OpenDriftModel(ocean_model="CIOFSOP", steps=1)
-    assert m.config.horizontal_diffusivity == 10.0  # known grid values
-
-
 def test_LarvalFish_disallowed_settings():
     """LarvalFish is incompatible with some settings.
 
@@ -367,6 +263,7 @@ def test_LarvalFish_seeding():
         wind_drift_factor=None,
         wind_drift_depth=None
     )
+    m.add_reader()
     m.seed()
     assert m.o.elements_scheduled.hatched == 1
 

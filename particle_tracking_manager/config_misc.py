@@ -21,7 +21,7 @@ from pydantic import (
 from pydantic.fields import FieldInfo
 from typing_extensions import Self
 
-from .utils import calc_known_horizontal_diffusivity
+# from .utils import calc_known_horizontal_diffusivity
 from .models.opendrift.utils import make_nwgoa_kerchunk, make_ciofs_kerchunk
 from .config_the_manager import TheManagerConfig
 

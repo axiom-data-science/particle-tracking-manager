@@ -5,7 +5,7 @@
 
 from pathlib import Path
 import xarray as xr
-import datetime
+from datetime import datetime
 import logging
 import pandas as pd
 
@@ -14,7 +14,7 @@ import fsspec
 from kerchunk.combine import MultiZarrToZarr
 
 
-def narrow_dataset_to_simulation_time(ds: xr.Dataset, start_time: datetime.datetime, end_time: datetime.datetime) -> xr.Dataset:
+def narrow_dataset_to_simulation_time(ds: xr.Dataset, start_time: datetime, end_time: datetime) -> xr.Dataset:
     """Narrow the dataset to the simulation time."""
     try:
         units = ds.ocean_time.attrs["units"]
@@ -114,31 +114,37 @@ def make_ciofs_kerchunk(start, end, name):
 
     fs2 = fsspec.filesystem("")  # local file system to save final jsons to
 
-    # select the single file Jsons to combine
-    # json_list = sorted(
-    #     fs2.glob(f"{output_dir_single_files}/*.json")
-    # )  # combine single json files
-
     if name in ["ciofs", "ciofs_fresh"]:
-        json_list = fs2.glob(f"{output_dir_single_files}/*.json")
-        # json_list = sorted(
-        #     fs2.glob(f"{output_dir_single_files}/*.json")
-        # )  # combine single json files
-        json_list = [
-            j for j in json_list if Path(j).stem >= start and Path(j).stem <= end
-        ]
+    
+        # base for matching
+        def base_str(a_time):
+            return f"{output_dir_single_files}/{a_time}_*.json"
+        date_format = "%Y_0%j"
+
     elif name == "aws_ciofs_with_angle":
-        json_list = fs2.glob(f"{output_dir_single_files}/ciofs_*.json")
-        # json_list = sorted(
-        #     fs2.glob(f"{output_dir_single_files}/ciofs_*.json")
-        # )  # combine single json files
-        json_list = [
-            j
-            for j in json_list
-            if Path(j).stem.split("_")[1] >= start and Path(j).stem.split("_")[1] <= end
-        ]
+
+        # base for matching
+        def base_str(a_time):
+            return f"{output_dir_single_files}/ciofs_{a_time}-*.json"
+        date_format = "ciofs_%Y-%m-%d"
     else:
         raise ValueError(f"Name {name} not recognized")
+
+    # only glob start and end year files, order isn't important
+    json_list = fs2.glob(base_str(start[:4]))
+    if end[:4] != start[:4]:
+            json_list += fs2.glob(base_str(end[:4]))
+
+    # forward in time
+    if end[:4] > start[:4]:
+        json_list = [
+            j for j in json_list if datetime.strptime(Path(j).stem, date_format).isoformat() >= start and datetime.strptime(Path(j).stem, date_format).isoformat() <= end
+        ]
+    # backward in time
+    elif end[:4] < start[:4]:
+        json_list = [
+            j for j in json_list if datetime.strptime(Path(j).stem, date_format).isoformat() <= start and datetime.strptime(Path(j).stem, date_format).isoformat() >= end
+        ]
 
     if json_list == []:
         raise ValueError(
@@ -278,17 +284,26 @@ def make_nwgoa_kerchunk(start, end):
 
     fs2 = fsspec.filesystem("")  # local file system to save final jsons to
 
-    # select the single file Jsons to combine
-    json_list = fs2.glob(f"{output_dir_single_files}/nwgoa*.json")  # combine single json files
-    # json_list = sorted(
-    #     fs2.glob(f"{output_dir_single_files}/nwgoa*.json")
-    # )  # combine single json files
-    json_list = [
-        j
-        for j in json_list
-        if Path(j).stem.split("nwgoa_")[1] >= start
-        and Path(j).stem.split("nwgoa_")[1] <= end
-    ]
+    # base for matching
+    def base_str(a_time):
+        return f"{output_dir_single_files}/nwgoa_{a_time}-*.json"
+    date_format = "nwgoa_%Y-%m-%d"
+
+    # only glob start and end year files, order isn't important
+    json_list = fs2.glob(base_str(start[:4]))
+    if end[:4] != start[:4]:
+            json_list += fs2.glob(base_str(end[:4]))
+
+    # forward in time
+    if end[:4] > start[:4]:
+        json_list = [
+            j for j in json_list if datetime.strptime(Path(j).stem, date_format).isoformat() >= start and datetime.strptime(Path(j).stem, date_format).isoformat() <= end
+        ]
+    # backward in time
+    elif end[:4] < start[:4]:
+        json_list = [
+            j for j in json_list if datetime.strptime(Path(j).stem, date_format).isoformat() <= start and datetime.strptime(Path(j).stem, date_format).isoformat() >= end
+        ]
 
     if json_list == []:
         raise ValueError(

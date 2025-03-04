@@ -122,7 +122,7 @@ class OpenDriftConfig(BaseModel):
     
     wind_uncertainty: float = Field(default=0.0, value=0.0, od_mapping="drift:wind_uncertainty", ptm_level=2)
     
-    wind_drift_depth: float = Field(default=0.02, od_mapping="drift:wind_drift_depth", ptm_level=3)
+    wind_drift_depth: Optional[float] = Field(default=0.02, od_mapping="drift:wind_drift_depth", ptm_level=3)
     
     vertical_mixing_timestep: int = Field(default=60, od_mapping="vertical_mixing:timestep", ptm_level=3)
     

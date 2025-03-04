@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from .config_the_manager import TheManagerConfig
 from .config_misc import ParticleTrackingState, SetupOutputFiles
 from .config_logging import LoggerMethods
-from .config_ocean_model import select_ocean_model
+from .config_ocean_model import create_ocean_model
 from pydantic import BaseModel
 import logging
 
@@ -170,10 +170,20 @@ class ParticleTrackingManager(ABC):
         # self.ocean_models = OceanModelConfig(inputs)
         self.manager_config = TheManagerConfig(**kwargs)
         
-        keys = ["start_time", "end_time", "lat", "lon", "ocean_model_local", "ocean_model", "timedir"]
+        # keys = ["start_time", "end_time", "lat", "lon", "ocean_model_local"]#, "ocean_model"]
+        # inputs = {key: getattr(self.manager_config,key) for key in keys}
+        # # self.ocean_model = select_ocean_model(**inputs)
+        # # self.ocean_model = SetupNWGOA(**inputs)
+        inputs = {key: kwargs[key] for key in ["ocean_model"] if key in kwargs}
+        OceanModelConfig = create_ocean_model(**inputs)
+
+        keys = ["start_time", "end_time", "lat", "lon", "ocean_model_local"]#, "ocean_model"]
         inputs = {key: getattr(self.manager_config,key) for key in keys}
-        self.ocean_model = select_ocean_model(**inputs)
-        # self.ocean_model = SetupNWGOA(**inputs)
+        inputs.update({key: kwargs[key] for key in ["horizontal_diffusivity"] if key in kwargs})
+        self.ocean_model = OceanModelConfig(**inputs)
+
+
+        # self._KNOWN_MODELS = self.manager_config.model_json_schema()['$defs']['OceanModelEnum']["enum"]
 
 
         # self.config = config
@@ -267,12 +277,12 @@ class ParticleTrackingManager(ABC):
     
     # TODO: which methods should be abstract
 
-    @abstractmethod
-    def show_all_config(self):
-        """Show all configuration, combined.
+    # @abstractmethod
+    # def show_all_config(self):
+    #     """Show all configuration, combined.
         
-        Define in child class."""
-        pass
+    #     Define in child class."""
+    #     pass
 
     # def show_config(self, **kwargs) -> dict:
     #     """Show parameter configuration across both model and PTM."""
@@ -280,25 +290,25 @@ class ParticleTrackingManager(ABC):
     #     config = self.show_config_model(**kwargs)
     #     return config
 
-    @abstractmethod
-    def reader_metadata(self, key):
-        """Define in child class."""
-        pass
+    # @abstractmethod
+    # def reader_metadata(self, key):
+    #     """Define in child class."""
+    #     pass
 
     # @abstractmethod
     # def query_reader(self):
     #     """Define in child class."""
     #     pass
 
-    @abstractmethod
-    def all_export_variables(self):
-        """Output list of all possible export variables."""
-        pass
+    # @abstractmethod
+    # def all_export_variables(self):
+    #     """Output list of all possible export variables."""
+    #     pass
 
-    @abstractmethod
-    def export_variables(self):
-        """Output list of all actual export variables."""
-        pass
+    # @abstractmethod
+    # def export_variables(self):
+    #     """Output list of all actual export variables."""
+    #     pass
 
     # this is fully handled by the field output_file in PTMConfig
     # @property

@@ -16,6 +16,7 @@ import xarray as xr
 from opendrift.readers import reader_ROMS_native
 
 # from ...config_replacement import OpenDriftConfig
+from ...config_ocean_model import _KNOWN_MODELS
 from .config_opendrift import OpenDriftConfig
 from ...the_manager import ParticleTrackingManager
 from ...config_logging import LoggerMethods
@@ -148,15 +149,14 @@ class OpenDriftModel(ParticleTrackingManager):
         # output_file was altered in PTM when setting up logger, so want to use
         # that version.
         # kwargs.update({"output_file": self.output_file})
-        keys_from_the_manager = ["use_cache", "stokes_drift", "do3D", "wind_drift_factor", "use_static_masks", "vertical_mixing", "ocean_model"]
+        keys_from_the_manager = ["use_cache", "stokes_drift", "do3D", "wind_drift_factor", "use_static_masks", "vertical_mixing"]
         inputs = {key: getattr(self.manager_config,key) for key in keys_from_the_manager}
-        keys_from_ocean_model = ["model_drop_vars"]
+        keys_from_ocean_model = ["model_drop_vars", "ocean_model"]
         inputs.update({key: getattr(self.ocean_model,key) for key in keys_from_ocean_model})
+        inputs.update(kwargs)
         self.config = OpenDriftConfig(**inputs)  # this runs both OpenDriftConfig and PTMConfig
         # logger = self.config.logger  # this is where logger is expected to be found
         # import pdb; pdb.set_trace()
-
-        self._KNOWN_MODELS = self.manager_config.model_json_schema()['$defs']['OceanModelEnum']["enum"]
         
         # self._setup_interpolator()
 
@@ -170,6 +170,7 @@ class OpenDriftModel(ParticleTrackingManager):
 
         # LoggerMethods().merge_with_opendrift_log(logger)
         
+        # TODO: move these so they aren't initialized during __init__
         self._create_opendrift_model_object()
         self._update_od_config_from_this_config()
         self._modify_opendrift_model_object()
@@ -189,37 +190,11 @@ class OpenDriftModel(ParticleTrackingManager):
         self.checked_plot = False
 
 
-    # def _setup_interpolator(self):
-    #     """Setup interpolator."""
-    #     # TODO: this isn't working correctly at the moment
-
-    #     if self.config.use_cache:
-    #         # TODO: fix this for Ahmad
-    #         cache_dir = Path(appdirs.user_cache_dir(appname="particle-tracking-manager", appauthor="axiom-data-science"))
-    #         cache_dir.mkdir(parents=True, exist_ok=True)
-    #         if self.config.interpolator_filename is None:
-    #             self.config.interpolator_filename = cache_dir / Path(f"{self.manager_config.ocean_model.name}_interpolator").with_suffix(".pickle")
-    #         else:
-    #             self.config.interpolator_filename = Path(self.config.interpolator_filename).with_suffix(".pickle")
-    #         self.save_interpolator = True
-            
-    #         # change interpolator_filename to string
-    #         self.config.interpolator_filename = str(self.config.interpolator_filename)
-            
-    #         if Path(self.config.interpolator_filename).exists():
-    #             logger.info(f"Loading the interpolator from {self.config.interpolator_filename}.")
-    #         else:
-    #             logger.info(f"A new interpolator will be saved to {self.config.interpolator_filename}.")
-    #     else:
-    #         self.save_interpolator = False
-    #         logger.info("Interpolators will not be saved.")
-
     def _create_opendrift_model_object(self):
         # do this right away so I can query the object
         # we don't actually input output_format here because we first output to netcdf, then
         # resave as parquet after adding in extra config
         # TODO: should drift_model be instantiated in OpenDriftConfig or here?
-        # import pdb; pdb.set_trace()
         log_level = logger.level
         if self.config.drift_model == "Leeway":
             from opendrift.models.leeway import Leeway
@@ -259,7 +234,6 @@ class OpenDriftModel(ParticleTrackingManager):
         This uses the metadata key "od_mapping" to map from the PTM parameter
         name to the OpenDrift parameter name.
         """
-        # import pdb; pdb.set_trace()
 
         for key in self.config.model_fields:
             if getattr(self.config.model_fields[key], "json_schema_extra") is not None:
@@ -269,7 +243,6 @@ class OpenDriftModel(ParticleTrackingManager):
                         self.o._config[od_key]["value"] = getattr(self.config, key)
 
     def _modify_opendrift_model_object(self):
-        # import pdb; pdb.set_trace()
         
         # TODO: where to put these things
         # turn on other things if using stokes_drift
@@ -322,7 +295,7 @@ class OpenDriftModel(ParticleTrackingManager):
         # TODO: have standard_name_mapping as an initial input only with initial call to OpenDrift?
         # TODO: has ds as an initial input for user-input ds?
         if (
-            self.manager_config.ocean_model not in self._KNOWN_MODELS
+            self.manager_config.ocean_model not in _KNOWN_MODELS
             and self.manager_config.ocean_model != "test"
             and ds is None
         ):
@@ -350,7 +323,7 @@ class OpenDriftModel(ParticleTrackingManager):
         
         # TODO: the stuff in apply_user_input_ocean_model_specific_changes can be moved to OceanModelConfig
         # validation I think
-        if self.manager_config.ocean_model not in self._KNOWN_MODELS and self.manager_config.ocean_model != "test":
+        if self.manager_config.ocean_model not in _KNOWN_MODELS and self.manager_config.ocean_model != "test":
             ds = apply_user_input_ocean_model_specific_changes(ds, self.manager_config.use_static_mask)
 
         self.ds = ds

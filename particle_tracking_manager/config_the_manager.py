@@ -20,7 +20,7 @@ from pydantic import (
 from pydantic.fields import FieldInfo
 from typing_extensions import Self
 
-from .utils import calc_known_horizontal_diffusivity
+# from .utils import calc_known_horizontal_diffusivity
 from .models.opendrift.utils import make_nwgoa_kerchunk, make_ciofs_kerchunk
 import logging
 
@@ -53,22 +53,22 @@ class SeedFlagEnum(str, Enum):
 #     CRITICAL = "CRITICAL"
 
 
-# Enum for "ocean_model"
-class OceanModelEnum(str, Enum):
-    NWGOA = "NWGOA"
-    CIOFS = "CIOFS"
-    CIOFSOP = "CIOFSOP"
-    CIOFSFRESH = "CIOFSFRESH"
+# # Enum for "ocean_model"
+# class OceanModelEnum(str, Enum):
+#     NWGOA = "NWGOA"
+#     CIOFS = "CIOFS"
+#     CIOFSOP = "CIOFSOP"
+#     CIOFSFRESH = "CIOFSFRESH"
 
 
 class TheManagerConfig(BaseModel):
     model: ModelEnum = Field(ModelEnum.opendrift, description="Lagrangian model software to use for simulation.", ptm_level=1)
-    lon: float = Field(-151.0, ge=-180, le=180, description="Central longitude for seeding drifters. Only used if `seed_flag==\"elements\"`.", ptm_level=1, units="degrees_east")
-    lat: float = Field(58.0, ge=-90, le=90, description="Central latitude for seeding drifters. Only used if `seed_flag==\"elements\"`.", ptm_level=1, units="degrees_north")
+    lon: Optional[float] = Field(-151.0, ge=-180, le=180, description="Central longitude for seeding drifters. Only used if `seed_flag==\"elements\"`.", ptm_level=1, units="degrees_east")
+    lat: Optional[float] = Field(58.0, ge=-90, le=90, description="Central latitude for seeding drifters. Only used if `seed_flag==\"elements\"`.", ptm_level=1, units="degrees_north")
     geojson: Optional[dict] = Field(None, description="GeoJSON describing a polygon within which to seed drifters. To use this parameter, also have `seed_flag==\"geojson\"`.", ptm_level=1)
     seed_flag: SeedFlagEnum = Field(SeedFlagEnum.elements, description="Method for seeding drifters. Options are \"elements\" or \"geojson\". If \"elements\", seed drifters at or around a single point defined by lon and lat. If \"geojson\", seed drifters within a polygon described by a GeoJSON object.", ptm_level=1)
     number: int = Field(100, description="Number of drifters to seed.", ptm_level=1, od_mapping="seed:number")
-    start_time: datetime = Field(datetime(2022,1,1), description="Start time for drifter simulation.", ptm_level=1)
+    start_time: Optional[datetime] = Field(datetime(2022,1,1), description="Start time for drifter simulation.", ptm_level=1)
     start_time_end: Optional[datetime] = Field(None, description="If used, this creates a range of start times for drifters, starting with `start_time` and ending with `start_time_end`. Drifters will be initialized linearly between the two start times.", ptm_level=2)
     run_forward: bool = Field(True, description="Run forward in time.", ptm_level=2)
     time_step: int = Field(300, ge=1, le=86400, description="Interval between particles updates, in seconds.", ptm_level=3, units="seconds")
@@ -76,7 +76,7 @@ class TheManagerConfig(BaseModel):
     steps: Optional[int] = Field(None, ge=1, le=10000, description="Maximum number of steps. End of simulation will be start_time + steps * time_step.", ptm_level=1)
     duration: Optional[timedelta] = Field(None, description="The length of the simulation. steps, end_time, or duration must be input by user.", ptm_level=1)
     end_time: Optional[datetime] = Field(None, description="The end of the simulation. steps, end_time, or duration must be input by user.", ptm_level=1)
-    ocean_model: OceanModelEnum = Field(OceanModelEnum.CIOFSOP, description="Name of ocean model to use for driving drifter simulation.", ptm_level=1)
+    # ocean_model: OceanModelEnum = Field(OceanModelEnum.CIOFSOP, description="Name of ocean model to use for driving drifter simulation.", ptm_level=1)
     # NWGOA_time_range: Optional[datetime] = Field(None, description="Time range for NWGOA ocean model.", ptm_level=1)
     # CIOFS_time_range: Optional[datetime] = Field(None, description="Time range for CIOFS ocean model.", ptm_level=1)
     # CIOFSOP_time_range: Optional[datetime] = Field(None, description="Time range for CIOFSOP ocean model.", ptm_level=1)
@@ -90,15 +90,15 @@ class TheManagerConfig(BaseModel):
     surface_only: Optional[bool] = Field(None, description="Set to True to keep drifters at the surface.", ptm_level=1)
     do3D: bool = Field(False, description="Set to True to run drifters in 3D, by default False. This is overridden if surface_only==True.", ptm_level=1)
     vertical_mixing: bool = Field(False, description="Set to True to activate vertical mixing in the simulation.", ptm_level=2)
-    z: float = Field(0, ge=-100000, le=0, description="Depth of the drifters.", ptm_level=1, od_mapping="seed:z")
+    z: Optional[float] = Field(0, ge=-100000, le=0, description="Depth of the drifters. None to use `seed_seafloor` flag.", ptm_level=1, od_mapping="seed:z")
     seed_seafloor: bool = Field(False, description="Set to True to seed drifters on the seafloor.", ptm_level=2, od_mapping="seed:seafloor")
     use_static_masks: bool = Field(True, description="Set to True to use static masks for known models instead of wetdry masks.", ptm_level=3)
     # output_file: Optional[str] = Field(None, description="Name of file to write output to. If None, default name is used.", ptm_level=3)
     # output_format: OutputFormatEnum = Field(OutputFormatEnum.netcdf, description="Output file format. Options are \"netcdf\" or \"parquet\".", ptm_level=2)
     use_cache: bool = Field(True, description="Set to True to use cache for storing interpolators.", ptm_level=3)
-    wind_drift_factor: float = Field(0.02, description="Wind drift factor for the drifters.", ptm_level=2, od_mapping="seed:wind_drift_factor")
+    wind_drift_factor: Optional[float] = Field(0.02, description="Wind drift factor for the drifters.", ptm_level=2, od_mapping="seed:wind_drift_factor")
     stokes_drift: bool = Field(True, description="Set to True to enable Stokes drift.", ptm_level=2, od_mapping="drift:stokes_drift")
-    horizontal_diffusivity: Optional[float] = Field(None, description="Horizontal diffusivity for the simulation.", ptm_level=2, od_mapping="drift:horizontal_diffusivity")
+    # horizontal_diffusivity: Optional[float] = Field(None, description="Horizontal diffusivity for the simulation.", ptm_level=2, od_mapping="drift:horizontal_diffusivity")
     # log_level: LogLevelEnum = Field(LogLevelEnum.INFO, description="Log verbosity", ptm_level=3)
 
     class Config:
@@ -257,7 +257,7 @@ class TheManagerConfig(BaseModel):
 
     #     elif self.ocean_model in _KNOWN_MODELS:
 
-    #         hdiff = 0  # TODO: UPDATE THIS BACK calc_known_horizontal_diffusivity(self.ocean_model)
+    #         hdiff = calc_known_horizontal_diffusivity(self.ocean_model)
     #         logger.info(
     #             f"Setting horizontal_diffusivity parameter to one tuned to reader model of value {hdiff}."
     #         )
@@ -281,11 +281,11 @@ class TheManagerConfig(BaseModel):
     def check_config_ocean_model_local(self) -> Self:
         if self.ocean_model_local:
             logger.info(
-                f"Using local output for ocean_model {self.ocean_model}"
+                "Using local output for ocean_model."
             )
         else:
             logger.info(
-                f"Using remote output for ocean_model {self.ocean_model}"
+                "Using remote output for ocean_model."
             )
         return self
 
