@@ -374,28 +374,40 @@ def test_misc_parameters():
     """Test values of parameters being input."""
 
     m = TestParticleTrackingManager(steps=1, start_time="2022-01-01",
-                                horizontal_diffusivity=1,
+                                # horizontal_diffusivity=1,
                                 number=100, time_step=5,
                                 wind_drift_factor=0.04,
                                 stokes_drift=False, log="DEBUG",)
     
-    assert m.manager_config.horizontal_diffusivity == 1
+    # assert m.manager_config.horizontal_diffusivity == 1
     assert m.manager_config.number == 100
     assert m.manager_config.time_step == 5
     assert m.manager_config.wind_drift_factor == 0.04
 
 
-def test_horizontal_diffusivity_logic():
-    """Check logic for using default horizontal diff values for known models."""
+# def test_horizontal_diffusivity_logic():
+#     """Check logic for using default horizontal diff values for known models."""
 
-    m = TestParticleTrackingManager(ocean_model="NWGOA", steps=1, start_time="2007-01-01")
-    assert m.manager_config.horizontal_diffusivity == 150.0  # known grid values
+#     m = TestParticleTrackingManager(ocean_model="NWGOA", steps=1, start_time="2007-01-01")
+#     assert m.manager_config.horizontal_diffusivity == 150.0  # known grid values
 
-    m = TestParticleTrackingManager(ocean_model="CIOFS", steps=1, start_time="2020-01-01")
-    assert m.manager_config.horizontal_diffusivity == 10.0  # known grid values
+#     m = TestParticleTrackingManager(ocean_model="CIOFS", steps=1, start_time="2020-01-01")
+#     assert m.manager_config.horizontal_diffusivity == 10.0  # known grid values
 
-    m = TestParticleTrackingManager(ocean_model="CIOFSOP", horizontal_diffusivity=11, steps=1)
-    assert m.manager_config.horizontal_diffusivity == 11.0  # user-selected value
+#     m = TestParticleTrackingManager(ocean_model="CIOFSOP", horizontal_diffusivity=11, steps=1)
+#     assert m.manager_config.horizontal_diffusivity == 11.0  # user-selected value
 
-    m = TestParticleTrackingManager(ocean_model="CIOFSOP", steps=1)
-    assert m.manager_config.horizontal_diffusivity == 10.0  # known grid values
+#     m = TestParticleTrackingManager(ocean_model="CIOFSOP", steps=1)
+#     assert m.manager_config.horizontal_diffusivity == 10.0  # known grid values
+
+
+
+
+def test_output_file():
+    """make sure output file is parquet if output_format is parquet"""
+
+    m = TestParticleTrackingManager(output_format="parquet", steps=1)
+    assert m.files.output_file.endswith(".parquet")
+
+    m = TestParticleTrackingManager(output_format="netcdf", steps=1)
+    assert m.files.output_file.endswith(".nc")

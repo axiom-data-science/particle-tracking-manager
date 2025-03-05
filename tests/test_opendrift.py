@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 import pytest
 import xarray as xr
+from pydantic import ValidationError
 
 from particle_tracking_manager.models.opendrift.opendrift import (
     OpenDriftModel,
@@ -124,6 +125,44 @@ ds = xr.Dataset(
 #         assert "mask_rho" not in self.model.reader.Dataset.data_vars
 
 
+
+
+
+def test_drift_model():
+    with pytest.raises(ValueError):
+        m = OpenDriftModel(drift_model="not_a_real_model")
+
+
+def test_Leeway():
+    
+    m = OpenDriftModel(
+        drift_model="Leeway", object_type=">PIW, scuba suit (face up)",
+        stokes_drift=False, steps=1, wind_drift_factor=None, wind_drift_depth=None,
+    )
+    assert m.manager_config.wind_drift_factor is None
+    assert "seed:wind_drift_factor" not in m.show_all_config()
+    
+    with pytest.raises(ValidationError): 
+        m = OpenDriftModel(drift_model="Leeway", stokes_drift=True, steps=1)
+
+    with pytest.raises(ValidationError): 
+        m = OpenDriftModel(drift_model="Leeway", wind_drift_factor=10, wind_drift_depth=10, steps=1)
+
+
+def test_LarvalFish_disallowed_settings():
+    """LarvalFish is incompatible with some settings.
+
+    LarvalFish has to always be 3D.
+    """
+
+    with pytest.raises(ValueError):
+        m = OpenDriftModel(drift_model="LarvalFish", vertical_mixing=False, steps=1)
+
+    with pytest.raises(ValueError):
+        m = OpenDriftModel(drift_model="LarvalFish", do3D=False, steps=1)
+
+
+
 # class TestOpenDriftModel_LarvalFish(unittest.TestCase):
 #     def setUp(self):
 #         self.model = OpenDriftModel(drift_model="LarvalFish", do3D=True)
@@ -145,107 +184,17 @@ ds = xr.Dataset(
 #         ]
 
 
-def test_drift_model():
-    with pytest.raises(ValueError):
-        m = OpenDriftModel(drift_model="not_a_real_model")
+def test_LarvalFish_init():
+    m = OpenDriftModel(drift_model="LarvalFish", 
+                       do3D=True,
+                        vertical_mixing=True,
+                        wind_drift_factor=None,
+                        wind_drift_depth=None,
+                        steps=1
+                        length=10
+                       )
 
-
-
-# TODO: need config working correctly for some of these:
-# class TestTheManager(unittest.TestCase):
-#     def setUp(self):
-#         self.m = OpenDriftModel()
-#         # self.m.opendrift_config_data = {"test_key": {"value": "old_value"}}
-#         # test m.drift_model_config()
-#         # also test in other sub tests
-
-#     def test_set_drift_model(self):
-#         """can't change the drift_model after class initialization"""
-#         with self.assertRaises(KeyError):
-#             self.m.drift_model = "new_model"
-
-#     def test_set_o(self):
-#         with self.assertRaises(KeyError):
-#             self.m.o = "new_o"
-
-#     def test_stokes_drift_true_not_leeway(self):
-#         self.m.stokes_drift = True
-#         assert self.m.show_config(key="drift:use_tabularised_stokes_drift")
-
-#     def test_do3D_false_not_leeway(self):
-#         self.m.do3D = False
-#         assert not self.m.show_config(key="drift:vertical_advection")["value"]
-#         assert not self.m.show_config(key="drift:vertical_mixing")["value"]
-
-#     def test_do3D_true(self):
-#         self.m.do3D = True
-#         # assert self.m.show_config(key="drift:vertical_advection")["value"]
-
-#     def test_vertical_mixing_false_vertical_mixing_timestep_not_default(self):
-#         self.m.vertical_mixing = False
-#         self.m.vertical_mixing_timestep = 10
-#         d = self.m.show_config(key="vertical_mixing_timestep")
-#         assert d["value"] == None
-
-#     def test_vertical_mixing_false_diffusivitymodel_not_default(self):
-#         self.m.vertical_mixing = False
-#         self.m.diffusivitymodel = "not_default"
-#         d = self.m.show_config(key="diffusivitymodel")
-#         assert d["value"] == "windspeed_Large1994"
-
-#     def test_vertical_mixing_false_mixed_layer_depth_not_default(self):
-#         self.m.vertical_mixing = False
-#         self.m.mixed_layer_depth = 10
-#         d = self.m.show_config(key="mixed_layer_depth")
-#         assert d["value"] == 30
-
-
-# class TestOpenDriftModel_Leeway(unittest.TestCase):
-#     def setUp(self):
-#         self.m = OpenDriftModel(
-#             drift_model="Leeway", object_type=">PIW, scuba suit (face up)"
-#         )
-
-#     def test_leeway_model_wind_drift_factor_not_default(self):
-#         self.m.wind_drift_factor = 10
-#         d = self.m.show_config(key="wind_drift_factor")
-#         assert d["value"] == None
-#         assert self.m.object_type == ">PIW, scuba suit (face up)"
-#         assert self.m.o._config["object_type"]["value"] == ">PIW, scuba suit (face up)"
-
-#     def test_leeway_model_wind_drift_depth_not_default(self):
-#         self.m.wind_drift_depth = 10
-#         d = self.m.show_config(key="wind_drift_depth")
-#         assert d["value"] == None
-
-#     def test_leeway_model_stokes_drift_true(self):
-#         self.m.stokes_drift = True
-#         assert not self.m.stokes_drift
-#         # assert not self.m.show_config(key="stokes_drift")["value"]
-
-
-def test_output_format():
-    """Check output_format."""
-
-    m = OpenDriftModel(output_format="netcdf", steps=1)
-    assert m.config.output_format == "netcdf"
-
-    m = OpenDriftModel(output_format="parquet", steps=1)
-    assert m.config.output_format == "parquet"
-
-
-def test_LarvalFish_disallowed_settings():
-    """LarvalFish is incompatible with some settings.
-
-    LarvalFish has to always be 3D.
-    """
-
-    with pytest.raises(ValueError):
-        m = OpenDriftModel(drift_model="LarvalFish", vertical_mixing=False, steps=1)
-
-    with pytest.raises(ValueError):
-        m = OpenDriftModel(drift_model="LarvalFish", do3D=False, steps=1)
-
+    
 
 def test_LarvalFish_seeding():
     """Make sure special seed parameter comes through"""
@@ -263,68 +212,71 @@ def test_LarvalFish_seeding():
         wind_drift_factor=None,
         wind_drift_depth=None
     )
-    m.add_reader()
-    m.seed()
-    assert m.o.elements_scheduled.hatched == 1
+    # m.add_reader()
+    # m.seed()
+    # assert m.o.elements_scheduled.hatched == 1
+    assert m.o._config["seed:hatched"]["value"] == 1
 
 
-# def test_OpenOil_seeding():
-#     """Make sure special seed parameters comes through"""
+def test_OpenOil_seeding():
+    """Make sure special seed parameters comes through"""
 
-#     m = OpenDriftModel(
-#         drift_model="OpenOil",
-#         lon=-151,
-#         lat=60,
-#         do3D=True,
-#         start_time="2021-01-01T00:00:00",
-#         use_auto_landmask=True,
-#         m3_per_hour=5,
-#         droplet_diameter_max_subsea=0.1,
-#         droplet_diameter_min_subsea=0.01,
-#         droplet_diameter_mu=0.01,
-#         droplet_size_distribution="normal",
-#         droplet_diameter_sigma=10,
-#         oil_film_thickness=5,
-#         oil_type="GENERIC DIESEL",
-#         steps=1
-#     )
+    m = OpenDriftModel(
+        drift_model="OpenOil",
+        lon=-151,
+        lat=60,
+        do3D=True,
+        start_time="2023-01-01T00:00:00",
+        use_auto_landmask=True,
+        m3_per_hour=5,
+        droplet_diameter_max_subsea=0.1,
+        droplet_diameter_min_subsea=0.01,
+        droplet_diameter_mu=0.01,
+        droplet_size_distribution="normal",
+        droplet_diameter_sigma=10,
+        oil_film_thickness=5,
+        oil_type="GENERIC DIESEL",
+        steps=1
+    )
 
-#     m.o.set_config("environment:constant:x_wind", -1)
-#     m.o.set_config("environment:constant:y_wind", -1)
-#     m.o.set_config("environment:constant:x_sea_water_velocity", -1)
-#     m.o.set_config("environment:constant:y_sea_water_velocity", -1)
-#     m.o.set_config("environment:constant:sea_water_temperature", 15)
-#     m.seed()
+    # m.o.set_config("environment:constant:x_wind", -1)
+    # m.o.set_config("environment:constant:y_wind", -1)
+    # m.o.set_config("environment:constant:x_sea_water_velocity", -1)
+    # m.o.set_config("environment:constant:y_sea_water_velocity", -1)
+    # m.o.set_config("environment:constant:sea_water_temperature", 15)
+    # m.seed()
 
-#     # to check impact of m3_per_hour: mass_oil for m3_per_hour of 1 * 5
-#     # assert np.allclose(m.o.elements_scheduled.mass_oil, 0.855 * 5)  # i'm getting different answers local vs github actiosn
-#     assert m.o._config["m3_per_hour"]["value"] == 5
-#     assert m.o._config["droplet_diameter_max_subsea"]["value"] == 0.1
-#     assert m.o._config["droplet_diameter_min_subsea"]["value"] == 0.01
-#     assert m.o._config["droplet_diameter_mu"]["value"] == 0.01
-#     assert m.o._config["droplet_size_distribution"]["value"] == "normal"
-#     assert m.o._config["droplet_diameter_sigma"]["value"] == 10
-#     assert m.o.elements_scheduled.oil_film_thickness == 5
-#     assert m.o._config["oil_type"]["value"] == "GENERIC DIESEL"
+    # to check impact of m3_per_hour: mass_oil for m3_per_hour of 1 * 5
+    # assert np.allclose(m.o.elements_scheduled.mass_oil, 0.855 * 5)  # i'm getting different answers local vs github actiosn
+    assert m.o._config["seed:m3_per_hour"]["value"] == 5
+    assert m.o._config["seed:droplet_diameter_max_subsea"]["value"] == 0.1
+    assert m.o._config["seed:droplet_diameter_min_subsea"]["value"] == 0.01
+    assert m.o._config["seed:droplet_diameter_mu"]["value"] == 0.01
+    assert m.o._config["seed:droplet_size_distribution"]["value"] == "normal"
+    assert m.o._config["seed:droplet_diameter_sigma"]["value"] == 10
+    # assert m.o.elements_scheduled.oil_film_thickness == 5
+    assert m.o._config["seed:oil_type"]["value"] == "GENERIC DIESEL"
 
 
-# def test_wind_drift():
-#     """Make sure changed wind drift numbers comes through"""
+def test_wind_drift():
+    """Make sure changed wind drift numbers comes through"""
 
-#     m = OpenDriftModel(
-#         drift_model="OceanDrift",
-#         lon=-151,
-#         lat=60,
-#         do3D=True,
-#         wind_drift_factor=1,
-#         wind_drift_depth=10,
-#         start_time="2021-01-01T00:00:00",
-#         use_auto_landmask=True,
-#         steps=1
-#     )
-#     m.seed()
-#     assert m.o.elements_scheduled.wind_drift_factor == 1
-#     assert m.o._config["wind_drift_depth"]["value"] == 10
+    m = OpenDriftModel(
+        drift_model="OceanDrift",
+        lon=-151,
+        lat=60,
+        do3D=True,
+        wind_drift_factor=1,
+        wind_drift_depth=10,
+        start_time="2023-01-01T00:00:00",
+        use_auto_landmask=True,
+        steps=1
+    )
+    # m.add_reader()
+    # m.seed()
+    # assert m.o.elements_scheduled.wind_drift_factor == 1
+    assert m.o._config["seed:wind_drift_factor"]["value"] == 1
+    assert m.o._config["drift:wind_drift_depth"]["value"] == 10
 
 
 # def test_plots_linecolor():

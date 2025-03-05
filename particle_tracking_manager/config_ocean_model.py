@@ -28,6 +28,9 @@ class BaseOceanModel(BaseModel):
     ocean_model_local: bool = Field(True, description="Set to True to use local ocean model data, False for remote access.")
     end_time: datetime
     horizontal_diffusivity: Optional[float] = Field(None, description="Horizontal diffusivity for the simulation.", ptm_level=2, od_mapping="drift:horizontal_diffusivity")
+    # TODO: Move functions for manipulating ocean model dataset to here and store ds, allowing user to input ds directly
+    # and avoid some of the initial checks as needed.
+    
     
     def open_dataset(self, drop_vars: list) -> xr.Dataset:
         """Open an xarray dataset 

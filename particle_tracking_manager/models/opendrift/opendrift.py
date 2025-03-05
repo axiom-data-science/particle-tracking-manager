@@ -144,8 +144,8 @@ class OpenDriftModel(ParticleTrackingManager):
 
         # OpenDriftConfig, _KNOWN_MODELS = setup_opendrift_config(**kwargs)
         
-        # OpenDriftConfig is a subclass of PTMConfig so it knows about all the
-        # PTMConfig parameters. PTMConfig is run with OpenDriftConfig.
+        # OpenDriftConfig is a subclass of TheManagerConfig so it knows about all the
+        # TheManagerConfig parameters. TheManagerConfig is run with OpenDriftConfig.
         # output_file was altered in PTM when setting up logger, so want to use
         # that version.
         # kwargs.update({"output_file": self.output_file})
@@ -154,7 +154,7 @@ class OpenDriftModel(ParticleTrackingManager):
         keys_from_ocean_model = ["model_drop_vars", "ocean_model"]
         inputs.update({key: getattr(self.ocean_model,key) for key in keys_from_ocean_model})
         inputs.update(kwargs)
-        self.config = OpenDriftConfig(**inputs)  # this runs both OpenDriftConfig and PTMConfig
+        self.config = OpenDriftConfig(**inputs)  # this runs both OpenDriftConfig and TheManagerConfig
         # logger = self.config.logger  # this is where logger is expected to be found
         # import pdb; pdb.set_trace()
         
@@ -226,21 +226,24 @@ class OpenDriftModel(ParticleTrackingManager):
         self.o = o
 
     def _update_od_config_from_this_config(self):
-        """Update OpenDrift's config with OpenDriftConfig and PTMConfig.
+        """Update OpenDrift's config with OpenDriftConfig and TheManagerConfig.
         
         Update the default value in OpenDrift's config dict with the 
-        config value from OpenDriftConfig (which includes PTMConfig).
+        config value from OpenDriftConfig, TheManagerConfig, OceanModelConfig, and SetupOutputFiles.
         
         This uses the metadata key "od_mapping" to map from the PTM parameter
         name to the OpenDrift parameter name.
         """
-
-        for key in self.config.model_fields:
-            if getattr(self.config.model_fields[key], "json_schema_extra") is not None:
-                if "od_mapping" in self.config.model_fields[key].json_schema_extra:
-                    od_key = self.config.model_fields[key].json_schema_extra["od_mapping"]
-                    if od_key in self.o._config:# and od_key is not None:
-                        self.o._config[od_key]["value"] = getattr(self.config, key)
+        # import pdb; pdb.set_trace()
+        
+        base_models_to_check = [self.files, self.manager_config, self.ocean_model, self.config]
+        for base_model in base_models_to_check:
+            for key in base_model.model_fields:
+                if getattr(base_model.model_fields[key], "json_schema_extra") is not None:
+                    if "od_mapping" in base_model.model_fields[key].json_schema_extra:
+                        od_key = base_model.model_fields[key].json_schema_extra["od_mapping"]
+                        if od_key in self.o._config:# and od_key is not None:
+                            self.o._config[od_key]["value"] = getattr(base_model, key)
 
     def _modify_opendrift_model_object(self):
         
@@ -295,8 +298,8 @@ class OpenDriftModel(ParticleTrackingManager):
         # TODO: have standard_name_mapping as an initial input only with initial call to OpenDrift?
         # TODO: has ds as an initial input for user-input ds?
         if (
-            self.manager_config.ocean_model not in _KNOWN_MODELS
-            and self.manager_config.ocean_model != "test"
+            self.ocean_model.ocean_model not in _KNOWN_MODELS
+            and self.ocean_model.ocean_model != "test"
             and ds is None
         ):
             raise ValueError(
@@ -307,9 +310,9 @@ class OpenDriftModel(ParticleTrackingManager):
 
         if ds is not None:
             if name is None:
-                self.manager_config.ocean_model = "user_input"
+                self.ocean_model.ocean_model = "user_input"
             else:
-                self.manager_config.ocean_model = name
+                self.ocean_model.ocean_model = name
 
         # TODO: do I still need a pathway for ocean_model of "test"?
         # TODO: move tests from test_manager to other files
@@ -319,22 +322,22 @@ class OpenDriftModel(ParticleTrackingManager):
         ds = narrow_dataset_to_simulation_time(ds, self.manager_config.start_time, self.manager_config.end_time)
         logger.info("Narrowed model output to simulation time")
         
-        ds = apply_known_ocean_model_specific_changes(ds, self.manager_config.ocean_model, self.manager_config.use_static_masks)
+        ds = apply_known_ocean_model_specific_changes(ds, self.ocean_model.ocean_model, self.manager_config.use_static_masks)
         
         # TODO: the stuff in apply_user_input_ocean_model_specific_changes can be moved to OceanModelConfig
         # validation I think
-        if self.manager_config.ocean_model not in _KNOWN_MODELS and self.manager_config.ocean_model != "test":
+        if self.ocean_model.ocean_model not in _KNOWN_MODELS and self.ocean_model.ocean_model != "test":
             ds = apply_user_input_ocean_model_specific_changes(ds, self.manager_config.use_static_mask)
 
         self.ds = ds
 
-        # if self.manager_config.ocean_model == "test":
+        # if self.ocean_model.ocean_model == "test":
         #     pass
         #     # oceanmodel_lon0_360 = True
         #     # loc = "test"
         #     # kwargs_xarray = dict()
 
-        # elif self.manager_config.ocean_model is not None or ds is not None:
+        # elif self.ocean_model.ocean_model is not None or ds is not None:
         #     # pass
             
         #     # TODO: should I change to computed_fields and where should this go?
@@ -404,7 +407,7 @@ class OpenDriftModel(ParticleTrackingManager):
         #     #         "Dropping mask_rho, mask_u, mask_v, mask_psi because using wetdry masks instead."
         #     #     )
 
-        #     # if self.manager_config.ocean_model == "NWGOA":
+        #     # if self.ocean_model.ocean_model == "NWGOA":
         #     #     oceanmodel_lon0_360 = True
 
         #     #     standard_name_mapping.update(
@@ -425,7 +428,7 @@ class OpenDriftModel(ParticleTrackingManager):
         #     #         "snow_thick",
         #     #     ]
 
-        #     #     if self.manager_config.ocean_model_local:
+        #     #     if self.ocean_model.ocean_model_local:
 
         #     #         if self.config.start_time is None:
         #     #             raise ValueError(
@@ -442,15 +445,15 @@ class OpenDriftModel(ParticleTrackingManager):
         #     #         "http://xpublish-nwgoa.srv.axds.co/datasets/nwgoa_all/zarr/"
         #     #     )
 
-        #     # elif "CIOFS" in self.manager_config.ocean_model:
+        #     # elif "CIOFS" in self.ocean_model.ocean_model:
         #     #     oceanmodel_lon0_360 = False
 
         #     #     drop_vars += [
         #     #         "wetdry_mask_psi",
         #     #     ]
-        #     #     if self.manager_config.ocean_model == "CIOFS":
+        #     #     if self.ocean_model.ocean_model == "CIOFS":
 
-        #     #         if self.manager_config.ocean_model_local:
+        #     #         if self.ocean_model.ocean_model_local:
 
         #     #             if self.config.start_time is None:
         #     #                 raise ValueError(
@@ -463,9 +466,9 @@ class OpenDriftModel(ParticleTrackingManager):
         #     #             )
         #     #         loc_remote = "http://xpublish-ciofs.srv.axds.co/datasets/ciofs_hindcast/zarr/"
 
-        #     #     elif self.manager_config.ocean_model == "CIOFSFRESH":
+        #     #     elif self.ocean_model.ocean_model == "CIOFSFRESH":
 
-        #     #         if self.manager_config.ocean_model_local:
+        #     #         if self.ocean_model.ocean_model_local:
 
         #     #             if self.config.start_time is None:
         #     #                 raise ValueError(
@@ -479,7 +482,7 @@ class OpenDriftModel(ParticleTrackingManager):
         #     #             )
         #     #         loc_remote = None
 
-        #     #     elif self.manager_config.ocean_model == "CIOFSOP":
+        #     #     elif self.ocean_model.ocean_model == "CIOFSOP":
 
         #     #         standard_name_mapping.update(
         #     #             {
@@ -488,7 +491,7 @@ class OpenDriftModel(ParticleTrackingManager):
         #     #             }
         #     #         )
 
-        #     #         if self.manager_config.ocean_model_local:
+        #     #         if self.ocean_model.ocean_model_local:
 
         #     #             if self.config.start_time is None:
         #     #                 raise ValueError(
@@ -504,7 +507,7 @@ class OpenDriftModel(ParticleTrackingManager):
 
         #     #         loc_remote = "https://thredds.aoos.org/thredds/dodsC/AWS_CIOFS.nc"
 
-        #     # if self.manager_config.ocean_model == "user_input":
+        #     # if self.ocean_model.ocean_model == "user_input":
 
         #     #     # check for case that self.config.use_static_masks False (which is the default)
         #     #     # but user input doesn't have wetdry masks
@@ -518,7 +521,7 @@ class OpenDriftModel(ParticleTrackingManager):
 
         #     # # if local and not a user-input ds
         #     # if ds is None:
-        #     #     if self.manager_config.ocean_model_local:
+        #     #     if self.ocean_model.ocean_model_local:
 
         #     #         ds = xr.open_dataset(
         #     #             self.config.loc_local,
@@ -536,7 +539,7 @@ class OpenDriftModel(ParticleTrackingManager):
         #     #     else:
         #     #         if ".nc" in self.config.loc_remote:
 
-        #     #             if self.manager_config.ocean_model == "CIOFSFRESH":
+        #     #             if self.ocean_model.ocean_model == "CIOFSFRESH":
         #     #                 raise NotImplementedError
 
         #     #             ds = xr.open_dataset(
@@ -558,12 +561,12 @@ class OpenDriftModel(ParticleTrackingManager):
         #     #         )
 
         #     # # For NWGOA, need to calculate wetdry mask from a variable
-        #     # if self.manager_config.ocean_model == "NWGOA" and not self.config.use_static_masks:
+        #     # if self.ocean_model.ocean_model == "NWGOA" and not self.config.use_static_masks:
         #     #     ds["wetdry_mask_rho"] = (~ds.zeta.isnull()).astype(int)
 
         #     # # For CIOFSOP need to rename u/v to have "East" and "North" in the variable names
         #     # # so they aren't rotated in the ROMS reader (the standard names have to be x/y not east/north)
-        #     # elif self.manager_config.ocean_model == "CIOFSOP":
+        #     # elif self.ocean_model.ocean_model == "CIOFSOP":
         #     #     ds = ds.rename_vars({"urot": "u_eastward", "vrot": "v_northward"})
         #     #     # grid = xr.open_dataset("/mnt/vault/ciofs/HINDCAST/nos.ciofs.romsgrid.nc")
         #     #     # ds["angle"] = grid["angle"]
@@ -611,7 +614,7 @@ class OpenDriftModel(ParticleTrackingManager):
         #     #     )
         reader = reader_ROMS_native.Reader(
             filename=ds,
-            name=self.manager_config.ocean_model,
+            name=self.ocean_model.ocean_model,
             standard_name_mapping=self.ocean_model.standard_name_mapping,
             save_interpolator=self.config.save_interpolator,
             interpolator_filename=self.config.interpolator_filename,
@@ -619,7 +622,7 @@ class OpenDriftModel(ParticleTrackingManager):
 
         self.o.add_reader([reader])
         self.reader = reader
-        # can find reader at manager.o.env.readers[self.manager_config.ocean_model]
+        # can find reader at manager.o.env.readers[self.ocean_model.ocean_model]
 
         # self.oceanmodel_lon0_360 = oceanmodel_lon0_360
 
@@ -794,7 +797,7 @@ class OpenDriftModel(ParticleTrackingManager):
     @property
     def all_config(self):
         """Combined dict of this class config and OpenDrift native config."""
-        
+        # TODO: update this
         if self._all_config is None:
             self._all_config = {**self._model_config, **self.config.dict()}
         return self._all_config
@@ -910,12 +913,12 @@ class OpenDriftModel(ParticleTrackingManager):
 
     def show_all_config(
         self,
-        key=None,
+        # key=None,
         prefix="",
-        level=None,
-        ptm_level=None,
-        substring="",
-        excludestring="excludestring",
+        level=[1,2,3],
+        # ptm_level=None,
+        # substring="",
+        # excludestring="excludestring",
     ) -> dict:
         """Show configuring for the drift model selected in configuration.
 
@@ -989,31 +992,33 @@ class OpenDriftModel(ParticleTrackingManager):
 
         """
 
-        if key is not None:
-            prefix = key
+        return self.o.get_configspec(prefix=prefix, level=level)
 
-        output = self.get_configspec(
-            prefix=prefix,
-            level=level,
-            ptm_level=ptm_level,
-            substring=substring,
-            excludestring=excludestring,
-        )
-        import pdb; pdb.set_trace()
-        if key is not None:
-            if key in output:
-                return output[key]
-            else:
-                return output
-        else:
-            return output
+        # if key is not None:
+        #     prefix = key
+
+        # output = self.get_configspec(
+        #     prefix=prefix,
+        #     level=level,
+        #     ptm_level=ptm_level,
+        #     substring=substring,
+        #     excludestring=excludestring,
+        # )
+        # import pdb; pdb.set_trace()
+        # if key is not None:
+        #     if key in output:
+        #         return output[key]
+        #     else:
+        #         return output
+        # else:
+        #     return output
 
     def reader_metadata(self, key):
         """allow manager to query reader metadata."""
 
         if not self.state.has_added_reader:
             raise ValueError("reader has not been added yet.")
-        return self.o.env.readers[self.manager_config.ocean_model].__dict__[key]
+        return self.o.env.readers[self.ocean_model.ocean_model].__dict__[key]
 
     # @property
     # def outfile_name(self):
