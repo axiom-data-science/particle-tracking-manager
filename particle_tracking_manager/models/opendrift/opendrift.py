@@ -1051,12 +1051,13 @@ class OpenDriftModel(ParticleTrackingManager):
         self.o.outfile_name = self.output_file
         self.output_file = self.output_file
 
-        try:
-            # remove initial file to save space
-            os.remove(self.output_file_initial)
-        except PermissionError:
-            # windows issue
-            pass
+        # don't remove the initial netcdf file since will use that for plots if needed
+        # try:
+        #     # remove initial file to save space
+        #     os.remove(self.output_file_initial)
+        # except PermissionError:
+        #     # windows issue
+        #     pass
 
     @property
     def _config(self):
