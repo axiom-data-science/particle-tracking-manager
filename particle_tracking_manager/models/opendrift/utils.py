@@ -103,25 +103,25 @@ def make_ciofs_kerchunk(start, end, name):
         _description_
     """
 
-    if name == "ciofs":
+    if name == "CIOFS":
         output_dir_single_files = "/mnt/vault/ciofs/HINDCAST/.kerchunk_json"
-    elif name == "ciofs_fresh":
+    elif name == "CIOFSFRESH":
         output_dir_single_files = "/mnt/vault/ciofs/HINDCAST_FRESHWATER/.kerchunk_json"
-    elif name == "aws_ciofs_with_angle":
+    elif name == "CIOFSOP":
         output_dir_single_files = "/mnt/depot/data/packrat/prod/noaa/coops/ofs/aws_ciofs/processed/.kerchunk_json"
     else:
         raise ValueError(f"Name {name} not recognized")
 
     fs2 = fsspec.filesystem("")  # local file system to save final jsons to
 
-    if name in ["ciofs", "ciofs_fresh"]:
+    if name in ["CIOFS", "CIOFSFRESH"]:
     
         # base for matching
         def base_str(a_time):
             return f"{output_dir_single_files}/{a_time}_*.json"
         date_format = "%Y_0%j"
 
-    elif name == "aws_ciofs_with_angle":
+    elif name == "CIOFSOP":
 
         # base for matching
         def base_str(a_time):
@@ -263,7 +263,7 @@ def make_ciofs_kerchunk(start, end, name):
     return out
 
 
-def make_nwgoa_kerchunk(start, end):
+def make_nwgoa_kerchunk(start, end, name="NWGOA"):
     """_summary_
 
     Parameters

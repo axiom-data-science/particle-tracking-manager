@@ -23,7 +23,7 @@ from typing_extensions import Self
 
 # from .utils import calc_known_horizontal_diffusivity
 from .models.opendrift.utils import make_nwgoa_kerchunk, make_ciofs_kerchunk
-from .config_the_manager import TheManagerConfig
+from .config_the_manager import TheManagerConfig, OutputFormatEnum
 
 logger = logging.getLogger()
 
@@ -42,10 +42,10 @@ class ParticleTrackingState(BaseModel):
 
 
 
-# Enum for "output_format"
-class OutputFormatEnum(str, Enum):
-    netcdf = "netcdf"
-    parquet = "parquet"
+# # Enum for "output_format"
+# class OutputFormatEnum(str, Enum):
+#     netcdf = "netcdf"
+#     parquet = "parquet"
 
 
 def generate_default_output_file():
@@ -57,8 +57,10 @@ class SetupOutputFiles(BaseModel):
     This class runs first thing. Then logger setup.
     """
 
-    output_file: Optional[str] = Field(None, description="Name of file to write output to. If None, default name is used.", ptm_level=3)
-    output_format: OutputFormatEnum = Field(OutputFormatEnum.netcdf, description="Output file format. Options are \"netcdf\" or \"parquet\".", ptm_level=2)
+    output_file: Optional[str] = Field(TheManagerConfig.model_json_schema()["properties"]["output_file"]["default"])
+    output_format: OutputFormatEnum = Field(TheManagerConfig.model_json_schema()["properties"]["output_format"]["default"])
+    # output_file: Optional[str] = Field(None, description="Name of file to write output to. If None, default name is used.", ptm_level=3)
+    # output_format: OutputFormatEnum = Field(OutputFormatEnum.netcdf, description="Output file format. Options are \"netcdf\" or \"parquet\".", ptm_level=2)
 
     class Config:
         validate_default: bool = True

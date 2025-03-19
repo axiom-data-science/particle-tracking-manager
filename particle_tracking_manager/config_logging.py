@@ -4,20 +4,22 @@ import logging
 from typing import Optional
 from enum import Enum
 from pydantic import BaseModel, Field
+from .config_the_manager import TheManagerConfig, LogLevelEnum
 
 
-# Enum for "log_level"
-class LogLevelEnum(str, Enum):
-    DEBUG = "DEBUG"
-    INFO = "INFO"
-    WARNING = "WARNING"
-    ERROR = "ERROR"
-    CRITICAL = "CRITICAL"
+# # Enum for "log_level"
+# class LogLevelEnum(str, Enum):
+#     DEBUG = "DEBUG"
+#     INFO = "INFO"
+#     WARNING = "WARNING"
+#     ERROR = "ERROR"
+#     CRITICAL = "CRITICAL"
 
 class LoggerMethods(BaseModel):
     """Methods for loggers."""
 
-    log_level: LogLevelEnum = Field(LogLevelEnum.INFO, description="Log verbosity", ptm_level=3)
+    log_level: LogLevelEnum = Field(TheManagerConfig.model_json_schema()["properties"]["log_level"]["default"])
+    # log_level: LogLevelEnum = Field(LogLevelEnum.INFO, description="Log verbosity", ptm_level=3)
 
     def close_loggers(self, logger):
         """Close and remove all handlers from the logger."""
@@ -32,7 +34,7 @@ class LoggerMethods(BaseModel):
 
         if logger.handlers:
             self.close_loggers(logger)
-            
+
         logger.setLevel(getattr(logging, self.log_level))
 
         # Add handlers from the main logger to the OpenDrift logger if not already added
