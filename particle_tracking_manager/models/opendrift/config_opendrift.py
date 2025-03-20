@@ -56,8 +56,8 @@ class SeafloorActionEnum(str, Enum):
     previous = "previous"
 
 
-# class BaseDriftModelConfig(BaseModel):
-class BaseDriftModelConfig(TheManagerConfig):
+# class OpenDriftConfig(BaseModel):
+class OpenDriftConfig(TheManagerConfig):
     """Some of the parameters in this mirror OpenDriftSimulation clss in OpenDrift"""
     drift_model: str
     
@@ -166,7 +166,7 @@ class BaseDriftModelConfig(TheManagerConfig):
 
     class Config:
         validate_defaults = True
-        use_enum_values=True
+        # use_enum_values=True
 
     @model_validator(mode='after')
     def check_interpolator_filename(self) -> Self:
@@ -374,7 +374,7 @@ class ObjectTypeEnum(str, Enum):
     MEDICAL_WASTE_SYRINGES = "Medical waste, syringes"    
 
 
-class LeewayModelConfig(BaseDriftModelConfig):
+class LeewayModelConfig(OpenDriftConfig):
     drift_model: Literal["Leeway"] = "Leeway"
     
     object_type: ObjectTypeEnum = Field(
@@ -386,11 +386,11 @@ class LeewayModelConfig(BaseDriftModelConfig):
     )
 
     # modify default values
-    stokes_drift: float = FieldInfo.merge_field_infos(BaseDriftModelConfig.model_fields['stokes_drift'],
+    stokes_drift: float = FieldInfo.merge_field_infos(OpenDriftConfig.model_fields['stokes_drift'],
                                                              Field(default=False))
 
 
-class OceanDriftModelConfig(BaseDriftModelConfig):
+class OceanDriftModelConfig(OpenDriftConfig):
     drift_model: Literal["OceanDrift"] = "OceanDrift"
     
     seed_seafloor: bool = Field(
@@ -1956,10 +1956,19 @@ class LarvalFishModelConfig(OceanDriftModelConfig):
         return self    
 
 
-DriftModelConfig = Union[OceanDriftModelConfig, OpenOilModelConfig, LarvalFishModelConfig, LeewayModelConfig]
+open_drift_mapper = {
+    "OceanDrift": OceanDriftModelConfig,
+    "OpenOil": OpenOilModelConfig,
+    "LarvalFish": LarvalFishModelConfig,
+    "Leeway": LeewayModelConfig,
+}
 
-class OpenDriftConfig(BaseModel):
-    drift_model: DriftModelConfig = Field(discriminator='drift_model')
+
+# DriftModelConfig = Union[OceanDriftModelConfig, OpenOilModelConfig, LarvalFishModelConfig, LeewayModelConfig]
+
+# class OpenDriftConfig(BaseModel):
+# # class OpenDriftConfig(OceanDriftModelConfig):
+#     drift_model: DriftModelConfig = Field(discriminator='drift_model')
     
-    # drift_model: DriftModelConfig = Field(default=OceanDriftModelConfig(), discriminator='drift_model')
+#     # drift_model: DriftModelConfig = Field(default=OceanDriftModelConfig(), discriminator='drift_model')
 

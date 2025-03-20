@@ -91,7 +91,8 @@ class TheManagerConfig(BaseModel):
     time_step: int = Field(300, ge=1, le=86400, description="Interval between particles updates, in seconds.", ptm_level=3, units="seconds")
     time_step_output: int = Field(3600, ge=1, le=604800, description="Time step at which element properties are stored and eventually written to file. Must be a multiple of time_step.", ptm_level=3, units="seconds")
     steps: Optional[int] = Field(None, ge=1, le=10000, description="Maximum number of steps. End of simulation will be start_time + steps * time_step.", ptm_level=1)
-    duration: Optional[str] = Field(None, description="The length of the simulation. steps, end_time, or duration must be input by user.", ptm_level=1)
+    duration: Optional[timedelta] = Field(None, description="The length of the simulation. steps, end_time, or duration must be input by user.", ptm_level=1)
+    duration_str: Optional[str] = Field(None, description="Duration should be input as a string of ISO 8601. The length of the simulation. steps, end_time, or duration must be input by user.", ptm_level=1)
     end_time: Optional[datetime] = Field(None, description="The end of the simulation. steps, end_time, or duration must be input by user.", ptm_level=1,
                                            ge=datetime(1999,1,1), le=datetime(2023,1,2))
     ocean_model: OceanModelEnum = Field(OceanModelEnum.CIOFSOP, description="Name of ocean model to use for driving drifter simulation.", ptm_level=1)
@@ -116,7 +117,7 @@ class TheManagerConfig(BaseModel):
     use_cache: bool = Field(True, description="Set to True to use cache for storing interpolators.", ptm_level=3)
     # wind_drift_factor: Optional[float] = Field(0.02, description="Wind drift factor for the drifters.", ptm_level=2, od_mapping="seed:wind_drift_factor")
     # stokes_drift: bool = Field(True, description="Set to True to enable Stokes drift.", ptm_level=2, od_mapping="drift:stokes_drift")
-    # horizontal_diffusivity: Optional[float] = Field(None, description="Horizontal diffusivity for the simulation.", ptm_level=2, od_mapping="drift:horizontal_diffusivity")
+    horizontal_diffusivity: Optional[float] = Field(None, description="Horizontal diffusivity for the simulation.", ptm_level=2, od_mapping="drift:horizontal_diffusivity")
     log_level: LogLevelEnum = Field(LogLevelEnum.INFO, description="Log verbosity", ptm_level=3)
     # TODO: change log_level to "verbose" or similar
     
@@ -124,7 +125,7 @@ class TheManagerConfig(BaseModel):
 
     class Config:
         validate_defaults = True
-        use_enum_values=True
+        # use_enum_values=True
 
     
 
@@ -141,6 +142,20 @@ class TheManagerConfig(BaseModel):
         if self.seed_flag == "geojson" and (self.lon is not None or self.lat is not None):
             raise ValueError("lon and lat need to be None if using `seed_flag=\"geojson\"`.")
         return self
+    
+    # @model_validator(mode='after')
+    # def calculation_duration_from_duration_string(self) -> Self:
+    #     # if duration and duration_str are both None, make sure they are consistent
+    #     # TODO test this
+    #     if self.duration is not None and self.duration_str is not None:
+    #         if self.duration != pd.Timedelta(self.duration_str).isoformat():
+    #             raise ValueError(f"duration and duration_str are inconsistent: {self.duration} != {self.duration_str}")
+            
+            
+    #     if self.duration_str is not None:
+    #         self.duration = pd.Timedelta(self.duration_str).isoformat()
+    #         logger.info(f"Setting duration to {self.duration} based on duration_str.")
+    #     return self
 
     @model_validator(mode='after')
     def check_config_time_parameters(self) -> Self:
