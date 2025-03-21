@@ -326,8 +326,6 @@ class OceanModelMethods(BaseModel):
                     logger.info(f"Shifting longitude from {orig_lon} to {self.lon}.")
         return self
 
-    # @computed_field
-
     @model_validator(mode='after')
     def assign_horizontal_diffusivity(self) -> Self:
         """Calculate horizontal diffusivity based on ocean model."""

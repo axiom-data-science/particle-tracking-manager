@@ -21,10 +21,6 @@ from pydantic import (
 from pydantic.fields import FieldInfo
 from typing_extensions import Self
 from functools import cached_property
-# from particle_tracking_manager.config_ocean_model import 
-
-# from .utils import calc_known_horizontal_diffusivity
-# from .models.opendrift.utils import make_nwgoa_kerchunk, make_ciofs_kerchunk
 import logging
 
 logger = logging.getLogger()
@@ -96,17 +92,7 @@ class TheManagerConfig(BaseModel):
     end_time: Optional[datetime] = Field(None, description="The end of the simulation. steps, end_time, or duration must be input by user.", ptm_level=1,
                                            ge=datetime(1999,1,1), le=datetime(2023,1,2))
     ocean_model: OceanModelEnum = Field(OceanModelEnum.CIOFSOP, description="Name of ocean model to use for driving drifter simulation.", ptm_level=1)
-    # NWGOA_time_range: Optional[datetime] = Field(None, description="Time range for NWGOA ocean model.", ptm_level=1)
-    # CIOFS_time_range: Optional[datetime] = Field(None, description="Time range for CIOFS ocean model.", ptm_level=1)
-    # CIOFSOP_time_range: Optional[datetime] = Field(None, description="Time range for CIOFSOP ocean model.", ptm_level=1)
-    # NWGOA_lon_range: Optional[float] = Field(None, description="Longitude range for NWGOA ocean model.", ptm_level=1)
-    # NWGOA_lat_range: Optional[float] = Field(None, description="Latitude range for NWGOA ocean model.", ptm_level=1)
-    # CIOFSOP_lon_range: Optional[float] = Field(None, description="Longitude range for CIOFSOP ocean model.", ptm_level=1)
-    # CIOFSOP_lat_range: Optional[float] = Field(None, description="Latitude range for CIOFSOP ocean model.", ptm_level=1)
-    # CIOFS_lon_range: Optional[float] = Field(None, description="Longitude range for CIOFS ocean model.", ptm_level=1)
-    # CIOFS_lat_range: Optional[float] = Field(None, description="Latitude range for CIOFS ocean model.", ptm_level=1)
     ocean_model_local: bool = Field(True, description="Set to True to use local version of known `ocean_model` instead of remote version.", ptm_level=3)
-    # surface_only: Optional[bool] = Field(None, description="Set to True to keep drifters at the surface.", ptm_level=1)
     do3D: bool = Field(False, description="Set to True to run drifters in 3D, by default False for most drift models.", ptm_level=1)
     # vertical_mixing: bool = Field(False, description="Set to True to activate vertical mixing in the simulation.", ptm_level=2)
     # z: Optional[float] = Field(0, ge=-100000, le=0, description="Depth of the drifters. None to use `seed_seafloor` flag.", ptm_level=1, od_mapping="seed:z")
@@ -117,7 +103,7 @@ class TheManagerConfig(BaseModel):
     use_cache: bool = Field(True, description="Set to True to use cache for storing interpolators.", ptm_level=3)
     # wind_drift_factor: Optional[float] = Field(0.02, description="Wind drift factor for the drifters.", ptm_level=2, od_mapping="seed:wind_drift_factor")
     # stokes_drift: bool = Field(True, description="Set to True to enable Stokes drift.", ptm_level=2, od_mapping="drift:stokes_drift")
-    horizontal_diffusivity: Optional[float] = Field(None, description="Horizontal diffusivity for the simulation.", ptm_level=2, od_mapping="drift:horizontal_diffusivity")
+    # horizontal_diffusivity: Optional[float] = Field(None, description="Horizontal diffusivity for the simulation.", ptm_level=2, od_mapping="drift:horizontal_diffusivity")
     log_level: LogLevelEnum = Field(LogLevelEnum.INFO, description="Log verbosity", ptm_level=3)
     # TODO: change log_level to "verbose" or similar
     
@@ -160,6 +146,10 @@ class TheManagerConfig(BaseModel):
     @model_validator(mode='after')
     def check_config_time_parameters(self) -> Self:
         non_none_count = sum(x is not None for x in [self.start_time, self.end_time, self.duration, self.steps])
+        # if non_none_count >= 2:
+        #     raise ValueError(f"At least two of start_time, end_time, duration, and steps must be non-None. "
+        #                      f"Current values are: start_time={self.start_time}, end_time={self.end_time}, "
+        #                      f"duration={self.duration}, steps={self.steps}.")
         if non_none_count != 2:
             raise ValueError(f"Exactly two of start_time, end_time, duration, and steps must be non-None. "
                              f"Current values are: start_time={self.start_time}, end_time={self.end_time}, "
@@ -176,6 +166,7 @@ class TheManagerConfig(BaseModel):
             value = -1
         return value
 
+    # TODO change this to making sure the time inputs are consistent with each other
     @model_validator(mode='after')
     def calculate_config_times(self) -> Self:
         if self.steps is None:
@@ -191,14 +182,14 @@ class TheManagerConfig(BaseModel):
         if self.duration is None:
             if self.end_time is not None and self.start_time is not None:
                 # import pdb; pdb.set_trace()
-                # self.duration = abs(self.end_time - self.start_time)
-                # convert to ISO 8601 string
-                self.duration = pd.Timedelta(abs(self.end_time - self.start_time)).isoformat()
+                self.duration = abs(self.end_time - self.start_time)
+                # # convert to ISO 8601 string
+                # self.duration = pd.Timedelta(abs(self.end_time - self.start_time)).isoformat()
                 logger.info(f"Setting duration to {self.duration} based on end_time and start_time.")
             elif self.steps is not None:
-                # self.duration = self.steps * timedelta(seconds=self.time_step)
-                # convert to ISO 8601 string
-                self.duration = (self.steps * pd.Timedelta(seconds=self.time_step)).isoformat()
+                self.duration = self.steps * timedelta(seconds=self.time_step)
+                # # convert to ISO 8601 string
+                # self.duration = (self.steps * pd.Timedelta(seconds=self.time_step)).isoformat()
                 logger.info(f"Setting duration to {self.duration} based on steps.")
             else:
                 raise ValueError("duration has not been calculated")
@@ -237,7 +228,69 @@ class TheManagerConfig(BaseModel):
     #         elif self.end_time is not None and self.start_time is not None:
     #             steps = int(abs(self.end_time - self.start_time) / timedelta(seconds=self.time_step))
     #             logger.info(f"Setting steps to {steps} based on end_time and start_time.")
-    #     return steps        
+    #         else:
+    #             raise ValueError("steps has not been calculated")
+    #     return steps
+    
+    # @property
+    # def duration(self):
+    #     if self.duration is None:
+    #         if self.end_time is not None and self.start_time is not None:
+    #             # import pdb; pdb.set_trace()
+    #             # self.duration = abs(self.end_time - self.start_time)
+    #             # convert to ISO 8601 string
+    #             duration = pd.Timedelta(abs(self.end_time - self.start_time)).isoformat()
+    #             logger.info(f"Setting duration to {duration} based on end_time and start_time.")
+    #         elif self.steps is not None:
+    #             # self.duration = self.steps * timedelta(seconds=self.time_step)
+    #             # convert to ISO 8601 string
+    #             duration = (self.steps * pd.Timedelta(seconds=self.time_step)).isoformat()
+    #             logger.info(f"Setting duration to {duration} based on steps.")
+    #         else:
+    #             raise ValueError("duration has not been calculated")
+    #     return duration
+    
+    # @property
+    # def end_time(self):
+    #     if self.end_time is None:
+    #         if self.steps is not None and self.start_time is not None:
+    #             end_time = self.start_time + self.timedir * self.steps * timedelta(seconds=self.time_step)
+    #             logger.info(f"Setting end_time to {end_time} based on start_time and steps.")
+    #         elif self.duration is not None and self.start_time is not None:
+    #             end_time = self.start_time + self.timedir * self.duration
+    #             logger.info(f"Setting end_time to {end_time} based on start_time and duration.")
+    #         else:
+    #             raise ValueError("end_time has not been calculated")
+    #     return end_time
+    
+    # @property
+    # def start_time(self):
+    #     if self.start_time is None:
+    #         if self.end_time is not None and self.steps is not None:
+    #             start_time = self.end_time - self.timedir * self.steps * timedelta(seconds=self.time_step)
+    #             logger.info(f"Setting start_time to {start_time} based on end_time and steps.")
+    #         elif self.duration is not None and self.end_time is not None:             
+    #             start_time = self.end_time - self.timedir * self.duration
+    #             logger.info(f"Setting start_time to {start_time} based on end_time and duration.")
+    #         else:
+    #             raise ValueError("start_time has not been calculated")
+    #     return start_time
+ 
+
+    # @model_validator(mode='after')
+    # def check_consistency_time_parameters(self) -> Self:
+    #     """If all time parameters defined, make sure they are consistent with each other."""
+    #     non_none_count = sum(x is not None for x in [self.start_time, self.end_time, self.duration, self.steps])
+    #     if non_none_count == 4:
+    #         # calculate duration and steps from start_time and end_time and make sure they are the same as what
+    #         # is already saved.
+    #         duration = pd.Timedelta(abs(self.end_time - self.start_time)).isoformat()
+    #         steps = int(abs(self.end_time - self.start_time) / timedelta(seconds=self.time_step))
+    #         if duration != self.duration:
+    #             raise ValueError(f"duration and calculated duration are inconsistent: {self.duration} != {duration}")
+    #         if steps != self.steps:
+    #             raise ValueError(f"steps and calculated steps are inconsistent: {self.steps} != {steps}")
+    #     return self
  
     # @model_validator(mode='after')
     # def check_config_start_time(self) -> Self:
@@ -248,26 +301,6 @@ class TheManagerConfig(BaseModel):
     #     if not min_model_time <= self.start_time <= max_model_time:
     #         raise ValueError(f"start_time must be between {min_model_time} and {max_model_time}")
     #     logger.info(f"start_time is within the time range of the ocean model: {min_model_time} to {max_model_time}")
-    #     return self
-
-    # @computed_field
-    # def oceanmodel_lon0_360(self) -> bool:
-    #     if self.ocean_model == "NWGOA":
-    #         value = True
-    #         logger.info("Setting oceanmodel_lon0_360 to True for NWGOA model.")
-    #     elif "CIOFS" in self.ocean_model:
-    #         value = False
-    #         logger.info("Setting oceanmodel_lon0_360 to False for all CIOFS models.")
-    #     return value
-
-    # @model_validator(mode='after')
-    # def check_config_oceanmodel_lon0_360(self) -> Self:
-    #     if self.oceanmodel_lon0_360:
-    #         if self.lon is not None and self.lon < 0:
-    #             if -180 < self.lon < 0:
-    #                 orig_lon = self.lon
-    #                 self.lon += 360
-    #                 logger.info(f"Shifting longitude from {orig_lon} to {self.lon}.")
     #     return self
 
     # @model_validator(mode='after')
@@ -283,37 +316,6 @@ class TheManagerConfig(BaseModel):
     #                 raise ValueError(f"{key} must be between {min_model} and {max_model}")
     #             logger.info(f"{key} is within the range of the ocean model: {min_model} to {max_model}")
     #     return self
-
-    # @model_validator(mode='after')
-    # def calculate_config_horizontal_diffusivity(self) -> Self:
-    #     """Calculate horizontal diffusivity based on ocean model."""
-
-    #     if self.horizontal_diffusivity is not None:
-    #         logger.info(
-    #             f"Setting horizontal_diffusivity to user-selected value {self.horizontal_diffusivity}."
-    #         )
-
-    #     elif self.ocean_model in _KNOWN_MODELS:
-
-    #         hdiff = calc_known_horizontal_diffusivity(self.ocean_model)
-    #         logger.info(
-    #             f"Setting horizontal_diffusivity parameter to one tuned to reader model of value {hdiff}."
-    #         )
-    #         self.horizontal_diffusivity = hdiff
-
-    #     elif (
-    #         self.ocean_model not in _KNOWN_MODELS
-    #         and self.horizontal_diffusivity is None
-    #     ):
-
-    #         logger.info(
-    #             """Since ocean_model is user-input, changing horizontal_diffusivity parameter from None to 0.0.
-    #             You can also set it to a specific value with `m.horizontal_diffusivity=[number]`."""
-    #         )
-
-    #         self.horizontal_diffusivity = 0
-
-    #     return self
     
     @model_validator(mode='after')
     def check_config_ocean_model_local(self) -> Self:
@@ -326,20 +328,3 @@ class TheManagerConfig(BaseModel):
                 "Using remote output for ocean_model."
             )
         return self
-
-# _KNOWN_MODELS = BasePTMConfig.model_fields["ocean_model"].json_schema_extra["enum"]
-
-
-# # Example of creating an instance
-# if __name__ == "__main__":
-#     try:
-#         config = TheManagerConfig(
-#             lon=-150.0,
-#             lat=59.0,
-#             start_time="2022-01-01T12:00:00",
-#             ocean_model="CIOFSOP",
-#             output_file="output.nc",
-#             time_step=600
-#         )
-#         print(config)
-#     except ValueError as e:

@@ -135,6 +135,16 @@ class OpenDriftConfig(TheManagerConfig):
         ptm_level=2,
     )
     
+    horizontal_diffusivity: float = Field(
+        default=0,
+        description="Add horizontal diffusivity (random walk)",
+        title="Horizontal Diffusivity",
+        ge=0,
+        le=100000,
+        units="m2/s",
+        od_mapping="drift:horizontal_diffusivity",
+    )
+    
     stokes_drift: bool = Field(
         default=True,
         description="Advection elements with Stokes drift (wave orbital motion).",
