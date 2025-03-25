@@ -1,23 +1,14 @@
 import logging
 from enum import Enum
 from pathlib import Path
-from typing import List, Literal, Optional, Dict, Union
+from typing import List, Literal, Optional, Dict
 
-from pydantic import BaseModel, Field, computed_field, model_validator, ValidationError
+from pydantic import  Field, model_validator
 from pydantic.fields import FieldInfo
 from typing_extensions import Self
 
 from particle_tracking_manager.config_the_manager import TheManagerConfig
-
-# from opendrift.models.leeway import Leeway
-# from opendrift.models.larvalfish import LarvalFish
-# from opendrift.models.openoil import OpenOil
-# from opendrift.models.oceandrift import OceanDrift
-
-# LeewayInstance = Leeway()
-# LarvalFishInstance = LarvalFish()
-# OpenOilInstance = OpenOil()
-# OceanDriftInstance = OceanDrift()
+from particle_tracking_manager.config_ocean_model import _KNOWN_MODELS
 
 logger = logging.getLogger()
 
@@ -135,8 +126,8 @@ class OpenDriftConfig(TheManagerConfig):
         ptm_level=2,
     )
     
-    horizontal_diffusivity: float = Field(
-        default=0,
+    horizontal_diffusivity: Optional[float] = Field(
+        default=None,
         description="Add horizontal diffusivity (random walk)",
         title="Horizontal Diffusivity",
         ge=0,
@@ -176,7 +167,7 @@ class OpenDriftConfig(TheManagerConfig):
 
     class Config:
         validate_defaults = True
-        # use_enum_values=True
+        use_enum_values=True
 
     @model_validator(mode='after')
     def check_interpolator_filename(self) -> Self:
@@ -213,7 +204,8 @@ class OpenDriftConfig(TheManagerConfig):
                 import appdirs
                 cache_dir = Path(appdirs.user_cache_dir(appname="particle-tracking-manager", appauthor="axiom-data-science"))
                 cache_dir.mkdir(parents=True, exist_ok=True)
-                self.interpolator_filename = cache_dir / Path(f"{self.ocean_model.name}_interpolator").with_suffix(".pickle")
+                self.interpolator_filename = cache_dir / Path(f"{self.ocean_model}_interpolator").with_suffix(".pickle")
+                # self.interpolator_filename = cache_dir / Path(f"{self.ocean_model.name}_interpolator").with_suffix(".pickle")
             else:
                 self.interpolator_filename = Path(self.interpolator_filename).with_suffix(".pickle")
             self.save_interpolator = True
@@ -231,83 +223,78 @@ class OpenDriftConfig(TheManagerConfig):
 
         return self
 
-    # TODO: put this function somewhere
-    # @model_validator(mode='after')
-    # @computed_field
-    # def drop_vars(self) -> list[str]:
-    #     """Gather variables to drop based on PTMConfig and OpenDriftConfig."""
-    #     # return self.gather_drop_vars()
-    # # def gather_drop_vars(self) -> Self:
-    #     """Gather variables to drop based on PTMConfig and OpenDriftConfig."""
+    @property
+    def drop_vars(self) -> list[str]:
+        """Gather variables to drop based on PTMConfig and OpenDriftConfig."""
 
-    #     # set drop_vars initial values based on the PTM settings, then add to them for the specific model
-    #     drop_vars = self.model_drop_vars
-    #     # drop_vars = [] #DROP VARS WILL ALREADY EXIST HERE
-    #     # don't need w if not 3D movement
-    #     if not self.do3D:
-    #         drop_vars += ["w"]
-    #         logger.info("Dropping vertical velocity (w) because do3D is False")
-    #     else:
-    #         logger.info("Retaining vertical velocity (w) because do3D is True")
+        # set drop_vars initial values based on the PTM settings, then add to them for the specific model
+        drop_vars = self.ocean_model_config.model_drop_vars
 
-    #     # don't need winds if stokes drift, wind drift, added wind_uncertainty, and vertical_mixing are off
-    #     # It's possible that winds aren't required for every OpenOil simulation but seems like
-    #     # they would usually be required and the cases are tricky to navigate so also skipping for that case.
-    #     if (
-    #         not self.stokes_drift
-    #         and self.wind_drift_factor == 0
-    #         and self.wind_uncertainty == 0
-    #         and self.drift_model != "OpenOil"
-    #         and not self.vertical_mixing
-    #     ):
-    #         drop_vars += ["Uwind", "Vwind", "Uwind_eastward", "Vwind_northward"]
-    #         logger.info(
-    #             "Dropping wind variables because stokes_drift, wind_drift_factor, wind_uncertainty, and vertical_mixing are all off and drift_model is not 'OpenOil'"
-    #         )
-    #     else:
-    #         logger.info(
-    #             "Retaining wind variables because stokes_drift, wind_drift_factor, wind_uncertainty, or vertical_mixing are on or drift_model is 'OpenOil'"
-    #         )
+        # don't need w if not 3D movement
+        if not self.do3D:
+            drop_vars += ["w"]
+            logger.info("Dropping vertical velocity (w) because do3D is False")
+        else:
+            logger.info("Retaining vertical velocity (w) because do3D is True")
 
-    #     # only keep salt and temp for LarvalFish or OpenOil
-    #     if self.drift_model not in ["LarvalFish", "OpenOil"]:
-    #         drop_vars += ["salt", "temp"]
-    #         logger.info(
-    #             "Dropping salt and temp variables because drift_model is not LarvalFish nor OpenOil"
-    #         )
-    #     else:
-    #         logger.info(
-    #             "Retaining salt and temp variables because drift_model is LarvalFish or OpenOil"
-    #         )
+        # don't need winds if stokes drift, wind drift, added wind_uncertainty, and vertical_mixing are off
+        # It's possible that winds aren't required for every OpenOil simulation but seems like
+        # they would usually be required and the cases are tricky to navigate so also skipping for that case.
+        if (
+            not self.stokes_drift
+            and ("wind_drift_factor" in self and self.wind_drift_factor == 0)
+            and self.wind_uncertainty == 0
+            and self.drift_model != "OpenOil"
+            and not self.vertical_mixing
+        ):
+            drop_vars += ["Uwind", "Vwind", "Uwind_eastward", "Vwind_northward"]
+            logger.info(
+                "Dropping wind variables because stokes_drift, wind_drift_factor, wind_uncertainty, and vertical_mixing are all off and drift_model is not 'OpenOil'"
+            )
+        else:
+            logger.info(
+                "Retaining wind variables because stokes_drift, wind_drift_factor, wind_uncertainty, or vertical_mixing are on or drift_model is 'OpenOil'"
+            )
 
-    #     # keep some ice variables for OpenOil (though later see if these are used)
-    #     if self.drift_model != "OpenOil":
-    #         drop_vars += ["aice", "uice_eastward", "vice_northward"]
-    #         logger.info(
-    #             "Dropping ice variables because drift_model is not OpenOil"
-    #         )
-    #     else:
-    #         logger.info(
-    #             "Retaining ice variables because drift_model is OpenOil"
-    #         )
+        # only keep salt and temp for LarvalFish or OpenOil
+        if self.drift_model not in ["LarvalFish", "OpenOil"]:
+            drop_vars += ["salt", "temp"]
+            logger.info(
+                "Dropping salt and temp variables because drift_model is not LarvalFish nor OpenOil"
+            )
+        else:
+            logger.info(
+                "Retaining salt and temp variables because drift_model is LarvalFish or OpenOil"
+            )
 
-    #     # if using static masks, drop wetdry masks.
-    #     # if using wetdry masks, drop static masks.
-    #     # TODO: is standard_name_mapping working correctly?
-    #     if self.use_static_masks:
-    #         # TODO: Can the mapping include all possible mappings or does it need to be exact?
-    #         # standard_name_mapping.update({"mask_rho": "land_binary_mask"})
-    #         drop_vars += ["wetdry_mask_rho", "wetdry_mask_u", "wetdry_mask_v"]
-    #         logger.info(
-    #             "Dropping wetdry masks because using static masks instead."
-    #         )
-    #     else:
-    #         # standard_name_mapping.update({"wetdry_mask_rho": "land_binary_mask"})
-    #         drop_vars += ["mask_rho", "mask_u", "mask_v", "mask_psi"]
-    #         logger.info(
-    #             "Dropping mask_rho, mask_u, mask_v, mask_psi because using wetdry masks instead."
-    #         )
-    #     return drop_vars    
+        # keep some ice variables for OpenOil (though later see if these are used)
+        if self.drift_model != "OpenOil":
+            drop_vars += ["aice", "uice_eastward", "vice_northward"]
+            logger.info(
+                "Dropping ice variables because drift_model is not OpenOil"
+            )
+        else:
+            logger.info(
+                "Retaining ice variables because drift_model is OpenOil"
+            )
+
+        # if using static masks, drop wetdry masks.
+        # if using wetdry masks, drop static masks.
+        # TODO: is standard_name_mapping working correctly?
+        if self.use_static_masks:
+            # TODO: Can the mapping include all possible mappings or does it need to be exact?
+            # standard_name_mapping.update({"mask_rho": "land_binary_mask"})
+            drop_vars += ["wetdry_mask_rho", "wetdry_mask_u", "wetdry_mask_v"]
+            logger.info(
+                "Dropping wetdry masks because using static masks instead."
+            )
+        else:
+            # standard_name_mapping.update({"wetdry_mask_rho": "land_binary_mask"})
+            drop_vars += ["mask_rho", "mask_u", "mask_v", "mask_psi"]
+            logger.info(
+                "Dropping mask_rho, mask_u, mask_v, mask_psi because using wetdry masks instead."
+            )
+        return drop_vars    
 
 # TODO: implement my defaults over opendrift defaults — no, instead set it up to take a config of my preferred inputs
 
@@ -1891,6 +1878,25 @@ class OpenOilModelConfig(OceanDriftModelConfig):
     # vertical_mixing: bool = FieldInfo.merge_field_infos(OceanDriftModelConfig.model_fields['vertical_mixing'],
     #                                                     Field(default=True))
 
+    
+    # @computed_field
+    @property
+    def oil_type_input(self) -> str:
+        """Save oil type input with both name and id"""
+        if self.drift_model == "OpenOil":
+            return self.oil_type
+        return None
+    
+    @model_validator(mode='after')
+    def clean_oil_type_string(self) -> Self:
+        """remove id from oil_type string if needed"""
+        if self.drift_model == "OpenOil":
+            # only keep first part of string, which is the name of the oil
+            # import pdb; pdb.set_trace()
+            self.oil_type = self.oil_type_input.split(" (")[0]
+            # self.oil_type.name = self.oil_type_input.split(" (")[0]
+        return self
+
 
 
 class LarvalFishModelConfig(OceanDriftModelConfig):
@@ -1963,7 +1969,7 @@ class LarvalFishModelConfig(OceanDriftModelConfig):
         if not self.do3D:
             raise ValueError("do3D must be True with the LarvalFish drift model.")
             
-        return self    
+        return self
 
 
 open_drift_mapper = {
@@ -1972,13 +1978,3 @@ open_drift_mapper = {
     "LarvalFish": LarvalFishModelConfig,
     "Leeway": LeewayModelConfig,
 }
-
-
-# DriftModelConfig = Union[OceanDriftModelConfig, OpenOilModelConfig, LarvalFishModelConfig, LeewayModelConfig]
-
-# class OpenDriftConfig(BaseModel):
-# # class OpenDriftConfig(OceanDriftModelConfig):
-#     drift_model: DriftModelConfig = Field(discriminator='drift_model')
-    
-#     # drift_model: DriftModelConfig = Field(default=OceanDriftModelConfig(), discriminator='drift_model')
-

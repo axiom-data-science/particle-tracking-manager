@@ -3,172 +3,104 @@ from abc import ABC, abstractmethod
 from .config_the_manager import TheManagerConfig
 from .config_misc import ParticleTrackingState, SetupOutputFiles
 from .config_logging import LoggerMethods
-from .config_ocean_model import ocean_model_mapper
-from pydantic import BaseModel
 import logging
-from typing import Any, Generic, Mapping, Self, TypeVar
+from typing import Self
 
 logger = logging.getLogger()
 
 
-
-# class ParticleTrackingManager(ABC):
-#     """Manager class that controls particle tracking model.
-
-#     Parameters
-#     ----------
-#     model : str
-#         Name of Lagrangian model package to use for drifter tracking. Only option
-#         currently is "opendrift".
-#     lon : Optional[Union[int,float]], optional
-#         Longitude of center of initial drifter locations, by default None. Use with `seed_flag="elements"`.
-#     lat : Optional[Union[int,float]], optional
-#         Latitude of center of initial drifter locations, by default None. Use with `seed_flag="elements"`.
-#     geojson : Optional[dict], optional
-#         GeoJSON object defining polygon for seeding drifters, by default None. Use with `seed_flag="geojson"`.
-#     seed_flag : str, optional
-#         Flag for seeding drifters. Options are "elements", "geojson". Default is "elements".
-#     z : Union[int,float], optional
-#         Depth of initial drifter locations, by default 0 but taken from the
-#         default in the model. Values are overridden if
-#         ``surface_only==True`` to 0 and to the seabed if ``seed_seafloor`` is True.
-#         Depth is negative downward in OpenDrift.
-#     seed_seafloor : bool, optional
-#         Set to True to seed drifters vertically at the seabed, default is False. If True
-#         then value of z is set to None and ignored.
-#     number : int
-#         Number of drifters to simulate. Default is 100.
-#     start_time : Optional[str,datetime.datetime,pd.Timestamp], optional
-#         Start time of simulation, by default None
-#     start_time_end : Optional[str,datetime.datetime,pd.Timestamp], optional
-#         If not None, this creates a range of start times for drifters, starting with
-#         `start_time` and ending with `start_time_end`. Drifters will be initialized linearly
-#         between the two start times. Default None.
-#     run_forward : bool, optional
-#         True to run forward in time, False to run backward, by default True
-#     time_step : int, optional
-#         Time step in seconds, options >0, <86400 (1 day in seconds), by default 300.
-#     time_step_output : int, Timedelta, optional
-#         How often to output model output. Should be a multiple of time_step.
-#         By default 3600.
-#     steps : int, optional
-#         Number of time steps to run in simulation. Options >0.
-#         steps, end_time, or duration must be input by user. By default steps is 3 and
-#         duration and end_time are None. Only one of steps, end_time, or duration can be
-#         non-None at initialization time. If one of steps, end_time, or duration is input
-#         later, it will be used to overwrite the three parameters according to that newest
-#         parameter.
-#     duration : Optional[datetime.timedelta], optional
-#         Length of simulation to run, as positive-valued timedelta object, in hours,
-#         such as ``timedelta(hours=48)``.
-#         steps, end_time, or duration must be input by user. By default steps is 3 and
-#         duration and end_time are None. For CLI, input duration as a pandas Timedelta
-#         string like "48h" for 48 hours. Only one of steps, end_time, or duration can be
-#         non-None at initialization time. If one of steps, end_time, or duration is input
-#         later, it will be used to overwrite the three parameters according to that newest
-#         parameter.
-
-#     end_time : Optional[datetime], optional
-#         Datetime at which to end simulation, as positive-valued datetime object.
-#         steps, end_time, or duration must be input by user. By default steps is 3 and
-#         duration and end_time are None. Only one of steps, end_time, or duration can be
-#         non-None at initialization time. If one of steps, end_time, or duration is input
-#         later, it will be used to overwrite the three parameters according to that newest
-#         parameter.
-
-#     ocean_model : Optional[str], optional
-#         Name of ocean model to use for driving drifter simulation, by default None.
-#         Use None for testing and set up. Otherwise input a string.
-#         Options are: "NWGOA", "CIOFS", "CIOFSOP".
-#         Alternatively keep as None and set up a separate reader (see example in docs).
-#     ocean_model_local : Optional, bool
-#         Set to True to use local version of known `ocean_model` instead of remote version.
-#     surface_only : bool, optional
-#         Set to True to keep drifters at the surface, by default None.
-#         If this flag is set to not-None, it overrides do3D to False, vertical_mixing to False,
-#         and the z value(s) 0.
-#         If True, this flag also turns off reading model output below 0.5m if
-#         drift_model is not Leeway:
-#         ``o.set_config('drift:truncate_ocean_model_below_m', 0.5)`` to save time.
-#     do3D : bool, optional
-#         Set to True to run drifters in 3D, by default False. This is overridden if
-#         ``surface_only==True``. If True, vertical advection and mixing are turned on with
-#         options for setting ``diffusivitymodel``, ``background_diffusivity``,
-#         ``ocean_mixed_layer_thickness``, ``vertical_mixing_timestep``. If False,
-#         vertical motion is disabled.
-#     vertical_mixing : bool, optional
-#         Set to True to include vertical mixing, by default False. This is overridden if
-#         ``surface_only==True``.
-#     use_static_masks : bool, optional
-#         Set to True to use static masks ocean_model output when ROMS wetdry masks are available, by default False.
-#         This is relevant for all of the available known models. If you want to use static masks
-#         with a user-input ocean_model, you can drop the wetdry_mask_rho etc variables from the
-#         dataset before inputting to PTM. Setting this to True may save computation time but
-#         will be less accurate, especially in the tidal flat regions of the model.
-#     output_file : Optional[str], optional
-#         Name of output file to save, by default None. If None, default is set in the model. Without any suffix.
-#     output_format : str, default "netcdf"
-#         Name of input/output module type to use for writing Lagrangian model output. Default is "netcdf".
-#     use_cache : bool
-#         Set to True to use cache for saving interpolators, by default True.
-#     interpolator_filename : Optional[Union[pathlib.Path,str]], optional
-#         Filename to save interpolators to, by default None. The full path should be given, but no suffix.
-#         Use this to either read from an existing file at a non-default location or to save to a
-#         non-default location. If None and use_cache==True, the filename is set to a built-in name to an
-#         `appdirs` cache directory.
-#     wind_drift_factor : float
-#         Elements at surface are moved with this fraction of the wind vector, in addition to currents and Stokes drift.
-#     stokes_drift : bool, optional
-#         Set to True to turn on Stokes drift, by default True.
-#     horizontal_diffusivity : float
-#         Horizontal diffusivity is None by default but will be set to a grid-dependent value for known ocean_model values. This is calculated as 0.1 m/s sub-gridscale velocity that is missing from the model output and multiplied by an estimate of the horizontal grid resolution. This leads to a larger value for NWGOA which has a larger value for mean horizontal grid resolution (lower resolution). If the user inputs their own ocean_model information, they can input their own horizontal_diffusivity value. A user can use a known ocean_model and then overwrite the horizontal_diffusivity value to some value.
-#     log : str, optional
-#         Options are "low" and "high" verbosity for log, by default "low"
-
-#     Notes
-#     -----
-#     Configuration happens at initialization time for the child model. There is currently
-#     no separate configuration step.
-#     """
-    
-#     # TODO: update docs and tests to not demonstrate doing things in steps
-#     # since won't be able to anymore
-
-#     """
-#     user_input_config
-#         ocean_model
-#         lat
-#         lon
-#         polygon
-#         ...
-    
-#     """
-#     # ocean_model
-#     # lat/lon
-#     # Polygon
-
-
-
-#     def __init__(self, #user_config: UserConfig, 
-#                 #  output_file,
-#                  **kwargs):
         
+class ParticleTrackingManager(ABC):
+    """Manager class that controls particle tracking model.
+    
+    Parameters
+    ----------
+    model : str
+        Name of Lagrangian model package to use for drifter tracking. Only option
+        currently is "opendrift".
+    lon : Optional[Union[int,float]], optional
+        Longitude of center of initial drifter locations, by default None. Use with `seed_flag="elements"`.
+    lat : Optional[Union[int,float]], optional
+        Latitude of center of initial drifter locations, by default None. Use with `seed_flag="elements"`.
+    geojson : Optional[dict], optional
+        GeoJSON object defining polygon for seeding drifters, by default None. Use with `seed_flag="geojson"`.
+    seed_flag : str, optional
+        Flag for seeding drifters. Options are "elements", "geojson". Default is "elements".
+    start_time : Optional[str,datetime.datetime,pd.Timestamp], optional
+        Start time of simulation, by default None
+    start_time_end : Optional[str,datetime.datetime,pd.Timestamp], optional
+        If not None, this creates a range of start times for drifters, starting with
+        `start_time` and ending with `start_time_end`. Drifters will be initialized linearly
+        between the two start times. Default None.
+    run_forward : bool, optional
+        True to run forward in time, False to run backward, by default True
+    time_step : int, optional
+        Time step in seconds, options >0, <86400 (1 day in seconds), by default 300.
+    time_step_output : int, Timedelta, optional
+        How often to output model output. Should be a multiple of time_step.
+        By default 3600.
+    steps : int, optional
+        Number of time steps to run in simulation. Options >0.
+        steps, end_time, or duration must be input by user. By default steps is 3 and
+        duration and end_time are None. Only one of steps, end_time, or duration can be
+        non-None at initialization time. If one of steps, end_time, or duration is input
+        later, it will be used to overwrite the three parameters according to that newest
+        parameter.
+    duration : Optional[datetime.timedelta], optional
+        Length of simulation to run, as positive-valued timedelta object, in hours,
+        such as ``timedelta(hours=48)``.
+        steps, end_time, or duration must be input by user. By default steps is 3 and
+        duration and end_time are None. For CLI, input duration as a pandas Timedelta
+        string like "48h" for 48 hours. Only one of steps, end_time, or duration can be
+        non-None at initialization time. If one of steps, end_time, or duration is input
+        later, it will be used to overwrite the three parameters according to that newest
+        parameter.
 
-ConfigType = TypeVar("ConfigType", bound=TheManagerConfig)
+    end_time : Optional[datetime], optional
+        Datetime at which to end simulation, as positive-valued datetime object.
+        steps, end_time, or duration must be input by user. By default steps is 3 and
+        duration and end_time are None. Only one of steps, end_time, or duration can be
+        non-None at initialization time. If one of steps, end_time, or duration is input
+        later, it will be used to overwrite the three parameters according to that newest
+        parameter.
 
-
-# class ParticleTrackingManager(ABC, Generic[ConfigType]):
-class ParticleTrackingManager(ABC, Generic[ConfigType]):
-    """Manager class that controls particle tracking model."""
+    ocean_model : Optional[str], optional
+        Name of ocean model to use for driving drifter simulation, by default None.
+        Use None for testing and set up. Otherwise input a string.
+        Options are: "NWGOA", "CIOFS", "CIOFSOP".
+        Alternatively keep as None and set up a separate reader (see example in docs).
+    ocean_model_local : Optional, bool
+        Set to True to use local version of known `ocean_model` instead of remote version.
+    do3D : bool, optional
+        Set to True to run drifters in 3D, by default False. This is overridden if
+        ``surface_only==True``. If True, vertical advection and mixing are turned on with
+        options for setting ``diffusivitymodel``, ``background_diffusivity``,
+        ``ocean_mixed_layer_thickness``, ``vertical_mixing_timestep``. If False,
+        vertical motion is disabled.
+    use_static_masks : bool, optional
+        Set to True to use static masks ocean_model output when ROMS wetdry masks are available, by default False.
+        This is relevant for all of the available known models. If you want to use static masks
+        with a user-input ocean_model, you can drop the wetdry_mask_rho etc variables from the
+        dataset before inputting to PTM. Setting this to True may save computation time but
+        will be less accurate, especially in the tidal flat regions of the model.
+    output_file : Optional[str], optional
+        Name of output file to save, by default None. If None, default is set in the model. Without any suffix.
+    output_format : str, default "netcdf"
+        Name of input/output module type to use for writing Lagrangian model output. Default is "netcdf".
+    use_cache : bool
+        Set to True to use cache for saving interpolators, by default True.
+    horizontal_diffusivity : float
+        Horizontal diffusivity is None by default but will be set to a grid-dependent value for known ocean_model values. This is calculated as 0.1 m/s sub-gridscale velocity that is missing from the model output and multiplied by an estimate of the horizontal grid resolution. This leads to a larger value for NWGOA which has a larger value for mean horizontal grid resolution (lower resolution). If the user inputs their own ocean_model information, they can input their own horizontal_diffusivity value. A user can use a known ocean_model and then overwrite the horizontal_diffusivity value to some value.
+    log_level : str, optional
+        Options are the logging input options. By default "INFO"
+    
+    """
 
     _config: TheManagerConfig
 
-    # def __init__(self, config: ConfigType):
     def __init__(self, **kwargs):
         """Initialize the ParticleTrackingManager."""
-        # self._config = config
 
-        # import pdb; pdb.set_trace()
         # Set up strings for the output files, which will be used in Logger setup and for all other output files.
         inputs = {key: kwargs[key] for key in ["output_file", "output_format"] if key in kwargs}
         self.files = SetupOutputFiles(**inputs)
@@ -176,84 +108,12 @@ class ParticleTrackingManager(ABC, Generic[ConfigType]):
         # Setup logging, this also contains the log_level parameter
         inputs = {key: kwargs[key] for key in ["log_level"] if key in kwargs}
         LoggerMethods(**inputs).setup_logger(logfile_name=self.files.logfile_name)
-        # logger = LoggerMethods(**inputs).setup_logger(logfile_name=self.files.logfile_name)
-        # TODO: check logger files
-        # import pdb; pdb.set_trace()
-        
-        # # inputs = {key: kwargs[key] for key in ["ocean_model"] if key in kwargs}
-        # # self.ocean_models = OceanModelConfig(inputs)
-        # self.manager_config = TheManagerConfig(**kwargs)
-        
-        
-        # DEFINE ocean models here but with no validation — just basic info.
-        # Validate in model-specific init.
-        # import pdb; pdb.set_trace()
-        ocean_model = kwargs.get("ocean_model", TheManagerConfig.model_json_schema()["properties"]["ocean_model"]["default"])
-        self.ocean_model = ocean_model_mapper[ocean_model]
-        
-        # keys = ["start_time", "end_time", "lat", "lon", "ocean_model_local", "ocean_model"]
-        # inputs = {key: getattr(self.manager_config,key) for key in keys}
-        # # # self.ocean_model = select_ocean_model(**inputs)
-        # # # self.ocean_model = SetupNWGOA(**inputs)
-        # # inputs = {key: kwargs[key] for key in ["ocean_model"] if key in kwargs}
-        # # inputs = {key: getattr(self.manager_config, key) for key in ["ocean_model"]}
-        # # inputs.update({key: kwargs[key] for key in ["ocean_model"] if key in kwargs})
-        # OceanModelConfig = create_ocean_model(**inputs)
-        # # TODO: should ocean model config be discriminated like OpenDriftConfig?
-
-        # keys = ["start_time", "end_time", "lat", "lon", "ocean_model_local"]#, "ocean_model"]
-        # inputs = {key: getattr(self.manager_config,key) for key in keys}
-        # inputs.update({key: kwargs[key] for key in ["horizontal_diffusivity"] if key in kwargs})
-        # self.ocean_model = OceanModelConfig(**inputs)
-
-        # self.ocean_model = getattr(OceanModelConfig, self.manager_config.ocean_model)(**kwargs)
-
-        # self._KNOWN_MODELS = self.manager_config.model_json_schema()['$defs']['OceanModelEnum']["enum"]
-
-
-        # self.config = config
-        
-        
-        # self.logger = PTMConfig(logger=self.logger, output_file_config=dict(output_file=self.files.output_file,
-        #                                                     output_format=kwargs.get("output_format", config_data["output_format"]["default"]),))
-
-        # # output_file is processed in setup_logger() so it is put into kwargs so it can be subsequently
-        # # used in PTMConfig. This is not ideal to have one configuration parameter dealt with first but makes it so 
-        # # that the logger can be set up before the rest of the configuration is processed and used during configuration.
-        # self.logger = LoggerConfig().setup_logger(output_file=self.files.output_file, 
-        #                                                             log_level=kwargs.get("log_level", config_data["log_level"]["default"]))
-        # self.logger, self.output_file = LoggerConfig().setup_logger(output_file=kwargs.get("output_file", config_data["output_file"]["default"]), 
-        #                                                             log_level=kwargs.get("log_level", config_data["log_level"]["default"]))
-
-        # self.logfile_name = Path(self.logger.handlers[0].baseFilename).name
         self.state = ParticleTrackingState()
-        
-        # TODO: alphabetize config files
-        # TODO: update docstrings
-    
 
-    # @abstractmethod
-    # def add_reader(self, **kwargs):
-    #     """Here is where the model output is opened.
-        
-    #     Subclasses must implement this method and:
-        
-    #     * Set `self.has_added_reader = True` at the end of the method.
-    #     """
-    #     pass
-
-    # # TODO: change methods to _methods as appropriate
-
-    # @abstractmethod
-    # def seed(self, lon=None, lat=None, z=None):
-    #     """Initialize the drifters in space and time.
-        
-    #     Subclasses must implement this method and:
-        
-    #     * Raise a ValueError if not self.has_added_reader
-    #     * Set `self.has_run_seeding = True` at the end of the method.
-    #     """
-    #     pass
+    @classmethod
+    def from_config(cls, config: TheManagerConfig) -> Self:
+        """Create an OpenDriftModel from a config."""
+        return cls(**config.dict())
 
     @abstractmethod
     def run_all(self):
@@ -275,72 +135,3 @@ class ParticleTrackingManager(ABC, Generic[ConfigType]):
     #         self.seed()
     #     if not self.state.has_run:
     #         self.run()
-
-    # def output(self):
-    #     """Hold for future output function."""
-    #     pass
-
-    @abstractmethod
-    def _model_config(self):
-        """Model (like OpenDrift) should have its own config."""
-        pass
-
-    # @abstractmethod
-    # def _add_ptm_config(self):
-    #     """Have this in the model class to modify config."""
-    #     pass
-
-    # @abstractmethod
-    # def _add_model_config(self):
-    #     """Have this in the model class to modify config."""
-    #     pass
-
-    # def _update_config(self) -> None:
-    #     """Update configuration between model, PTM additions, and model additions."""
-    #     self._add_ptm_config()
-    #     self._add_model_config()
-    
-    # TODO: which methods should be abstract
-
-    # @abstractmethod
-    # def show_all_config(self):
-    #     """Show all configuration, combined.
-        
-    #     Define in child class."""
-    #     pass
-
-    # def show_config(self, **kwargs) -> dict:
-    #     """Show parameter configuration across both model and PTM."""
-    #     # self._update_config()
-    #     config = self.show_config_model(**kwargs)
-    #     return config
-
-    # @abstractmethod
-    # def reader_metadata(self, key):
-    #     """Define in child class."""
-    #     pass
-
-    # @abstractmethod
-    # def query_reader(self):
-    #     """Define in child class."""
-    #     pass
-
-    # @abstractmethod
-    # def all_export_variables(self):
-    #     """Output list of all possible export variables."""
-    #     pass
-
-    # @abstractmethod
-    # def export_variables(self):
-    #     """Output list of all actual export variables."""
-    #     pass
-
-    # this is fully handled by the field output_file in PTMConfig
-    # @property
-    # @abstractmethod
-    # def outfile_name(self):
-    #     """Output file name."""
-    #     pass
-
-# simulation_config = PTMConfig(...)
-# simulation = ParticleTrackingManager(config=simulation_config)

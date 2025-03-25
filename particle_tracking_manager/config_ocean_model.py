@@ -1,18 +1,26 @@
 from pydantic import BaseModel, Field, model_validator, create_model
-from typing import Optional, List, Dict, Self, Union, Annotated, Literal, Callable
+from typing import Optional, List, Dict, Self, Annotated, Callable
 from datetime import datetime, timedelta
 import xarray as xr
 from .models.opendrift.utils import make_nwgoa_kerchunk, make_ciofs_kerchunk
-from .config_the_manager import _KNOWN_MODELS
 import logging
 from enum import Enum
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger()
 
 
-"""
-User can input xarray dataset
-"""
+
+
+## Set up ocean model configuration: doesn't depend on a tracking simulation. ##
+
+class OceanModelEnum(str, Enum):
+    NWGOA = "NWGOA"
+    CIOFS = "CIOFS"
+    CIOFSOP = "CIOFSOP"
+    CIOFSFRESH = "CIOFSFRESH"
+
+_KNOWN_MODELS = [model.value for model in OceanModelEnum]
+
 
 def calculate_CIOFSOP_max():
     """read in CIOFSOP max time available, at datetime object"""
@@ -72,10 +80,6 @@ class OceanModelConfig(BaseModel):
         datetime,
         Field(description="Start time of the model."),
     ]
-    # end_time: Annotated[
-    #     datetime,
-    #     Field(description="End time of the model."),
-    # ]
     oceanmodel_lon0_360: Annotated[
         bool,
         Field(description="Set to True to use 0-360 longitude convention for this model."),
@@ -96,10 +100,6 @@ class OceanModelConfig(BaseModel):
         float,
         Field(description="Approximate horizontal grid resolution (meters), used to calculate horizontal diffusivity."),
     ]
-
-    # @property
-    # def start_time_model(self) -> datetime:
-    #     return get_model_start_time_model(self.path).to_pydatetime()
     
     end_time_fixed: Annotated[Optional[datetime], Field(None, description="End time of the model, if doesn't change.")]
 
@@ -115,11 +115,19 @@ class OceanModelConfig(BaseModel):
         else:  # there is only one that uses this currently
             return get_model_end_time(self.name)
 
-    # @property
-    # def temporal_resolution(self) -> timedelta:
-    #     return pd.Timedelta(self.temporal_resolution_str).to_pytimedelta()
-    
+    @property
+    def horizontal_diffusivity(self) -> float:
+        """Calculate horizontal diffusivity based on known ocean_model.
+        
+        Might be overwritten by user-input in other model config.
+        """
 
+        # horizontal diffusivity is calculated based on the mean horizontal grid resolution
+        # for the model being used.
+        # 0.1 is a guess for the magnitude of velocity being missed in the models, the sub-gridscale velocity
+        sub_gridscale_velocity = 0.1
+        horizontal_diffusivity = sub_gridscale_velocity * self.dx
+        return horizontal_diffusivity
 
 
 
@@ -218,62 +226,35 @@ ocean_model_mapper = {
 }
 
 
-# TODO decide if this should be in OceanMOdelMethods. Maybe yes if can then test it easily.
-# only do that if I would reasonably be able to test it separately from the rest.
-def loc_local(name, kerchunk_func_str, start_sim, end_sim) -> dict:
-    """This sets up a short kerchunk file for reading in just enough model output."""
+
+## Set up ocean model simulation configuration: depends on a tracking simulation. ##
+
+class OceanModelSimulation(BaseModel):
+    ocean_model_config: OceanModelConfig
+    oceanmodel_lon0_360: bool
+    ocean_model_local: bool
     
-    # back each start time back 1 day and end time forward 1 day to make sure enough output is available
-    if start_sim < end_sim:
-        start_time = start_sim - timedelta(days=1)
-        end_time = end_sim + timedelta(days=1)
-    else:
-        start_time = start_sim + timedelta(days=1)
-        end_time = end_sim - timedelta(days=1)
     
-    start = get_file_date_string(name, start_time)
-    end = get_file_date_string(name, end_time)
-    loc_local = function_map[kerchunk_func_str](start=start, end=end, name=name)
-    return loc_local
+    @model_validator(mode='after')
+    def check_config_oceanmodel_lon0_360(self) -> Self:
+        print("RUNNING VALIDATOR")
+        if self.ocean_model_config.oceanmodel_lon0_360:
+            if self.lon is not None and self.lon < 0:
+                if -180 < self.lon < 0:
+                    orig_lon = self.lon
+                    self.lon += 360
+                    logger.info(f"Shifting longitude from {orig_lon} to {self.lon}.")
+        return self
 
-
-def calc_horizontal_diffusivity_for_model(dx) -> float:
-    """Calculate horizontal diffusivity based on known ocean_model."""
-
-    # horizontal diffusivity is calculated based on the mean horizontal grid resolution
-    # for the model being used.
-    # 0.1 is a guess for the magnitude of velocity being missed in the models, the sub-gridscale velocity
-    sub_gridscale_velocity = 0.1
-    horizontal_diffusivity = sub_gridscale_velocity * dx
-    return horizontal_diffusivity
-
-
-
-class OceanModelMethods(BaseModel):
-    """Contains functions and validators for all ocean models for tracking sims."""
-
-    ocean_model: OceanModelConfig
-    config: BaseModel
-
-
-#     loc_local: dict = Field(default={}, exclude=True)
-#     ocean_model_local: bool = Field(True, description="Set to True to use local ocean model data, False for remote access.")
-#     end_time: datetime
-#     horizontal_diffusivity: Optional[float] = Field(None, description="Horizontal diffusivity for the simulation.", ptm_level=2, od_mapping="drift:horizontal_diffusivity")
-#     # TODO: Move functions for manipulating ocean model dataset to here and store ds, allowing user to input ds directly
-#     # and avoid some of the initial checks as needed.
-
-
-    
     def open_dataset(self, drop_vars: list) -> xr.Dataset:
         """Open an xarray dataset 
         
         """
         # if local
-        if self.config.ocean_model_local:
+        if self.ocean_model_local:
             
-            name, kerchunk_func_str = self.ocean_model.name, self.ocean_model.kerchunk_func_str
-            start_time, end_time = self.config.start_time, self.config.end_time
+            name, kerchunk_func_str = self.ocean_model_config.name, self.ocean_model_config.kerchunk_func_str
+            start_time, end_time = self.start_time, self.end_time
             
             if loc_local(name, kerchunk_func_str, start_time, end_time) is None:
                 raise ValueError("loc_local must be set if ocean_model_local is True, but loc_local is None.")
@@ -292,72 +273,68 @@ class OceanModelMethods(BaseModel):
 
         # otherwise remote
         else:
-            if self.ocean_model.loc_remote is None:
+            if self.ocean_model_config.loc_remote is None:
                 raise ValueError("loc_remote must be set if ocean_model_local is False, but loc_remote is None.")
             else:
-                if ".nc" in self.ocean_model.loc_remote:
+                if ".nc" in self.ocean_model_config.loc_remote:
                     ds = xr.open_dataset(
-                        self.ocean_model.loc_remote,
+                        self.ocean_model_config.loc_remote,
                         chunks={},
                         drop_variables=drop_vars,
                         decode_times=False,
                     )
                 else:
                     ds = xr.open_zarr(
-                        self.ocean_model.loc_remote,
+                        self.ocean_model_config.loc_remote,
                         chunks={},
                         drop_variables=drop_vars,
                         decode_times=False,
                     )
 
                 logger.info(
-                    f"Opened remote dataset {self.ocean_model.loc_remote} with number outputs {ds.ocean_time.size}."
+                    f"Opened remote dataset {self.ocean_model_config.loc_remote} with number outputs {ds.ocean_time.size}."
                 )
         return ds
 
-    @model_validator(mode='after')
-    def check_config_oceanmodel_lon0_360(self) -> Self:
-        print("RUNNING VALIDATOR")
-        if self.ocean_model.oceanmodel_lon0_360:
-            if self.lon is not None and self.lon < 0:
-                if -180 < self.lon < 0:
-                    orig_lon = self.lon
-                    self.lon += 360
-                    logger.info(f"Shifting longitude from {orig_lon} to {self.lon}.")
-        return self
 
-    @model_validator(mode='after')
-    def assign_horizontal_diffusivity(self) -> Self:
-        """Calculate horizontal diffusivity based on ocean model."""
-
-        if self.config.horizontal_diffusivity is not None:
-            logger.info(
-                f"Setting horizontal_diffusivity to user-selected value {self.config.horizontal_diffusivity}."
-            )
-
-        elif self.ocean_model.name in _KNOWN_MODELS:
-
-            hdiff = calc_horizontal_diffusivity_for_model(self.ocean_model.dx)
-            logger.info(
-                f"Setting horizontal_diffusivity parameter to one tuned to reader model of value {hdiff}."
-            )
-            self.config.horizontal_diffusivity = hdiff
-
-        elif (
-            self.ocean_model.name not in _KNOWN_MODELS
-            and self.config.horizontal_diffusivity is None
-        ):
-
-            logger.info(
-                """Since ocean_model is user-input, changing horizontal_diffusivity parameter from None to 0.0.
-                You can also set it to a specific value with `m.horizontal_diffusivity=[number]`."""
-            )
-
-            self.config.horizontal_diffusivity = 0
-
-        return self
+# Using `create_model` to generate a dynamic simulation model class
+# ocean_model = NWGOA
+# NWGOASimulation = create_model(
+#     ocean_model.name,  # Model name
+#     __base__=OceanModelSimulation,
+#     lon=(float, Field(..., ge=getattr(ocean_model, "lon_min"), le=getattr(ocean_model, "lon_max"), description="Longitude of the simulation within the model bounds.")),
+#     lat=(float, Field(..., ge=getattr(ocean_model, "lat_min"), le=getattr(ocean_model, "lat_max"), description="Latitude of the simulation within the model bounds.")),
+#     start_time=(datetime, Field(..., ge=getattr(ocean_model, "start_time_model"), le=getattr(ocean_model, "end_time_model"), description="Start time of the simulation.")),
+#     end_time=(datetime, Field(..., ge=getattr(ocean_model, "start_time_model"), le=getattr(ocean_model, "end_time_model"), description="End time of the simulation.")),
+# )
+ocean_model_simulation_mapper = {}
+for ocean_model in ocean_model_mapper.values():# [NWGOA, CIOFS, CIOFSOP, CIOFSFRESH]:
+    ocean_model_name = ocean_model.name
+    simulation_model = create_model(
+        ocean_model_name,  # Model name
+        __base__=OceanModelSimulation,
+        lon=(float, Field(..., ge=getattr(ocean_model, "lon_min"), le=getattr(ocean_model, "lon_max"), description="Longitude of the simulation within the model bounds.")),
+        lat=(float, Field(..., ge=getattr(ocean_model, "lat_min"), le=getattr(ocean_model, "lat_max"), description="Latitude of the simulation within the model bounds.")),
+        start_time=(datetime, Field(..., ge=getattr(ocean_model, "start_time_model"), le=getattr(ocean_model, "end_time_model"), description="Start time of the simulation.")),
+        end_time=(datetime, Field(..., ge=getattr(ocean_model, "start_time_model"), le=getattr(ocean_model, "end_time_model"), description="End time of the simulation.")),
+    )
+    ocean_model_simulation_mapper[ocean_model_name] = simulation_model
 
 
-
+def loc_local(name, kerchunk_func_str, start_sim, end_sim) -> dict:
+    """This sets up a short kerchunk file for reading in just enough model output."""
+    
+    # back each start time back 1 day and end time forward 1 day to make sure enough output is available
+    if start_sim < end_sim:
+        start_time = start_sim - timedelta(days=1)
+        end_time = end_sim + timedelta(days=1)
+    else:
+        start_time = start_sim + timedelta(days=1)
+        end_time = end_sim - timedelta(days=1)
+    
+    start = get_file_date_string(name, start_time)
+    end = get_file_date_string(name, end_time)
+    loc_local = function_map[kerchunk_func_str](start=start, end=end, name=name)
+    return loc_local
     
     

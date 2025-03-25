@@ -40,14 +40,6 @@ class ParticleTrackingState(BaseModel):
     has_run: bool = False
 
 
-
-
-# # Enum for "output_format"
-# class OutputFormatEnum(str, Enum):
-#     netcdf = "netcdf"
-#     parquet = "parquet"
-
-
 def generate_default_output_file():
     return f"output-results_{datetime.datetime.now():%Y-%m-%dT%H%M%SZ}"
 
@@ -59,8 +51,6 @@ class SetupOutputFiles(BaseModel):
 
     output_file: Optional[str] = Field(TheManagerConfig.model_json_schema()["properties"]["output_file"]["default"])
     output_format: OutputFormatEnum = Field(TheManagerConfig.model_json_schema()["properties"]["output_format"]["default"])
-    # output_file: Optional[str] = Field(None, description="Name of file to write output to. If None, default name is used.", ptm_level=3)
-    # output_format: OutputFormatEnum = Field(OutputFormatEnum.netcdf, description="Output file format. Options are \"netcdf\" or \"parquet\".", ptm_level=2)
 
     class Config:
         validate_default: bool = True

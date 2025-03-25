@@ -68,21 +68,23 @@ def apply_known_ocean_model_specific_changes(ds: xr.Dataset, ocean_model: str, u
         ds = ds.rename_vars({"urot": "u_eastward", "vrot": "v_northward"})
     return ds
 
-def apply_user_input_ocean_model_specific_changes(ds: xr.Dataset, ocean_model: str) -> xr.Dataset:
+def apply_user_input_ocean_model_specific_changes(ds: xr.Dataset, use_static_masks: bool) -> xr.Dataset:
     """Apply user input ocean model specific changes to the dataset.
 
     This includes renaming variables, adding variables, etc.
+    
+    For now, assume user has dropped variables ahead of time.
     """
 
     # check for case that self.config.use_static_masks False (which is the default)
     # but user input doesn't have wetdry masks
     # then raise exception and tell user to set use_static_masks True
-    if "wetdry_mask_rho" not in ds.data_vars and not self.config.use_static_masks:
+    if "wetdry_mask_rho" not in ds.data_vars and not use_static_masks:
         raise ValueError(
             "User input does not have wetdry_mask_rho variable. Set use_static_masks True to use static masks instead."
         )
 
-    ds = ds.drop_vars(self.config.drop_vars, errors="ignore")
+    # ds = ds.drop_vars(self.config.drop_vars, errors="ignore")
     
     return ds
 

@@ -1,25 +1,14 @@
 
-import datetime
 import logging
-from typing import Optional
-from enum import Enum
 from pydantic import BaseModel, Field
 from .config_the_manager import TheManagerConfig, LogLevelEnum
 
-
-# # Enum for "log_level"
-# class LogLevelEnum(str, Enum):
-#     DEBUG = "DEBUG"
-#     INFO = "INFO"
-#     WARNING = "WARNING"
-#     ERROR = "ERROR"
-#     CRITICAL = "CRITICAL"
+logger = logging.getLogger()
 
 class LoggerMethods(BaseModel):
     """Methods for loggers."""
 
     log_level: LogLevelEnum = Field(TheManagerConfig.model_json_schema()["properties"]["log_level"]["default"])
-    # log_level: LogLevelEnum = Field(LogLevelEnum.INFO, description="Log verbosity", ptm_level=3)
 
     def close_loggers(self, logger):
         """Close and remove all handlers from the logger."""
@@ -57,7 +46,7 @@ class LoggerMethods(BaseModel):
         logger.info(f"Log filename: {logfile_name}")
         return logger
 
-    def merge_with_opendrift_log(self, logger: logging.Logger) -> None:
+    def merge_with_opendrift_log(self) -> None:
         """Merge the OpenDrift logger with the main logger."""
         for logger_name in logging.root.manager.loggerDict:
             if logger_name.startswith("opendrift"):
