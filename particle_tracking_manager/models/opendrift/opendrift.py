@@ -124,8 +124,9 @@ class OpenDriftModel(ParticleTrackingManager):
         
         # OpenDriftConfig is a subclass of TheManagerConfig so it knows about all the
         # TheManagerConfig parameters. TheManagerConfig is run with OpenDriftConfig.
-        drift_model = kwargs["drift_model"]
-        del kwargs["drift_model"]
+        drift_model = kwargs.get("drift_model", "OceanDrift")
+        if "drift_model" in kwargs:
+            del kwargs["drift_model"]
         self.config = open_drift_mapper[drift_model](**kwargs)
 
         
@@ -180,7 +181,7 @@ class OpenDriftModel(ParticleTrackingManager):
         self.o = o
 
     def _update_od_config_from_this_config(self):
-        """Update OpenDrift's config with OpenDriftConfig and TheManagerConfig.
+        """Update OpenDrift's config values with OpenDriftConfig and TheManagerConfig.
         
         Update the default value in OpenDrift's config dict with the 
         config value from OpenDriftConfig, TheManagerConfig, OceanModelConfig, and SetupOutputFiles.
@@ -231,7 +232,7 @@ class OpenDriftModel(ParticleTrackingManager):
         self._modify_opendrift_model_object()
 
 
-    def add_reader(
+    def _add_reader(
         self,
         ds=None,
         name=None,
@@ -262,6 +263,7 @@ class OpenDriftModel(ParticleTrackingManager):
                 "ocean_model must be a known model or user must input a Dataset."
             )
 
+        # user-input ds
         if ds is not None:
             if name is None:
                 self.config.ocean_model_config.name = "user_input"
@@ -297,8 +299,6 @@ class OpenDriftModel(ParticleTrackingManager):
         self.o.add_reader([reader])
         self.reader = reader
         # can find reader at manager.o.env.readers[self.ocean_model.name]
-        
-        self.state.has_added_reader = True
 
 
     @property
@@ -369,11 +369,8 @@ class OpenDriftModel(ParticleTrackingManager):
         return self._seed_kws
 
 
-    def seed(self):
+    def _seed(self):
         """Actually seed drifters for model."""
-
-        if not self.state.has_added_reader:
-            raise ValueError("first add reader with `manager.add_reader(**kwargs)`.")
 
         if self.config.seed_flag == "elements":
             self.o.seed_elements(**self.seed_kws)
@@ -391,15 +388,8 @@ class OpenDriftModel(ParticleTrackingManager):
 
         self.initial_drifters = self.o.elements_scheduled
 
-        self.state.has_run_seeding = True
-
-    def run(self):
+    def _run(self):
         """Run the drifters!"""
-
-        if not self.state.has_run_seeding:
-            raise ValueError("first run seeding with `manager.seed()`.")
-
-        logger.info(f"start_time: {self.config.start_time}, end_time: {self.config.end_time}, steps: {self.config.steps}, duration: {self.config.duration}")
         
         # add input config to model config
         self.o.metadata_dict.update(self.config.dict())
@@ -426,17 +416,14 @@ class OpenDriftModel(ParticleTrackingManager):
             # https://github.com/pydata/xarray/issues/1307
             self.config.plots = repr(self.config.plots)
 
-        LoggerMethods().close_loggers(logger)
-        self.state.has_run = True
-
-    def run_all(self):
-        """Run all steps."""
-        if not self.state.has_added_reader:
-            self.add_reader()
-        if not self.state.has_run_seeding:
-            self.seed()
-        if not self.state.has_run:
-            self.run()
+    # def run_all(self):
+    #     """Run all steps."""
+    #     if not self.state.has_added_reader:
+    #         self.add_reader()
+    #     if not self.state.has_run_seeding:
+    #         self.seed()
+    #     if not self.state.has_run:
+    #         self.run()
 
     def all_export_variables(self):
         """Output list of all possible export variables."""

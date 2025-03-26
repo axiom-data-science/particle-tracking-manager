@@ -138,12 +138,12 @@ def make_ciofs_kerchunk(start, end, name):
             json_list += fs2.glob(base_str(end[:4]))
 
     # forward in time
-    if end[:4] > start[:4]:
+    if end > start:
         json_list = [
             j for j in json_list if datetime.strptime(Path(j).stem, date_format).isoformat() >= start and datetime.strptime(Path(j).stem, date_format).isoformat() <= end
         ]
     # backward in time
-    elif end[:4] < start[:4]:
+    elif end < start:
         json_list = [
             j for j in json_list if datetime.strptime(Path(j).stem, date_format).isoformat() <= start and datetime.strptime(Path(j).stem, date_format).isoformat() >= end
         ]
@@ -293,16 +293,17 @@ def make_nwgoa_kerchunk(start, end, name="NWGOA"):
 
     # only glob start and end year files, order isn't important
     json_list = fs2.glob(base_str(start[:4]))
+
     if end[:4] != start[:4]:
             json_list += fs2.glob(base_str(end[:4]))
 
     # forward in time
-    if end[:4] > start[:4]:
+    if end > start:
         json_list = [
             j for j in json_list if datetime.strptime(Path(j).stem, date_format).isoformat() >= start and datetime.strptime(Path(j).stem, date_format).isoformat() <= end
         ]
     # backward in time
-    elif end[:4] < start[:4]:
+    elif end < start:
         json_list = [
             j for j in json_list if datetime.strptime(Path(j).stem, date_format).isoformat() <= start and datetime.strptime(Path(j).stem, date_format).isoformat() >= end
         ]

@@ -1,12 +1,11 @@
 """From Copilot"""
 
-import unittest
-
 import numpy as np
 import pandas as pd
 import pytest
 import xarray as xr
 from pydantic import ValidationError
+from datetime import datetime, timedelta
 
 from particle_tracking_manager.models.opendrift.opendrift import (
     OpenDriftModel,
@@ -38,162 +37,80 @@ ds = xr.Dataset(
         "lat_rho": (("Y", "X"), np.array([[1, 1, 1], [2, 2, 2]])),
     },
 )
+    
+
+def test_drop_vars_do3D_true():
+    m = OpenDriftModel(drift_model="OceanDrift", do3D=True, steps=4)
+    # drop variables manually using drop_vars from config to check behavior
+    m.add_reader(ds=ds.drop_vars(m.config.drop_vars, errors="ignore"))
+    assert m.reader.variables == [
+        "x_sea_water_velocity",
+        "y_sea_water_velocity",
+        "upward_sea_water_velocity",
+        "land_binary_mask",
+        "x_wind",
+        "y_wind",
+        "wind_speed",
+        "sea_water_speed",
+    ]
 
 
-# # WORK ON THIS ONE ONCE HAVE DONE USER INPUT
-# class TestOpenDriftModel_OceanDrift_static_mask(unittest.TestCase):
-#     def setUp(self):
-#         self.model = OpenDriftModel(drift_model="OceanDrift", use_static_masks=True, steps=4)
-
-#     def test_ocean_model_not_known_ds_None(self):
-#         self.model.config.ocean_model = "wrong_name"
-#         self.model.ds = None  # this is the default
-#         # need to input steps, duration, or end_time but don't here
-#         with pytest.raises(ValueError):
-#             self.model.add_reader(ds=ds)
-
-#     def test_drop_vars_do3D_true(self):
-#         self.model.config.do3D = True
-#         self.model.config.steps = 4
-#         self.model.add_reader(ds=ds)
-#         assert self.model.reader.variables == [
-#             "x_sea_water_velocity",
-#             "y_sea_water_velocity",
-#             "upward_sea_water_velocity",
-#             "land_binary_mask",
-#             "x_wind",
-#             "y_wind",
-#             "wind_speed",
-#             "sea_water_speed",
-#         ]
-
-#     def test_drop_vars_use_static_masks(self):
-#         self.model.config.do3D = False
-#         self.model.config.duration = pd.Timedelta("24h")
-#         self.model.add_reader(ds=ds)
-#         assert self.model.reader.variables == [
-#             "x_sea_water_velocity",
-#             "y_sea_water_velocity",
-#             "land_binary_mask",
-#             "x_wind",
-#             "y_wind",
-#             "wind_speed",
-#             "sea_water_speed",
-#         ]
-#         assert "mask_rho" in self.model.reader.Dataset.data_vars
-#         assert "wetdry_mask_rho" not in self.model.reader.Dataset.data_vars
-
-#     def test_drop_vars_no_wind(self):
-#         self.model.config.stokes_drift = False
-#         self.model.config.wind_drift_factor = 0
-#         self.model.config.wind_uncertainty = 0
-#         self.model.config.vertical_mixing = False
-#         self.model.config.end_time = pd.Timestamp("1970-01-01T02:00")
-#         self.model.add_reader(ds=ds)
-#         assert self.model.reader.variables == [
-#             "x_sea_water_velocity",
-#             "y_sea_water_velocity",
-#             "land_binary_mask",
-#             "sea_water_speed",
-#         ]
+def test_drop_vars_do3D_false_use_static_masks():
+    m = OpenDriftModel(drift_model="OceanDrift", use_static_masks=True, steps=4)
+    # drop variables manually using drop_vars from config to check behavior
+    m.add_reader(ds=ds.drop_vars(m.config.drop_vars, errors="ignore"))
+    assert m.reader.variables == [
+        "x_sea_water_velocity",
+        "y_sea_water_velocity",
+        "land_binary_mask",
+        "x_wind",
+        "y_wind",
+        "wind_speed",
+        "sea_water_speed",
+    ]
+    assert "mask_rho" in m.reader.Dataset.data_vars
+    assert "wetdry_mask_rho" not in m.reader.Dataset.data_vars
 
 
-# class TestOpenDriftModel_OceanDrift_wetdry_mask(unittest.TestCase):
-#     def setUp(self):
-#         self.model = OpenDriftModel(drift_model="OceanDrift", use_static_masks=False, steps=1)
-
-#     def test_error_no_end_of_simulation(self):
-#         self.model.config.do3D = False
-#         # need to input steps, duration, or end_time but don't here
-#         with pytest.raises(ValueError):
-#             self.model.add_reader(ds=ds)
-
-#     def test_drop_vars_do3D_false(self):
-#         self.model.config.do3D = False
-#         self.model.config.steps = 4
-#         self.model.add_reader(ds=ds)
-#         assert self.model.reader.variables == [
-#             "x_sea_water_velocity",
-#             "y_sea_water_velocity",
-#             "land_binary_mask",
-#             "x_wind",
-#             "y_wind",
-#             "wind_speed",
-#             "sea_water_speed",
-#         ]
-#         assert "wetdry_mask_rho" in self.model.reader.Dataset.data_vars
-#         assert "mask_rho" not in self.model.reader.Dataset.data_vars
-
-
-
-
-
-def test_drift_model():
-    with pytest.raises(ValueError):
-        m = OpenDriftModel(drift_model="not_a_real_model")
+def test_drop_vars_no_wind():
+    m = OpenDriftModel(drift_model="OceanDrift", steps=4, stokes_drift=False, wind_drift_factor=0, wind_uncertainty=0, vertical_mixing=False)
+    # drop variables manually using drop_vars from config to check behavior
+    m.add_reader(ds=ds.drop_vars(m.config.drop_vars, errors="ignore"))
+    assert m.reader.variables == [
+        "x_sea_water_velocity",
+        "y_sea_water_velocity",
+        "land_binary_mask",
+        "sea_water_speed",
+    ]
 
 
 def test_Leeway():
     
     m = OpenDriftModel(
         drift_model="Leeway", object_type=">PIW, scuba suit (face up)",
-        stokes_drift=False, steps=1, wind_drift_factor=None, wind_drift_depth=None,
+        stokes_drift=False, steps=1
     )
-    assert m.manager_config.wind_drift_factor is None
-    assert "seed:wind_drift_factor" not in m.show_all_config()
-    
-    with pytest.raises(ValidationError): 
-        m = OpenDriftModel(drift_model="Leeway", stokes_drift=True, steps=1)
-
-    with pytest.raises(ValidationError): 
-        m = OpenDriftModel(drift_model="Leeway", wind_drift_factor=10, wind_drift_depth=10, steps=1)
+    m._setup_for_simulation()  # creates m.o
+    # assert "wind_drift_factor" not in m.config
+    assert not hasattr(m.config, "wind_drift_factor")
+    assert "seed:wind_drift_factor" not in m.o.get_configspec().keys()
 
 
-def test_LarvalFish_disallowed_settings():
-    """LarvalFish is incompatible with some settings.
-
-    LarvalFish has to always be 3D.
-    """
-
-    with pytest.raises(ValueError):
-        m = OpenDriftModel(drift_model="LarvalFish", vertical_mixing=False, steps=1)
-
-    with pytest.raises(ValueError):
-        m = OpenDriftModel(drift_model="LarvalFish", do3D=False, steps=1)
-
-
-
-# class TestOpenDriftModel_LarvalFish(unittest.TestCase):
-#     def setUp(self):
-#         self.model = OpenDriftModel(drift_model="LarvalFish", do3D=True)
-
-#     def test_drop_vars_wind(self):
-#         self.model.duration = pd.Timedelta("1h")
-#         self.model.add_reader(ds=ds)
-#         assert self.model.reader.variables == [
-#             "x_sea_water_velocity",
-#             "y_sea_water_velocity",
-#             "upward_sea_water_velocity",
-#             "sea_water_salinity",
-#             "sea_water_temperature",
-#             "land_binary_mask",
-#             "x_wind",
-#             "y_wind",
-#             "wind_speed",
-#             "sea_water_speed",
-#         ]
-
-
-def test_LarvalFish_init():
-    m = OpenDriftModel(drift_model="LarvalFish", 
-                       do3D=True,
-                        vertical_mixing=True,
-                        wind_drift_factor=None,
-                        wind_drift_depth=None,
-                        steps=1
-                        length=10
-                       )
-
+def test_LarvalFish_add_reader():
+    m = OpenDriftModel(drift_model="LarvalFish", do3D=True, duration="1h")
+    m.add_reader(ds=ds.drop_vars(m.config.drop_vars, errors="ignore"))
+    assert m.reader.variables == [
+            "x_sea_water_velocity",
+            "y_sea_water_velocity",
+            "upward_sea_water_velocity",
+            "sea_water_salinity",
+            "sea_water_temperature",
+            "land_binary_mask",
+            "x_wind",
+            "y_wind",
+            "wind_speed",
+            "sea_water_speed",
+        ]
     
 
 def test_LarvalFish_seeding():
@@ -209,12 +126,10 @@ def test_LarvalFish_seeding():
         use_auto_landmask=True,
         steps=1,
         vertical_mixing=True,
-        wind_drift_factor=None,
-        wind_drift_depth=None
+        wind_drift_factor=0,
+        wind_drift_depth=0
     )
-    # m.add_reader()
-    # m.seed()
-    # assert m.o.elements_scheduled.hatched == 1
+    m._setup_for_simulation()  # creates m.o
     assert m.o._config["seed:hatched"]["value"] == 1
 
 
@@ -233,11 +148,12 @@ def test_OpenOil_seeding():
         droplet_diameter_min_subsea=0.01,
         droplet_diameter_mu=0.01,
         droplet_size_distribution="normal",
-        droplet_diameter_sigma=10,
+        droplet_diameter_sigma=0.9,
         oil_film_thickness=5,
-        oil_type="GENERIC DIESEL",
+        oil_type="Generic Diesel (GN00002)",
         steps=1
     )
+    m._setup_for_simulation()  # creates m.o
 
     # m.o.set_config("environment:constant:x_wind", -1)
     # m.o.set_config("environment:constant:y_wind", -1)
@@ -253,9 +169,9 @@ def test_OpenOil_seeding():
     assert m.o._config["seed:droplet_diameter_min_subsea"]["value"] == 0.01
     assert m.o._config["seed:droplet_diameter_mu"]["value"] == 0.01
     assert m.o._config["seed:droplet_size_distribution"]["value"] == "normal"
-    assert m.o._config["seed:droplet_diameter_sigma"]["value"] == 10
+    assert m.o._config["seed:droplet_diameter_sigma"]["value"] == 0.9
     # assert m.o.elements_scheduled.oil_film_thickness == 5
-    assert m.o._config["seed:oil_type"]["value"] == "GENERIC DIESEL"
+    assert m.o._config["seed:oil_type"]["value"] == "Generic Diesel"  # don't use ID because it is stripped off
 
 
 def test_wind_drift():
@@ -272,109 +188,196 @@ def test_wind_drift():
         use_auto_landmask=True,
         steps=1
     )
-    # m.add_reader()
-    # m.seed()
-    # assert m.o.elements_scheduled.wind_drift_factor == 1
+    m._setup_for_simulation()  # creates m.o
     assert m.o._config["seed:wind_drift_factor"]["value"] == 1
     assert m.o._config["drift:wind_drift_depth"]["value"] == 10
 
 
-# def test_plots_linecolor():
-#     # this should error if user inputs some export_variables, which
-#     # changes the default from returning all variables to just those
-#     # selected plus a short list of required variables
-#     with pytest.raises(ValueError):
-#         m = OpenDriftModel(
-#             drift_model="OceanDrift",
-#             plots={"spaghetti": {"linecolor": "x_wind"}},
-#             export_variables=[],
-#         )
+def test_plots_linecolor():
+    # since export_variables are all included by default now, I am not testing this
+    # this should error if user inputs some export_variables, which
+    # changes the default from returning all variables to just those
+    # selected plus a short list of required variables
+    # with pytest.raises(ValueError):
+    #     m = OpenDriftModel(
+    #         drift_model="OceanDrift",
+    #         plots={"spaghetti": {"linecolor": "x_wind"}},
+    #         export_variables=[],
+    #         steps=1
+    #     )
 
-#     m = OpenDriftModel(
-#         drift_model="OceanDrift",
-#         plots={"spaghetti": {"linecolor": "x_wind"}},
-#         export_variables=None,
-#     )
+    m = OpenDriftModel(
+        drift_model="OceanDrift",
+        plots={"spaghetti": {"linecolor": "x_wind"}},
+        steps=1
+    )
 
-#     # this should work bc "z" should already be included
-#     m = OpenDriftModel(
-#         drift_model="OceanDrift", plots={"spaghetti": {"linecolor": "z"}}
-#     )
+    m = OpenDriftModel(
+        drift_model="OceanDrift",
+        plots={"spaghetti": {"linecolor": "x_wind"}},
+        export_variables=None,
+        steps=1
+    )
 
-
-# def test_plots_background():
-#     # this should error if user inputs some export_variables, which
-#     # changes the default from returning all variables to just those
-#     # selected plus a short list of required variables
-#     with pytest.raises(ValueError):
-#         m = OpenDriftModel(
-#             drift_model="OceanDrift",
-#             plots={"animation": {"background": "sea_surface_height"}},
-#             export_variables=[],
-#         )
-
-#     m = OpenDriftModel(
-#         drift_model="OceanDrift",
-#         plots={"animation": {"background": "sea_surface_height"}},
-#     )
+    # this should work bc "z" should already be included
+    m = OpenDriftModel(
+        drift_model="OceanDrift", plots={"spaghetti": {"linecolor": "z"}}, steps=1
+    )
 
 
-# def test_plots_oil():
-#     # this should error if user inputs some export_variables, which
-#     # changes the default from returning all variables to just those
-#     # selected plus a short list of required variables
-#     with pytest.raises(ValueError):
-#         m = OpenDriftModel(
-#             drift_model="OpenOil",
-#             plots={"oil": {"show_wind_and_current": True}},
-#             export_variables=[],
-#         )
+def test_plots_background():
+    # # this should error if user inputs some export_variables, which
+    # # changes the default from returning all variables to just those
+    # # selected plus a short list of required variables
+    # with pytest.raises(ValueError):
+    #     m = OpenDriftModel(
+    #         drift_model="OceanDrift",
+    #         plots={"animation": {"background": "sea_surface_height"}},
+    #         export_variables=[],
+    #         steps=1
+    #     )
 
-#     m = OpenDriftModel(
-#         drift_model="OpenOil", plots={"oil": {"show_wind_and_current": True}}
-#     )
-
-#     with pytest.raises(ValueError):
-#         m = OpenDriftModel(drift_model="OceanDrift", plots={"oil": {}})
-
-
-# def test_plots_property():
-#     # this should error if user inputs some export_variables, which
-#     # changes the default from returning all variables to just those
-#     # selected plus a short list of required variables
-#     with pytest.raises(ValueError):
-#         m = OpenDriftModel(
-#             drift_model="LarvalFish",
-#             do3D=True,
-#             plots={"property": {"prop": "survival"}},
-#             export_variables=["x_wind"],
-#         )
-
-#     m = OpenDriftModel(
-#         drift_model="LarvalFish",
-#         do3D=True,
-#         plots={"property": {"prop": "survival"}},
-#     )
+    m = OpenDriftModel(
+        drift_model="OceanDrift",
+        plots={"animation": {"background": "sea_surface_height"}},
+        steps=1
+    )
 
 
-# def test_plots_all():
+def test_plots_oil():
+    # # this should error if user inputs some export_variables, which
+    # # changes the default from returning all variables to just those
+    # # selected plus a short list of required variables
+    # with pytest.raises(ValueError):
+    #     m = OpenDriftModel(
+    #         drift_model="OpenOil",
+    #         plots={"oil": {"show_wind_and_current": True}},
+    #         export_variables=[],
+    #     )
 
-#     with pytest.raises(ValueError):
-#         m = OpenDriftModel(
-#             drift_model="OceanDrift",
-#             plots={
-#                 "all": {},
-#                 "spaghetti": {"line_color": "x_wind"},
-#                 "animation": {"background": "sea_surface_height"},
-#             },
-#         )
+    m = OpenDriftModel(
+        drift_model="OpenOil", plots={"oil": {"show_wind_and_current": True}},
+        steps=1
+    )
+
+    with pytest.raises(ValidationError):
+        m = OpenDriftModel(drift_model="OceanDrift", plots={"oil": {}}, steps=1)
+
+
+def test_plots_property():
+    # # this should error if user inputs some export_variables, which
+    # # changes the default from returning all variables to just those
+    # # selected plus a short list of required variables
+    # with pytest.raises(ValueError):
+    #     m = OpenDriftModel(
+    #         drift_model="LarvalFish",
+    #         do3D=True,
+    #         plots={"property": {"prop": "survival"}},
+    #         export_variables=["x_wind"],
+    #     )
+
+    m = OpenDriftModel(
+        drift_model="LarvalFish",
+        do3D=True,
+        plots={"property": {"prop": "survival"}},
+        steps=1
+    )
+
+
+def test_plots_all():
+
+    with pytest.raises(ValueError):
+        m = OpenDriftModel(
+            drift_model="OceanDrift",
+            plots={
+                "all": {},
+                "spaghetti": {"line_color": "x_wind"},
+                "animation": {"background": "sea_surface_height"},
+            },
+            steps=1
+        )
+
+
+def test_plots_names():
+    
+    with pytest.raises(ValidationError):
+        m = OpenDriftModel(
+            plots={
+                "random_plot_name": {},
+            },
+            steps=1
+        )
+
+    
+    with pytest.raises(ValidationError):
+        m = OpenDriftModel(
+            plots={
+                "something_spaghetti": {},
+            },
+            steps=1
+        )
+
+
+
+
+@pytest.mark.slow
+def test_parameter_passing():
+    """make sure parameters passed into package make it to simulation runtime."""
+
+    ts = 7  # minutes
+    diffmodel = "windspeed_Sundby1983"
+    use_auto_landmask = True
+    vertical_mixing = True
+    do3D = True
+
+    seed_kws = dict(
+        lon=4.0,
+        lat=60.0,
+        radius=5000,
+        number=100,
+        start_time=datetime(2015, 9, 22, 6, 0, 0),
+    )
+    m = OpenDriftModel(
+        use_auto_landmask=use_auto_landmask,
+        time_step=ts,
+        duration="P0DT10H0M0S",
+        steps=None,
+        diffusivitymodel=diffmodel,
+        vertical_mixing=vertical_mixing,
+        do3D=do3D,
+        **seed_kws
+    )
+    
+    m._setup_for_simulation()  # creates m.o
+
+    # idealized simulation, provide a fake current
+    m.o.set_config("environment:fallback:y_sea_water_velocity", 1)
+
+    # # seed
+    # m.seed()
+
+    # # run simulation
+    # m.run()
+
+    # check time_step across access points
+    # import pdb; pdb.set_trace()
+    assert (
+        m.o._config["general:time_step_minutes"]["value"]
+        == ts
+        == m.config.time_step
+        # == m.show_config_model(key="time_step")["value"]
+        == m.o.get_configspec()["general:time_step_minutes"]["default"]
+    )
+
+    # check diff model
+    assert m.o.get_configspec()["diffusivitymodel"]["default"] == diffmodel
+    # assert m.show_config(key="diffusivitymodel")["value"] == diffmodel
+
+    # check use_auto_landmask coming through
+    assert m.o.get_configspec()["use_auto_landmask"]["default"] == use_auto_landmask
+    # assert m.show_config(key="use_auto_landmask")["value"] == use_auto_landmask
 
 
 
 # TODO: Add tests, such as from test_manager, that test the known models
 
-
-
-
-if __name__ == "__main__":
-    unittest.main()

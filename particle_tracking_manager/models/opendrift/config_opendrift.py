@@ -1,7 +1,7 @@
 import logging
 from enum import Enum
 from pathlib import Path
-from typing import List, Literal, Optional, Dict
+from typing import List, Literal, Optional, Dict, Union
 
 from pydantic import  Field, model_validator
 from pydantic.fields import FieldInfo
@@ -46,11 +46,19 @@ class SeafloorActionEnum(str, Enum):
     deactivate = "deactivate"
     previous = "previous"
 
+class PlotTypeEnum(str, Enum):
+    spaghetti = "spaghetti"
+    animation = "animation"
+    animation_profile = "animation_profile"
+    oil = "oil"
+    property = "property"
+    all = "all"
+
 
 # class OpenDriftConfig(BaseModel):
 class OpenDriftConfig(TheManagerConfig):
     """Some of the parameters in this mirror OpenDriftSimulation clss in OpenDrift"""
-    drift_model: str
+    drift_model: DriftModelEnum = Field(default=DriftModelEnum.OceanDrift, description="Drift model to use for simulation.")
     
     save_interpolator: bool = Field(default=False, description="Whether to save the interpolator.")
 
@@ -65,7 +73,7 @@ class OpenDriftConfig(TheManagerConfig):
         ptm_level=3,
     )
     
-    plots: Optional[Dict[str, str]] = Field(default=None, ptm_level=1, description="Dictionary of plots to generate using OpenDrift.")
+    plots: Optional[Dict[str, dict]] = Field(default=None, ptm_level=1, description="Dictionary of plots to generate using OpenDrift.")
     
     radius: float = Field(
         default=1000.0, 
@@ -163,11 +171,19 @@ class OpenDriftConfig(TheManagerConfig):
         ptm_level=1, 
         od_mapping="seed:number",
     )
+
+    # add od_mapping to what should otherwise be in TheManagerConfig
+    time_step: float = FieldInfo.merge_field_infos(TheManagerConfig.model_fields['time_step'],
+                                                             Field(od_mapping='general:time_step_minutes'))
+    # add od_mapping to what should otherwise be in TheManagerConfig
+    time_step_output: float = FieldInfo.merge_field_infos(TheManagerConfig.model_fields['time_step_output'],
+                                                             Field(od_mapping='general:time_step_output_minutes'))
     
 
     class Config:
         validate_defaults = True
         use_enum_values=True
+        extra="forbid"
 
     @model_validator(mode='after')
     def check_interpolator_filename(self) -> Self:
@@ -228,7 +244,7 @@ class OpenDriftConfig(TheManagerConfig):
         """Gather variables to drop based on PTMConfig and OpenDriftConfig."""
 
         # set drop_vars initial values based on the PTM settings, then add to them for the specific model
-        drop_vars = self.ocean_model_config.model_drop_vars
+        drop_vars = self.ocean_model_config.model_drop_vars.copy()  # without copy this remembers drop_vars from other instances
 
         # don't need w if not 3D movement
         if not self.do3D:
@@ -242,7 +258,7 @@ class OpenDriftConfig(TheManagerConfig):
         # they would usually be required and the cases are tricky to navigate so also skipping for that case.
         if (
             not self.stokes_drift
-            and ("wind_drift_factor" in self and self.wind_drift_factor == 0)
+            and (hasattr(self, "wind_drift_factor") and self.wind_drift_factor == 0)
             and self.wind_uncertainty == 0
             and self.drift_model != "OpenOil"
             and not self.vertical_mixing
@@ -296,46 +312,72 @@ class OpenDriftConfig(TheManagerConfig):
             )
         return drop_vars    
 
-# TODO: implement my defaults over opendrift defaults — no, instead set it up to take a config of my preferred inputs
+    @model_validator(mode='after')
+    def check_plot_oil(self) -> Self:
+        if self.plots is not None and "oil" in self.plots.keys():
+            if self.drift_model != "OpenOil":
+                raise ValueError("Oil budget plot only available for OpenOil drift model")
+        return self
 
+    @model_validator(mode='after')
+    def check_plot_all(self) -> Self:
+        if self.plots is not None and "all" in self.plots.keys() and len(self.plots) > 1:
+            raise ValueError("If 'all' is specified for plots, it must be the only plot option.")
+        return self
+
+    @model_validator(mode='after')
+    def check_plot_prefix_enum(self) -> Self:
+        if self.plots is not None:
+            present_keys = [key for key in self.plots.keys() for PlotType in PlotTypeEnum if key.startswith(PlotType.value)]
+            random_keys = set(self.plots.keys()) - set(present_keys)
+            if len(random_keys) > 0:
+                raise ValueError(f"Plot keys must start with a PlotTypeEnum. The following keys do not: {random_keys}")
+        return self
+
+
+# TODO: implement my defaults over opendrift defaults — no, instead set it up to take a config of my preferred inputs
 
 class ObjectTypeEnum(str, Enum):
     PERSON_IN_WATER_UNKNOWN = "Person-in-water (PIW), unknown state (mean values)"
-    PIW_VERTICAL_PFD_TYPE_III_CONSCIOUS = "PIW, vertical PFD type III conscious"
-    PIW_SITTING_PFD_TYPE_I_OR_II = "PIW, sitting, PFD type I or II"
-    PIW_SURVIVAL_SUIT_FACE_UP = "PIW, survival suit (face up)"
-    PIW_SCUBA_SUIT_FACE_UP = "PIW, scuba suit (face up)"
-    PIW_DECEASED_FACE_DOWN = "PIW, deceased (face down)"
+    PIW_VERTICAL_PFD_TYPE_III_CONSCIOUS = ">PIW, vertical PFD type III conscious"
+    PIW_SITTING_PFD_TYPE_I_OR_II = ">PIW, sitting, PFD type I or II"
+    PIW_SURVIVAL_SUIT_FACE_UP = ">PIW, survival suit (face up)"
+    PIW_SCUBA_SUIT_FACE_UP = ">PIW, scuba suit (face up)"
+    PIW_DECEASED_FACE_DOWN = ">PIW, deceased (face down)"
     LIFE_RAFT_DEEP_BALLAST_GENERAL = "Life raft, deep ballast (DB) system, general, unknown capacity and loading (mean values)"
-    LIFE_RAFT_4_14_PERSON_CANOPY_AVERAGE = "4-14 person capacity, deep ballast system, canopy (average)"
-    LIFE_RAFT_4_14_PERSON_NO_DROGUE = "4-14 person capacity, deep ballast system, no drogue"
-    LIFE_RAFT_4_14_PERSON_CANOPY_NO_DROGUE_LIGHT = "4-14 person capacity, deep ballast system, canopy, no drogue, light loading"
-    LIFE_RAFT_4_14_PERSON_NO_DROGUE_HEAVY = "4-14 person capacity, deep ballast system, no drogue, heavy loading"
-    LIFE_RAFT_4_14_PERSON_CANOPY_WITH_DROGUE_AVERAGE = "4-14 person capacity, deep ballast system, canopy, with drogue (average)"
-    LIFE_RAFT_4_14_PERSON_CANOPY_WITH_DROGUE_LIGHT = "4-14 person capacity, deep ballast system, canopy, with drogue, light loading"
-    LIFE_RAFT_4_14_PERSON_CANOPY_WITH_DROGUE_HEAVY = "4-14 person capacity, deep ballast system, canopy, with drogue, heavy loading"
-    LIFE_RAFT_15_50_PERSON_CANOPY_GENERAL = "15-50 person capacity, deep ballast system, canopy, general (mean values)"
-    LIFE_RAFT_15_50_PERSON_CANOPY_NO_DROGUE_LIGHT = "15-50 person capacity, deep ballast system, canopy, no drogue, light loading"
-    LIFE_RAFT_15_50_PERSON_CANOPY_WITH_DROGUE_HEAVY = "15-50 person capacity, deep ballast system, canopy, with drogue, heavy loading"
+    LIFE_RAFT_4_14_PERSON_CANOPY_AVERAGE = ">4-14 person capacity, deep ballast system, canopy (average)"
+    LIFE_RAFT_4_14_PERSON_NO_DROGUE = ">>4-14 person capacity, deep ballast system, no drogue"
+    LIFE_RAFT_4_14_PERSON_CANOPY_NO_DROGUE_LIGHT = ">>>4-14 person capacity, deep ballast system, canopy, no drogue, light loading"
+    LIFE_RAFT_4_14_PERSON_NO_DROGUE_HEAVY = ">>>4-14 person capacity, deep ballast system, no drogue, heavy loading"
+    LIFE_RAFT_4_14_PERSON_CANOPY_WITH_DROGUE_AVERAGE = ">>4-14 person capacity, deep ballast system, canopy, with drogue (average)"
+    LIFE_RAFT_4_14_PERSON_CANOPY_WITH_DROGUE_LIGHT = ">>>4-14 person capacity, deep ballast system, canopy, with drogue, light loading"
+    LIFE_RAFT_4_14_PERSON_CANOPY_WITH_DROGUE_HEAVY = ">>>4-14 person capacity, deep ballast system, canopy, with drogue, heavy loading"
+    LIFE_RAFT_15_50_PERSON_CANOPY_GENERAL = ">15-50 person capacity, deep ballast system, canopy, general (mean values)"
+    LIFE_RAFT_15_50_PERSON_CANOPY_NO_DROGUE_LIGHT = ">>15-50 person capacity, deep ballast system, canopy, no drogue, light loading"
+    LIFE_RAFT_15_50_PERSON_CANOPY_WITH_DROGUE_HEAVY = ">>15-50 person capacity, deep ballast system, canopy, with drogue, heavy loading"
     DEEP_BALLAST_CAPSIZED = "Deep ballast system, general (mean values), capsized"
     DEEP_BALLAST_SWAMPED = "Deep ballast system, general (mean values), swamped"
     LIFE_RAFT_SHALLOW_BALLAST_CANOPY_GENERAL = "Life-raft, shallow ballast (SB) system AND canopy, general (mean values)"
-    LIFE_RAFT_SHALLOW_BALLAST_CANOPY_NO_DROGUE = "Life-raft, shallow ballast system, canopy, no drogue"
-    LIFE_RAFT_SHALLOW_BALLAST_CANOPY_WITH_DROGUE = "Life-raft, shallow ballast system AND canopy, with drogue"
+    LIFE_RAFT_SHALLOW_BALLAST_CANOPY_NO_DROGUE = ">Life-raft, shallow ballast system, canopy, no drogue"
+    LIFE_RAFT_SHALLOW_BALLAST_CANOPY_WITH_DROGUE = ">Life-raft, shallow ballast system AND canopy, with drogue"
     LIFE_RAFT_SHALLOW_BALLAST_CANOPY_CAPSIZED = "Life-raft, shallow ballast system AND canopy, capsized"
     LIFE_RAFT_SHALLOW_BALLAST_NAVY_SEIE_NO_DROGUE = "Life Raft - Shallow ballast, canopy, Navy Sub Escape (SEIE) 1-man raft, NO drogue"
     LIFE_RAFT_SHALLOW_BALLAST_NAVY_SEIE_WITH_DROGUE = "Life Raft - Shallow ballast, canopy, Navy Sub Escape (SEIE) 1-man raft, with drogue"
     LIFE_RAFT_NO_BALLAST_GENERAL = "Life-raft, no ballast (NB) system, general (mean values)"
-    LIFE_RAFT_NO_BALLAST_NO_CANOPY_NO_DROGUE = "Life-raft, no ballast system, no canopy, no drogue"
-    LIFE_RAFT_NO_BALLAST_NO_CANOPY_WITH_DROGUE = "Life-raft, no ballast system, no canopy, with drogue"
-    LIFE_RAFT_NO_BALLAST_WITH_CANOPY_NO_DROGUE = "Life-raft, no ballast system, with canopy, no drogue"
-    LIFE_RAFT_NO_BALLAST_WITH_CANOPY_WITH_DROGUE = "Life-raft, no ballast system, with canopy, with drogue"
+    LIFE_RAFT_NO_BALLAST_NO_CANOPY_NO_DROGUE = ">Life-raft, no ballast system, no canopy, no drogue"
+    LIFE_RAFT_NO_BALLAST_NO_CANOPY_WITH_DROGUE = ">Life-raft, no ballast system, no canopy, with drogue"
+    LIFE_RAFT_NO_BALLAST_WITH_CANOPY_NO_DROGUE = ">Life-raft, no ballast system, with canopy, no drogue"
+    LIFE_RAFT_NO_BALLAST_WITH_CANOPY_WITH_DROGUE = ">Life-raft, no ballast system, with canopy, with drogue"
     SURVIVAL_CRAFT_USCG_SEA_RESCUE_KIT = "Survival Craft - USCG Sea Rescue Kit - 3 ballasted life rafts and 300 meter of line"
     LIFE_RAFT_4_6_PERSON_NO_BALLAST_WITH_CANOPY_NO_DROGUE = "Life-raft, 4-6 person capacity, no ballast, with canopy, no drogue"
     EVACUATION_SLIDE_WITH_LIFE_RAFT = "Evacuation slide with life-raft, 46 person capacity"
     SURVIVAL_CRAFT_SOLAS_HARD_SHELL = "Survival Craft - SOLAS Hard Shell Life Capsule, 22 man"
-    SURVIVAL_CRAFT_OVATEK_HARD_SHELL_LIGHT_NO_DROGUE = "Survival Craft - Ovatek Hard Shell Life Raft, 4 and 7-man, lightly loaded, no drogue (average)"
+    # SURVIVAL_CRAFT_OVATEK_HARD_SHELL_LIGHT_NO_DROGUE = "Survival Craft - Ovatek Hard Shell Life Raft, 4 and 7-man, lightly loaded, no drogue (average)"
     SURVIVAL_CRAFT_OVATEK_HARD_SHELL_FULLY_DROGUED = "Survival Craft - Ovatek Hard Shell Life Raft, 4 and 7-man, fully loaded, drogued (average)"
+    SURVIVAL_CRAFT_OVATEK_HARD_SHELL_4_MAN_LIGHT_NO_DROGUE = ">Survival Craft - Ovatek Hard Shell Life Raft, 4 man, lightly loaded, no drogue"
+    SURVIVAL_CRAFT_OVATEK_HARD_SHELL_7_MAN_LIGHT_NO_DROGUE = ">Survival Craft - Ovatek Hard Shell Life Raft, 7 man, lightly loaded, no drogue"
+    SURVIVAL_CRAFT_OVATEK_HARD_SHELL_4_MAN_FULLY_NO_DROGUE = ">Survival Craft - Ovatek Hard Shell Life Raft, 4 man, fully loaded, drogued"
+    SURVIVAL_CRAFT_OVATEK_HARD_SHELL_7_MAN_FULLY_NO_DROGUE = ">Survival Craft - Ovatek Hard Shell Life Raft, 7 man, fully loaded, drogued"
     SEA_KAYAK_PERSON_ON_AFT_DECK = "Sea Kayak with person on aft deck"
     SURF_BOARD_PERSON = "Surf board with person"
     WINDSURFER_MAST_AND_SAIL_IN_WATER = "Windsurfer with mast and sail in water"
@@ -346,19 +388,25 @@ class ObjectTypeEnum(str, Enum):
     SPORT_FISHER_CENTER_CONSOLE = "Sport fisher, center console (*2), open cockpit"
     FISHING_VESSEL_GENERAL = "Fishing vessel, general (mean values)"
     FISHING_VESSEL_HAWAIIAN_SAMPAN = "Fishing vessel, Hawaiian Sampan (*3)"
-    FISHING_VESSEL_JAPANESE_SIDE_STERN_TRAWLER = "Fishing vessel, Japanese side-stern trawler"
-    FISHING_VESSEL_JAPANESE_LONGLINER = "Fishing vessel, Japanese Longliner (*3)"
-    FISHING_VESSEL_KOREAN = "Fishing vessel, Korean fishing vessel (*4)"
-    FISHING_VESSEL_GILL_NETTER = "Fishing vessel, Gill-netter with rear reel (*3)"
+    FISHING_VESSEL_JAPANESE_SIDE_STERN_TRAWLER = ">Fishing vessel, Japanese side-stern trawler"
+    FISHING_VESSEL_JAPANESE_LONGLINER = ">Fishing vessel, Japanese Longliner (*3)"
+    FISHING_VESSEL_KOREAN = ">Fishing vessel, Korean fishing vessel (*4)"
+    FISHING_VESSEL_GILL_NETTER = ">Fishing vessel, Gill-netter with rear reel (*3)"
     COASTAL_FREIGHTER = "Coastal freighter. (*5)"
     SAILBOAT_MONO_HULL = "Sailboat Mono-hull (Average)"
-    SAILBOAT_MONO_HULL_DISMASTED = "Sailboat Mono-hull (Dismasted, Average)"
-    SAILBOAT_MONO_HULL_BARE_MASTED = "Sailboat Mono-hull (Bare-masted,  Average)"
+    SAILBOAT_MONO_HULL_DISMASTED = ">Sailboat Mono-hull (Dismasted, Average)"
+    SAILBOAT_MONO_HULL_DISMASTED_RUDDER = ">>Sailboat Mono-hull (Dismasted - rudder amidships)"
+    SAILBOAT_MONO_HULL_DISMASTED_RUDDER_MISSING = ">>Sailboat Mono-hull (Dismasted - rudder missing)"
+    SAILBOAT_MONO_HULL_BARE_MASTED = ">Sailboat Mono-hull (Bare-masted,  Average)"
+    SAILBOAT_MONO_HULL_BARE_MASTED_RUDDER = ">>Sailboat Mono-hull (Bare-masted, rudder amidships)"
+    SAILBOAT_MONO_HULL_BARE_MASTED_RUDDER_HOVE_TO = ">>Sailboat Mono-hull (Bare-masted, rudder hove-to)"
+    SAILBOAT_MONO_HULL_FIN_KEEL = "Sailboat Mono-hull, fin keel, shallow draft (was SAILBOAT-2)"
     SUNFISH_SAILING_DINGY = "Sunfish sailing dingy  -  Bare-masted, rudder missing"
     FISHING_VESSEL_DEBRIS = "Fishing vessel debris"
     SELF_LOCATING_DATUM_MARKER_BUOY = "Self-locating datum marker buoy - no windage"
     NAVY_SUBMARINE_EPIRB = "Navy Submarine EPIRB (SEPIRB)"
     BAIT_WHARF_BOX = "Bait/wharf box, holds a cubic metre of ice, mean values (*6)"
+    BAIT_WHARF_BOX_FULL_LOAD = ">Bait/wharf box, holds a cubic metre of ice, full loaded"
     OIL_DRUM = "55-gallon (220 l) Oil Drum"
     CONTAINER_40_FT = "Scaled down (1:3) 40-ft Container (70% submerged)"
     CONTAINER_20_FT = "20-ft Container (80% submerged)"
@@ -367,12 +415,16 @@ class ObjectTypeEnum(str, Enum):
     IMMIGRATION_VESSEL_WITH_SAIL = "Immigration vessel, Cuban refugee-raft, with sail (*7)"
     SEWAGE_FLOATABLES = "Sewage floatables, tampon applicator"
     MEDICAL_WASTE = "Medical waste (mean values)"
-    MEDICAL_WASTE_VIALS = "Medical waste, vials"
-    MEDICAL_WASTE_SYRINGES = "Medical waste, syringes"    
-
+    MEDICAL_WASTE_VIALS = ">Medical waste, vials"
+    MEDICAL_WASTE_VIALS_LARGE = ">>Medical waste, vials, large"
+    MEDICAL_WASTE_VIALS_SMALL = ">>Medical waste, vials, small"
+    MEDICAL_WASTE_SYRINGES = ">Medical waste, syringes"
+    MEDICAL_WASTE_SYRINGES_LARGE = ">>Medical waste, syringes, large"
+    MEDICAL_WASTE_SYRINGES_SMALL = ">>Medical waste, syringes, small"
 
 class LeewayModelConfig(OpenDriftConfig):
-    drift_model: Literal["Leeway"] = "Leeway"
+    drift_model: DriftModelEnum = DriftModelEnum.Leeway
+    # drift_model: Literal["Leeway"] = "Leeway"
     
     object_type: ObjectTypeEnum = Field(
         default=ObjectTypeEnum.PERSON_IN_WATER_UNKNOWN,
@@ -383,12 +435,28 @@ class LeewayModelConfig(OpenDriftConfig):
     )
 
     # modify default values
-    stokes_drift: float = FieldInfo.merge_field_infos(OpenDriftConfig.model_fields['stokes_drift'],
+    stokes_drift: bool = FieldInfo.merge_field_infos(OpenDriftConfig.model_fields['stokes_drift'],
                                                              Field(default=False))
 
 
+    @model_validator(mode='after')
+    def check_stokes_drift(self) -> Self:
+        if self.stokes_drift:
+            raise ValueError("stokes_drift must be False with the Leeway drift model.")
+            
+        return self
+
+    @model_validator(mode='after')
+    def check_do3D(self) -> Self:
+        if self.do3D:
+            raise ValueError("do3D must be False with the Leeway drift model.")
+            
+        return self
+
+
 class OceanDriftModelConfig(OpenDriftConfig):
-    drift_model: Literal["OceanDrift"] = "OceanDrift"
+    drift_model: DriftModelEnum = DriftModelEnum.OceanDrift
+    # drift_model: Literal["OceanDrift"] = "OceanDrift"
     
     seed_seafloor: bool = Field(
         default=False,
@@ -447,7 +515,7 @@ class OceanDriftModelConfig(OpenDriftConfig):
         ptm_level=3,
     )
 
-    wind_drift_factor: Optional[float] = Field(
+    wind_drift_factor: float = Field(
         default=0.02,
         description="Elements at surface are moved with this fraction of the wind vector, in addition to currents and Stokes drift",
         title="Wind Drift Factor",
@@ -1756,7 +1824,8 @@ class DropletSizeDistributionEnum(str, Enum):
 
 
 class OpenOilModelConfig(OceanDriftModelConfig):
-    drift_model: Literal["OpenOil"] = "OpenOil"
+    drift_model: DriftModelEnum = DriftModelEnum.OpenOil
+    # drift_model: Literal["OpenOil"] = "OpenOil"
     
     oil_type: OilTypeEnum = Field(
         default=OilTypeEnum.GENERIC_BUNKER_C_AD04012,
@@ -1900,7 +1969,8 @@ class OpenOilModelConfig(OceanDriftModelConfig):
 
 
 class LarvalFishModelConfig(OceanDriftModelConfig):
-    drift_model: Literal["LarvalFish"] = "LarvalFish"
+    drift_model: DriftModelEnum = DriftModelEnum.LarvalFish
+    # drift_model: Literal["LarvalFish"] = "LarvalFish"
 
     diameter: float = Field(
         default=0.0014,
@@ -1965,9 +2035,16 @@ class LarvalFishModelConfig(OceanDriftModelConfig):
 
 
     @model_validator(mode='after')
-    def check_config(self) -> Self:
+    def check_do3D(self) -> Self:
         if not self.do3D:
             raise ValueError("do3D must be True with the LarvalFish drift model.")
+            
+        return self
+
+    @model_validator(mode='after')
+    def check_vertical_mixing(self) -> Self:
+        if not self.vertical_mixing:
+            raise ValueError("vertical_mixing must be True with the LarvalFish drift model.")
             
         return self
 

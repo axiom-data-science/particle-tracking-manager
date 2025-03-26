@@ -114,24 +114,61 @@ class ParticleTrackingManager(ABC):
     def from_config(cls, config: TheManagerConfig) -> Self:
         """Create an OpenDriftModel from a config."""
         return cls(**config.dict())
+    
+    def add_reader(self, **kwargs):
+        """Add reader to model class."""
+        self._add_reader(**kwargs)
+        
+        self.state.has_added_reader = True
+
+    def seed(self):
+        """Seed drifters."""
+
+        if not self.state.has_added_reader:
+            raise ValueError("first add reader with `manager.add_reader(**kwargs)`.")
+
+        # run seeding function in model class
+        self._seed()  # in child class
+
+        self.state.has_run_seeding = True
+
+    def run(self):
+        """Call model run_drifters function.
+        
+        Also run some other items.
+        """
+
+        if not self.state.has_run_seeding:
+            raise ValueError("first run seeding with `manager.seed()`.")
+
+        logger.info(f"start_time: {self.config.start_time}, end_time: {self.config.end_time}, steps: {self.config.steps}, duration: {self.config.duration}")
+
+        self._run()  # in child class
+
+        LoggerMethods().close_loggers(logger)
+        self.state.has_run = True
+        
+
+    def run_all(self):
+        """Run all steps."""
+        if not self.state.has_added_reader:
+            self.add_reader()
+        if not self.state.has_run_seeding:
+            self.seed()
+        if not self.state.has_run:
+            self.run()
+    
+    @abstractmethod
+    def _add_reader(self, **kwargs) -> None:
+        """Add reader to model class."""
+        raise NotImplementedError("This should be implemented in the model class.")
 
     @abstractmethod
-    def run_all(self):
-        """Call all methods necessary for model run.
-        
-        Subclasses must implement this method and:
-        
-        * Include a log entry stating basic information about the run.
-        * Set `self.has_run = True` at the end of the method.
-        * Should close the file handler and logger.
-        """
-        pass
+    def _seed(self) -> None:
+        """Seed drifters in model class."""
+        raise NotImplementedError("This should be implemented in the model class.")
 
-    # def run_all(self):
-    #     """Run all steps."""
-    #     if not self.state.has_added_reader:
-    #         self.add_reader()
-    #     if not self.state.has_run_seeding:
-    #         self.seed()
-    #     if not self.state.has_run:
-    #         self.run()
+    @abstractmethod
+    def _run(self) -> None:
+        """Run drifter simulation in model class."""
+        raise NotImplementedError("This should be implemented in the model class.")

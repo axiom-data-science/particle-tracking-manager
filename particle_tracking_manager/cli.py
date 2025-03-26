@@ -2,7 +2,6 @@
 
 import argparse
 import ast
-import logging
 
 from datetime import datetime
 
@@ -81,7 +80,7 @@ class ParseKwargs(argparse.Action):
             elif is_None(value):
                 value = None
             elif is_deltastr(value):
-                value = pd.Timedelta(value)
+                value = pd.Timedelta(value).isoformat()
             elif is_datestr(value):
                 value = pd.Timestamp(value)
             getattr(namespace, self.dest)[key] = value
@@ -177,12 +176,12 @@ def main():
         # m.logger.info(f"filename: {args.kwargs['output_file']}")
 
         m.add_reader()
-        print(m.drift_model_config())
+        # print(m.drift_model_config())
 
         m.seed()
         m.run()
 
-        print(m.config.outfile_name)
+        print(m.files.output_file)
 
     # # Remove the handler at the end of the loop
     # m.logger.removeHandler(file_handler)

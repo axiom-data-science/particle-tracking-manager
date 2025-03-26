@@ -135,10 +135,16 @@ class OceanModelConfig(BaseModel):
 standard_name_mapping={
     "mask_rho": "mask_rho",
     "wetdry_mask_rho": "wetdry_mask_rho",
-    "u_eastward": "u_eastward",
-    "v_northward": "v_northward",
-    "Uwind_eastward": "Uwind_eastward",
-    "Vwind_northward": "Vwind_northward"
+    # "u_eastward": "u_eastward",
+    # "v_northward": "v_northward",
+    "u_eastward": "x_sea_water_velocity",
+    "v_northward": "y_sea_water_velocity",
+    # "Uwind_eastward": "Uwind_eastward",
+    # "Vwind_northward": "Vwind_northward",
+    # NWGOA, there are east/north oriented and will not be rotated
+    # because "east" "north" in variable names
+    "Uwind_eastward": "x_wind",
+    "Vwind_northward": "y_wind",
 }
 
 NWGOA = OceanModelConfig(

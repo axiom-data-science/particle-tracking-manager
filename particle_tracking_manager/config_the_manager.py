@@ -63,8 +63,8 @@ class TheManagerConfig(BaseModel):
                                            ge=datetime(1999,1,1), le=datetime(2023,1,2))
     start_time_end: Optional[datetime] = Field(None, description="If used, this creates a range of start times for drifters, starting with `start_time` and ending with `start_time_end`. Drifters will be initialized linearly between the two start times.", ptm_level=2)
     run_forward: bool = Field(True, description="Run forward in time.", ptm_level=2)
-    time_step: int = Field(300, ge=1, le=86400, description="Interval between particles updates, in seconds.", ptm_level=3, units="seconds")
-    time_step_output: int = Field(3600, ge=1, le=604800, description="Time step at which element properties are stored and eventually written to file. Must be a multiple of time_step.", ptm_level=3, units="seconds")
+    time_step: float = Field(5, ge=0.01, le=1440, description="Interval between particles updates, in minutes.", ptm_level=3, units="minutes")
+    time_step_output: float = Field(60, ge=1, le=1440, description="Time step at which element properties are stored and eventually written to file. This must be larger than the calculation time step, and be an integer multiple of this.", ptm_level=3, units="minutes", od_mapping='general:time_step_output_minutes')
     steps: Optional[int] = Field(None, ge=1, le=10000, description="Maximum number of steps. End of simulation will be start_time + steps * time_step.", ptm_level=1)
     duration: Optional[str] = Field(None, description="Duration should be input as a string of ISO 8601. The length of the simulation. steps, end_time, or duration must be input by user.", ptm_level=1)
     end_time: Optional[datetime] = Field(None, description="The end of the simulation. steps, end_time, or duration must be input by user.", ptm_level=1,
@@ -130,7 +130,7 @@ class TheManagerConfig(BaseModel):
     def calculate_config_times(self) -> Self:
         if self.steps is None:
             if self.duration is not None:
-                self.steps = int(self.duration / timedelta(seconds=self.time_step))
+                self.steps = int(pd.Timedelta(self.duration) / pd.Timedelta(seconds=self.time_step))
                 logger.info(f"Setting steps to {self.steps} based on duration.")
             elif self.end_time is not None and self.start_time is not None:
                 self.steps = int(abs(self.end_time - self.start_time) / timedelta(seconds=self.time_step))
