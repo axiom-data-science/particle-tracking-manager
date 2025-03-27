@@ -320,7 +320,7 @@ def test_plots_names():
 
 
 
-@pytest.mark.slow
+# @pytest.mark.slow
 def test_parameter_passing():
     """make sure parameters passed into package make it to simulation runtime."""
 
@@ -353,29 +353,19 @@ def test_parameter_passing():
     # idealized simulation, provide a fake current
     m.o.set_config("environment:fallback:y_sea_water_velocity", 1)
 
-    # # seed
-    # m.seed()
-
-    # # run simulation
-    # m.run()
-
     # check time_step across access points
-    # import pdb; pdb.set_trace()
     assert (
         m.o._config["general:time_step_minutes"]["value"]
         == ts
         == m.config.time_step
-        # == m.show_config_model(key="time_step")["value"]
-        == m.o.get_configspec()["general:time_step_minutes"]["default"]
+        == m.o.get_configspec()["general:time_step_minutes"]["value"]
     )
 
     # check diff model
-    assert m.o.get_configspec()["diffusivitymodel"]["default"] == diffmodel
-    # assert m.show_config(key="diffusivitymodel")["value"] == diffmodel
+    assert m.o.get_configspec()["vertical_mixing:diffusivitymodel"]["value"] == diffmodel
 
     # check use_auto_landmask coming through
-    assert m.o.get_configspec()["use_auto_landmask"]["default"] == use_auto_landmask
-    # assert m.show_config(key="use_auto_landmask")["value"] == use_auto_landmask
+    assert m.o.get_configspec()["general:use_auto_landmask"]["value"] == use_auto_landmask
 
 
 

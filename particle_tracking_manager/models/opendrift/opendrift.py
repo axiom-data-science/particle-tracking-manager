@@ -2,13 +2,13 @@
 import json
 import logging
 from enum import Enum
+from pathlib import Path
 
 from opendrift.readers import reader_ROMS_native
 
-from ...config_ocean_model import _KNOWN_MODELS
+# from ...config_ocean_model import _KNOWN_MODELS
 from .config_opendrift import open_drift_mapper
 from ...the_manager import ParticleTrackingManager
-from ...config_logging import LoggerMethods
 from .plot import make_plots
 from .utils import narrow_dataset_to_simulation_time, \
     apply_known_ocean_model_specific_changes, apply_user_input_ocean_model_specific_changes
@@ -145,6 +145,12 @@ class OpenDriftModel(ParticleTrackingManager):
         self.checked_plot = False
 
 
+    def _check_interpolator_filename_exists(self):
+        if Path(self.config.interpolator_filename).exists():
+            logger.info(f"Will load the interpolator from {self.config.interpolator_filename}.")
+        else:
+            logger.info(f"A new interpolator will be saved to {self.config.interpolator_filename}.")
+
     def _create_opendrift_model_object(self):
         # do this right away so I can query the object
         # we don't actually input output_format here because we first output to netcdf, then
@@ -226,7 +232,8 @@ class OpenDriftModel(ParticleTrackingManager):
 
     def _setup_for_simulation(self):
 
-        LoggerMethods().merge_with_opendrift_log()
+        self.logger_config.merge_with_opendrift_log()
+        self._check_interpolator_filename_exists()
         self._create_opendrift_model_object()
         self._update_od_config_from_this_config()
         self._modify_opendrift_model_object()
@@ -255,7 +262,7 @@ class OpenDriftModel(ParticleTrackingManager):
         # TODO: have standard_name_mapping as an initial input only with initial call to OpenDrift?
         # TODO: has ds as an initial input for user-input ds?
         if (
-            self.config.ocean_model_config.name not in _KNOWN_MODELS
+            self.config.ocean_model_config.name not in _ocean_model_registry.all()
             and self.config.ocean_model_config.name != "test"
             and ds is None
         ):
@@ -283,7 +290,7 @@ class OpenDriftModel(ParticleTrackingManager):
         
         ds = apply_known_ocean_model_specific_changes(ds, self.config.ocean_model_config.name, self.config.use_static_masks)
         
-        if self.config.ocean_model_config.name not in _KNOWN_MODELS and self.config.ocean_model_config.name != "test":
+        if self.config.ocean_model_config.name not in _ocean_model_registry.all() and self.config.ocean_model_config.name != "test":
             ds = apply_user_input_ocean_model_specific_changes(ds, self.config.use_static_masks)
 
         self.ds = ds

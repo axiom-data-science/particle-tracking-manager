@@ -8,7 +8,7 @@ from pydantic.fields import FieldInfo
 from typing_extensions import Self
 
 from particle_tracking_manager.config_the_manager import TheManagerConfig
-from particle_tracking_manager.config_ocean_model import _KNOWN_MODELS
+# from particle_tracking_manager.config_ocean_model import _KNOWN_MODELS
 
 logger = logging.getLogger()
 
@@ -64,7 +64,7 @@ class OpenDriftConfig(TheManagerConfig):
 
 
     # interpolator_filename: str = Field("", description="Filename to save interpolator to.", ptm_level=3)
-    interpolator_filename: Optional[str] = Field(None, description="Filename to save interpolator to.", ptm_level=3)
+    interpolator_filename: Optional[str] = Field(None, description="Filename to save interpolator to or read interpolator from. Exclude suffix (which should be .pickle).", ptm_level=3)
     
     export_variables: Optional[List[str]] = Field(
         default=None,
@@ -133,49 +133,18 @@ class OpenDriftConfig(TheManagerConfig):
         od_mapping="drift:wind_uncertainty", 
         ptm_level=2,
     )
-    
-    horizontal_diffusivity: Optional[float] = Field(
-        default=None,
-        description="Add horizontal diffusivity (random walk)",
-        title="Horizontal Diffusivity",
-        ge=0,
-        le=100000,
-        units="m2/s",
-        od_mapping="drift:horizontal_diffusivity",
-    )
-    
-    stokes_drift: bool = Field(
-        default=True,
-        description="Advection elements with Stokes drift (wave orbital motion).",
-        title="Stokes Drift",
-        ptm_level=2, 
-        od_mapping="drift:stokes_drift",
-    )
-
-    z: Optional[float] = Field(
-        default=0,
-        description="Depth below sea level where elements are released. This depth is neglected if seafloor seeding is set selected.",
-        title="Z",
-        le=0,
-        ge=-10000,
-        units="m",
-        ptm_level=1, od_mapping="seed:z",
-    )
-
-    number: int = Field(
-        default=1,
-        description="The number of elements for the simulation.",
-        title="Number",
-        ge=1,
-        units=1,
-        ptm_level=1, 
-        od_mapping="seed:number",
-    )
 
     # add od_mapping to what should otherwise be in TheManagerConfig
+    horizontal_diffusivity: Optional[float] = FieldInfo.merge_field_infos(TheManagerConfig.model_fields['horizontal_diffusivity'],
+                                                             Field(od_mapping="drift:horizontal_diffusivity"))
+    stokes_drift: bool = FieldInfo.merge_field_infos(TheManagerConfig.model_fields['stokes_drift'],
+                                                             Field(od_mapping="drift:stokes_drift"))
+    z: Optional[float] = FieldInfo.merge_field_infos(TheManagerConfig.model_fields['z'],
+                                                             Field(od_mapping="seed:z"))
+    number: int = FieldInfo.merge_field_infos(TheManagerConfig.model_fields['number'],
+                                                             Field(od_mapping="seed:number"))
     time_step: float = FieldInfo.merge_field_infos(TheManagerConfig.model_fields['time_step'],
                                                              Field(od_mapping='general:time_step_minutes'))
-    # add od_mapping to what should otherwise be in TheManagerConfig
     time_step_output: float = FieldInfo.merge_field_infos(TheManagerConfig.model_fields['time_step_output'],
                                                              Field(od_mapping='general:time_step_output_minutes'))
     
@@ -216,7 +185,6 @@ class OpenDriftConfig(TheManagerConfig):
 
         if self.use_cache:
             if self.interpolator_filename is None:
-                # TODO: fix this for Ahmad
                 import appdirs
                 cache_dir = Path(appdirs.user_cache_dir(appname="particle-tracking-manager", appauthor="axiom-data-science"))
                 cache_dir.mkdir(parents=True, exist_ok=True)
@@ -229,13 +197,11 @@ class OpenDriftConfig(TheManagerConfig):
             # change interpolator_filename to string
             self.interpolator_filename = str(self.interpolator_filename)
             
-            if Path(self.interpolator_filename).exists():
-                logger.info(f"Loading the interpolator from {self.interpolator_filename}.")
-            else:
-                logger.info(f"A new interpolator will be saved to {self.interpolator_filename}.")
+            logger.info(f"Interpolator filename: {self.interpolator_filename}")
+
         else:
             self.save_interpolator = False
-            logger.info("Interpolators will not be saved.")
+            logger.info("Interpolator will not be saved.")
 
         return self
 

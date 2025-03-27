@@ -5,7 +5,7 @@ from .config_the_manager import TheManagerConfig, LogLevelEnum
 
 logger = logging.getLogger()
 
-class LoggerMethods(BaseModel):
+class LoggerConfig(BaseModel):
     """Methods for loggers."""
 
     log_level: LogLevelEnum = Field(TheManagerConfig.model_json_schema()["properties"]["log_level"]["default"])

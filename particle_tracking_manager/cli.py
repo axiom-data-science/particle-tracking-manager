@@ -166,7 +166,7 @@ def main():
 
         # run this to make sure everything is updated fully
         m.add_reader()
-        print(m.drift_model_config())
+        print(m.config.dict())
 
     else:
 

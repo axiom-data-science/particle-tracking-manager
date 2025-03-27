@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 
 from .config_the_manager import TheManagerConfig
 from .config_misc import ParticleTrackingState, SetupOutputFiles
-from .config_logging import LoggerMethods
+from .config_logging import LoggerConfig
 import logging
 from typing import Self
 
@@ -107,7 +107,8 @@ class ParticleTrackingManager(ABC):
 
         # Setup logging, this also contains the log_level parameter
         inputs = {key: kwargs[key] for key in ["log_level"] if key in kwargs}
-        LoggerMethods(**inputs).setup_logger(logfile_name=self.files.logfile_name)
+        self.logger_config = LoggerConfig(**inputs)
+        self.logger_config.setup_logger(logfile_name=self.files.logfile_name)
         self.state = ParticleTrackingState()
 
     @classmethod
@@ -145,7 +146,7 @@ class ParticleTrackingManager(ABC):
 
         self._run()  # in child class
 
-        LoggerMethods().close_loggers(logger)
+        self.logger_config.close_loggers(logger)
         self.state.has_run = True
         
 
