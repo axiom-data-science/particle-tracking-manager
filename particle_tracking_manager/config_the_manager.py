@@ -14,7 +14,6 @@ from pydantic import (
 from typing_extensions import Self
 import logging
 from .config_ocean_model import ocean_model_simulation_mapper, OceanModelSimulation, OceanModelEnum
-# from .config_ocean_model import OceanModelConfig, ocean_model_mapper, OceanModelEnum, ocean_model_simulation_mapper, OceanModelSimulation, _KNOWN_MODELS
 from .ocean_model_registry import ocean_model_registry, OceanModelConfig
 
 logger = logging.getLogger()
@@ -218,22 +217,16 @@ class TheManagerConfig(BaseModel):
     @computed_field
     def ocean_model_config(self) -> OceanModelConfig:
         return ocean_model_registry.get(self.ocean_model)
-        # return ocean_model_mapper.get(self.ocean_model)
-        # return ocean_model_mapper[self.ocean_model]
     
     @computed_field
     def ocean_model_simulation(self) -> OceanModelSimulation:
-        # import pdb; pdb.set_trace()
         inputs = {
-            # "ocean_model_config": self.ocean_model_config,
-            # "oceanmodel_lon0_360": self.ocean_model_config.oceanmodel_lon0_360,
             "lon": self.lon,
             "lat": self.lat,
             "start_time": self.start_time,
             "end_time": self.end_time,
             "ocean_model_local": self.ocean_model_local,
         }
-        # return ocean_model_simulation_mapper.get(self.ocean_model)(**inputs)    
         return ocean_model_simulation_mapper[self.ocean_model](**inputs)
     
     @model_validator(mode='after')

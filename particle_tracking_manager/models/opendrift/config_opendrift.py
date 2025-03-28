@@ -8,8 +8,6 @@ from pydantic.fields import FieldInfo
 from typing_extensions import Self
 
 from ...config_the_manager import TheManagerConfig
-# from particle_tracking_manager.config_the_manager import TheManagerConfig
-# from particle_tracking_manager.config_ocean_model import _KNOWN_MODELS
 
 logger = logging.getLogger()
 
@@ -416,7 +414,6 @@ class LeewayModelConfig(OpenDriftConfig):
 
 class OceanDriftModelConfig(OpenDriftConfig):
     drift_model: DriftModelEnum = DriftModelEnum.OceanDrift.value
-    # drift_model: Literal["OceanDrift"] = "OceanDrift"
     
     seed_seafloor: bool = Field(
         default=False,
@@ -426,7 +423,6 @@ class OceanDriftModelConfig(OpenDriftConfig):
     )
     
     diffusivitymodel: DiffusivityModelEnum = Field(
-        # default="environment",
         default=DiffusivityModelEnum.environment.value,
         description="Algorithm/source used for profile of vertical diffusivity. Environment means that diffusivity is acquired from readers or environment constants/fallback.",
         title="Diffusivity model",
@@ -450,7 +446,6 @@ class OceanDriftModelConfig(OpenDriftConfig):
     )
     
     seafloor_action: SeafloorActionEnum = Field(
-        # default="lift_to_seafloor",
         default=SeafloorActionEnum.lift_to_seafloor.value,
         description="deactivate: elements are deactivated; lift_to_seafloor: elements are lifted to seafloor level; previous: elements are moved back to previous position; none; seafloor is ignored.",
         title="Seafloor Action",
@@ -1800,9 +1795,7 @@ class DropletSizeDistributionEnum(str, Enum):
 
 
 class OpenOilModelConfig(OceanDriftModelConfig):
-    # drift_model: DriftModelEnum = "OpenOil"
     drift_model: DriftModelEnum = DriftModelEnum.OpenOil.value
-    # drift_model: Literal["OpenOil"] = "OpenOil"
     
     oil_type: OilTypeEnum = Field(
         default=OilTypeEnum.GENERIC_BUNKER_C_AD04012.value,
@@ -1834,7 +1827,6 @@ class OpenOilModelConfig(OceanDriftModelConfig):
         default=DropletSizeDistributionEnum.uniform.value,
         description="Droplet size distribution used for subsea release.",
         title="Droplet Size Distribution",
-        # enum=["uniform", "normal", "lognormal"],
         json_schema_extra={
             "od_mapping": "seed:droplet_size_distribution",
             "ptm_level": 3,
@@ -1979,7 +1971,6 @@ class OpenOilModelConfig(OceanDriftModelConfig):
 
 class LarvalFishModelConfig(OceanDriftModelConfig):
     drift_model: DriftModelEnum = DriftModelEnum.LarvalFish.value
-    # drift_model: Literal["LarvalFish"] = "LarvalFish"
 
     diameter: float = Field(
         default=0.0014,

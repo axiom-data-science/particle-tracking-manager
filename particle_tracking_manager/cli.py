@@ -128,8 +128,6 @@ def main():
             "output_file"
         ] = f"output-results_{datetime.utcnow():%Y-%m-%dT%H%M:%SZ}.nc"
 
-    # log_file = args.kwargs["output_file"].replace(".nc", ".log")
-
     # this is for running plots at the same time as a simulation
     # Convert the string representation of the dictionary to an actual dictionary
     if "plots" in args.kwargs:
@@ -151,15 +149,6 @@ def main():
         print(plots_dict)
         return
 
-    # # Create a file handler
-    # file_handler = logging.FileHandler(log_file)
-
-    # # Create a formatter and add it to the handler
-    # formatter = logging.Formatter(
-    #     "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    # )
-    # file_handler.setFormatter(formatter)
-
     m = ptm.OpenDriftModel(**args.kwargs)  # , plots=plots)
 
     if args.dry_run:
@@ -170,22 +159,12 @@ def main():
 
     else:
 
-        # # Add the handler to the logger
-        # m.logger.addHandler(file_handler)
-
-        # m.logger.info(f"filename: {args.kwargs['output_file']}")
-
         m.add_reader()
-        # print(m.drift_model_config())
 
         m.seed()
         m.run()
 
         print(m.files.output_file)
-
-    # # Remove the handler at the end of the loop
-    # m.logger.removeHandler(file_handler)
-    # file_handler.close()
 
 
 if __name__ == "__main__":

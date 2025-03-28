@@ -29,7 +29,6 @@ class LoggerConfig(BaseModel):
         # Add handlers from the main logger to the OpenDrift logger if not already added
         
         # Create file handler to save log to file
-        # logfile_name = pathlib.Path(output_file).stem + ".log"
         file_handler = logging.FileHandler(logfile_name)
         fmt = "%(asctime)s %(levelname)-7s %(name)s.%(module)s.%(funcName)s:%(lineno)d: %(message)s"
         datefmt = '%Y-%m-%d %H:%M:%S'

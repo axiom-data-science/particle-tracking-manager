@@ -7,7 +7,6 @@ import numpy as np
 import pandas as pd
 import pytest
 
-# import particle_tracking_manager as ptm
 from particle_tracking_manager.the_manager import ParticleTrackingManager
 from pydantic import ValidationError
 from particle_tracking_manager.config_the_manager import TheManagerConfig

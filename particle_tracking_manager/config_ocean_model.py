@@ -21,99 +21,13 @@ def generate_enum_from_registry() -> Enum:
 
 
 # Generate a dynamic Enum using the registry data
+# since user might add their own models.
 OceanModelEnum = generate_enum_from_registry()
-# ## Set up ocean model configuration: doesn't depend on a tracking simulation. ##
-
-
-# def calculate_CIOFSOP_max():
-#     """read in CIOFSOP max time available, at datetime object"""
-#     return xr.open_dataset("/mnt/depot/data/packrat/prod/noaa/coops/ofs/aws_ciofs/processed/aws_ciofs_kerchunk.parq", engine="kerchunk").ocean_time[-1].values.astype('datetime64[s]').item()
-
-
-# def get_model_end_time(name) -> datetime:
-#     # This is only run when the property is requested
-#     if name == "CIOFSOP":
-#         return calculate_CIOFSOP_max()
-#     else:
-#         raise NotImplementedError(f"get_model_end_time not implemented for {name}.")
-
-# def get_file_date_string(name: str, date: datetime) -> str:
-#     if name == "NWGOA":
-#         return f"{date.year}-{str(date.month).zfill(2)}-{str(date.day).zfill(2)}"
-#     elif name == "CIOFSOP":
-#         return f"{date.year}-{str(date.month).zfill(2)}-{str(date.day).zfill(2)}"
-#     elif name == "CIOFS":
-#         return f"{date.year}_{str(date.timetuple().tm_yday - 1).zfill(4)}"
-#     elif name == "CIOFSFRESH":
-#         return f"{date.year}_{str(date.timetuple().tm_yday - 1).zfill(4)}"
-
-# function_map: Dict[str, Callable[[int, int], int]] = {
-#     'make_nwgoa_kerchunk': make_nwgoa_kerchunk,
-#     'make_ciofs_kerchunk': make_ciofs_kerchunk,
-# }
-
-# class OceanModelRegistry:
-#     def __init__(self):
-#         self._registry = {}
-
-#     def register(self, name, instance):
-#         self._registry[name] = instance
-
-#     def get(self, name):
-#         return self._registry.get(name)
-    
-#     def all_models(self):
-#         return self._registry.values()
-    
-#     def all(self):
-#         return self._registry.keys()
-
-# # class MyClass:
-# #     def __init__(self, name):
-# #         self.name = name
-
-# # Create an instance of the registry
-# ocean_model_registry = OceanModelRegistry()
-
-# # # Create an instance of MyClass
-# # obj1 = MyClass("First Object")
-
-# # Register the known model instances
-# ocean_model_registry.register(NWGOA.name, NWGOA)
-# ocean_model_registry.register(CIOFS.name, CIOFS)
-# ocean_model_registry.register(CIOFSOP.name, CIOFSOP)
-# ocean_model_registry.register(CIOFSFRESH.name, CIOFSFRESH)
-
-# # # Access the registered instance
-# # retrieved_obj = registry.get("First Object")
-# # print(retrieved_obj.name)  # Output: First Object
-
-
-
-# class OceanModelEnum(str, Enum):
-#     NWGOA = "NWGOA"
-#     CIOFS = "CIOFS"
-#     CIOFSOP = "CIOFSOP"
-#     CIOFSFRESH = "CIOFSFRESH"
-
-# _KNOWN_MODELS = [model.value for model in OceanModelEnum]
-
-
-
-# ocean_model_mapper = {
-#     "NWGOA": NWGOA,
-#     "CIOFS": CIOFS,
-#     "CIOFSOP": CIOFSOP,
-#     "CIOFSFRESH": CIOFSFRESH,
-# }
-
 
 
 ## Set up ocean model simulation configuration: depends on a tracking simulation. ##
 
 class OceanModelSimulation(BaseModel):
-    # ocean_model_config: OceanModelConfig
-    # oceanmodel_lon0_360: bool
     ocean_model_local: bool
     
     model_config = {
@@ -125,7 +39,6 @@ class OceanModelSimulation(BaseModel):
     
     @model_validator(mode='after')
     def check_config_oceanmodel_lon0_360(self) -> Self:
-        print("RUNNING VALIDATOR")
         if self.ocean_model_config.oceanmodel_lon0_360:
             if self.lon is not None and self.lon < 0:
                 if -180 < self.lon < 0:
@@ -185,32 +98,6 @@ class OceanModelSimulation(BaseModel):
         return ds
 
 
-# Using `create_model` to generate a dynamic simulation model class
-# ocean_model = NWGOA
-# NWGOASimulation = create_model(
-#     ocean_model.name,  # Model name
-#     __base__=OceanModelSimulation,
-#     lon=(float, Field(..., ge=getattr(ocean_model, "lon_min"), le=getattr(ocean_model, "lon_max"), description="Longitude of the simulation within the model bounds.")),
-#     lat=(float, Field(..., ge=getattr(ocean_model, "lat_min"), le=getattr(ocean_model, "lat_max"), description="Latitude of the simulation within the model bounds.")),
-#     start_time=(datetime, Field(..., ge=getattr(ocean_model, "start_time_model"), le=getattr(ocean_model, "end_time_model"), description="Start time of the simulation.")),
-#     end_time=(datetime, Field(..., ge=getattr(ocean_model, "start_time_model"), le=getattr(ocean_model, "end_time_model"), description="End time of the simulation.")),
-# )
-# ocean_model_simulation_mapper = {}
-# for ocean_model in ocean_model_registry.all_models():# [NWGOA, CIOFS, CIOFSOP, CIOFSFRESH]:
-# # for ocean_model in ocean_model_mapper.values():# [NWGOA, CIOFS, CIOFSOP, CIOFSFRESH]:
-#     ocean_model_name = ocean_model.name
-#     simulation_model = create_model(
-#         ocean_model_name,  # Model name
-#         __base__=OceanModelSimulation,
-#         lon=(Optional[float], Field(..., ge=getattr(ocean_model, "lon_min"), le=getattr(ocean_model, "lon_max"), description="Longitude of the simulation within the model bounds.")),
-#         lat=(Optional[float], Field(..., ge=getattr(ocean_model, "lat_min"), le=getattr(ocean_model, "lat_max"), description="Latitude of the simulation within the model bounds.")),
-#         start_time=(datetime, Field(..., ge=getattr(ocean_model, "start_time_model"), le=getattr(ocean_model, "end_time_model"), description="Start time of the simulation.")),
-#         end_time=(datetime, Field(..., ge=getattr(ocean_model, "start_time_model"), le=getattr(ocean_model, "end_time_model"), description="End time of the simulation.")),
-#         ocean_model_config=(OceanModelConfig, ocean_model)
-#     )
-#     ocean_model_simulation_mapper[ocean_model_name] = simulation_model
-
-
 def create_ocean_model_simulation(ocean_model: OceanModelConfig) -> OceanModelSimulation:
     """Create an ocean model simulation object."""
     ocean_model_name = ocean_model.name
@@ -228,12 +115,6 @@ def create_ocean_model_simulation(ocean_model: OceanModelConfig) -> OceanModelSi
 ocean_model_simulation_mapper = {}
 for ocean_model in ocean_model_registry.all_models():# [NWGOA, CIOFS, CIOFSOP, CIOFSFRESH]:
     ocean_model_simulation_mapper[ocean_model.name] = create_ocean_model_simulation(ocean_model)
-
-# def create_ocean_model_simulation_mapper
-
-
-# ocean_model_simulation_mapper = create_ocean_model_simulation_mapper()
-
 
 
 def get_file_date_string(name: str, date: datetime) -> str:

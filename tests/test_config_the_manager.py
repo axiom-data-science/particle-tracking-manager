@@ -37,7 +37,7 @@ def test_time_calculations():
                                     start_time=start_time, end_time=pd.Timestamp(start_time)+pd.Timedelta(minutes=ts))
 
     m = TheManagerConfig(steps=1, end_time="2022-01-01 12:00:00", start_time=None)
-    assert m.duration == duration # timedelta(seconds=m.time_step*m.steps)
+    assert m.duration == duration
     assert m.start_time == m.end_time - pd.Timedelta(m.duration)
 
     with pytest.raises(ValidationError):
@@ -139,7 +139,6 @@ def test_misc_parameters():
                                 horizontal_diffusivity=1,
                                 number=100, 
                                 time_step=5,
-                                # wind_drift_factor=0.04,
                                 stokes_drift=False, 
                                 )
     
@@ -147,8 +146,6 @@ def test_misc_parameters():
     assert m.number == 100
     assert m.time_step == 5
     assert m.stokes_drift == False
-    # assert m.config.log_level == "DEBUG"
-    # assert m.config.wind_drift_factor == 0.04
 
 
 def test_ocean_model_not_known():

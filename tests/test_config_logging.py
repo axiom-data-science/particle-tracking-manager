@@ -2,8 +2,6 @@
 from particle_tracking_manager.config_logging import LoggerConfig
 
 
-
-# MOVE TO CONFIG THE MANAGER AND LOG CONFIG TEST
 def test_log_level():
     """Test values of parameters being input."""
 

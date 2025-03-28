@@ -6,7 +6,6 @@ from pathlib import Path
 
 from opendrift.readers import reader_ROMS_native
 
-# from ...config_ocean_model import _KNOWN_MODELS
 from ...ocean_model_registry import ocean_model_registry
 from .config_opendrift import open_drift_mapper
 from ...the_manager import ParticleTrackingManager
@@ -130,11 +129,6 @@ class OpenDriftModel(ParticleTrackingManager):
             del kwargs["drift_model"]
         self.config = open_drift_mapper[drift_model](**kwargs)
 
-        
-        # # Extra keyword parameters are not currently allowed so they might be a typo
-        # if len(self.kw) > 0:
-        #     raise KeyError(f"Unknown input parameter(s) {self.kw} input.")
-
         # Note that you can see configuration possibilities for a given model with
         # o.list_configspec()
         # You can check the metadata for a given configuration with (min/max/default/type)
@@ -160,30 +154,28 @@ class OpenDriftModel(ParticleTrackingManager):
         log_level = logger.level
         if self.config.drift_model == "Leeway":
             from opendrift.models.leeway import Leeway
-            # getattr(logging, self.config.log_level) converts from, e.g., "INFO" to 20
-            o = Leeway(loglevel=log_level)  # , output_format=self.output_format)
+            o = Leeway(loglevel=log_level)
 
         elif self.config.drift_model == "OceanDrift":
             from opendrift.models.oceandrift import OceanDrift
             o = OceanDrift(
                 loglevel=log_level,
-            )  # , output_format=self.output_format)
+            )
 
         elif self.config.drift_model == "LarvalFish":
             from opendrift.models.larvalfish import LarvalFish
             o = LarvalFish(
                 loglevel=log_level
-            )  # , output_format=self.output_format)
+            )
 
         elif self.config.drift_model == "OpenOil":
             from opendrift.models.openoil import OpenOil
             o = OpenOil(
                 loglevel=log_level, weathering_model="noaa"
-            )  # , output_format=self.output_format)
+            )
 
         else:
             raise ValueError(f"Drifter model {self.config.drift_model} is not recognized.")
-        # TODO: Should I keep this sort of ValueError when the input parameter has already been validated?
         
         self.o = o
 
@@ -260,26 +252,6 @@ class OpenDriftModel(ParticleTrackingManager):
         
         self._setup_for_simulation()
         
-        # TODO: have standard_name_mapping as an initial input only with initial call to OpenDrift?
-        # TODO: has ds as an initial input for user-input ds?
-        # if (
-        #     self.config.ocean_model_config.name not in ocean_model_registry.all()
-        #     and self.config.ocean_model_config.name != "test"
-        #     and ds is None
-        # ):
-        #     raise ValueError(
-        #         "ocean_model must be a known model or user must input a Dataset."
-        #     )
-
-        # # user-input ds
-        # if ds is not None:
-        #     if name is None:
-        #         self.config.ocean_model_config.name = "user_input"
-        #     else:
-        #         self.config.ocean_model_config.name = name
-
-        # TODO: do I still need a pathway for ocean_model of "test"?
-        # TODO: move tests from test_manager to other files
         if ds is None:
             ds = self.config.ocean_model_simulation.open_dataset(drop_vars=self.config.drop_vars)
         
@@ -423,15 +395,6 @@ class OpenDriftModel(ParticleTrackingManager):
             # convert plots dict into string representation to save in output file attributes
             # https://github.com/pydata/xarray/issues/1307
             self.config.plots = repr(self.config.plots)
-
-    # def run_all(self):
-    #     """Run all steps."""
-    #     if not self.state.has_added_reader:
-    #         self.add_reader()
-    #     if not self.state.has_run_seeding:
-    #         self.seed()
-    #     if not self.state.has_run:
-    #         self.run()
 
     def all_export_variables(self):
         """Output list of all possible export variables."""

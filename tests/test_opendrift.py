@@ -375,7 +375,3 @@ def test_parameter_passing():
     # check use_auto_landmask coming through
     assert m.o.get_configspec()["general:use_auto_landmask"]["value"] == use_auto_landmask
 
-
-
-# TODO: Add tests, such as from test_manager, that test the known models
-

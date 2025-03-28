@@ -28,11 +28,6 @@ from .config_the_manager import TheManagerConfig, OutputFormatEnum
 logger = logging.getLogger()
 
 
-# TODO: write tests for PTMConfig and OpenDriftConfig, and maybe SetupOutputFiles
-
-
-
-
 class ParticleTrackingState(BaseModel):
     """Track simulation state."""
     has_added_reader: bool = False
