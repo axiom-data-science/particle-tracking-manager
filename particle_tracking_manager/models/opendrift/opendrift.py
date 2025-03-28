@@ -7,6 +7,7 @@ from pathlib import Path
 from opendrift.readers import reader_ROMS_native
 
 # from ...config_ocean_model import _KNOWN_MODELS
+from ...ocean_model_registry import ocean_model_registry
 from .config_opendrift import open_drift_mapper
 from ...the_manager import ParticleTrackingManager
 from .plot import make_plots
@@ -261,25 +262,25 @@ class OpenDriftModel(ParticleTrackingManager):
         
         # TODO: have standard_name_mapping as an initial input only with initial call to OpenDrift?
         # TODO: has ds as an initial input for user-input ds?
-        if (
-            self.config.ocean_model_config.name not in _ocean_model_registry.all()
-            and self.config.ocean_model_config.name != "test"
-            and ds is None
-        ):
-            raise ValueError(
-                "ocean_model must be a known model or user must input a Dataset."
-            )
+        # if (
+        #     self.config.ocean_model_config.name not in ocean_model_registry.all()
+        #     and self.config.ocean_model_config.name != "test"
+        #     and ds is None
+        # ):
+        #     raise ValueError(
+        #         "ocean_model must be a known model or user must input a Dataset."
+        #     )
 
-        # user-input ds
-        if ds is not None:
-            if name is None:
-                self.config.ocean_model_config.name = "user_input"
-            else:
-                self.config.ocean_model_config.name = name
+        # # user-input ds
+        # if ds is not None:
+        #     if name is None:
+        #         self.config.ocean_model_config.name = "user_input"
+        #     else:
+        #         self.config.ocean_model_config.name = name
 
         # TODO: do I still need a pathway for ocean_model of "test"?
         # TODO: move tests from test_manager to other files
-        else:
+        if ds is None:
             ds = self.config.ocean_model_simulation.open_dataset(drop_vars=self.config.drop_vars)
         
         # don't need the following currently if using ocean_model_local since the kerchunk file is already 
@@ -290,7 +291,7 @@ class OpenDriftModel(ParticleTrackingManager):
         
         ds = apply_known_ocean_model_specific_changes(ds, self.config.ocean_model_config.name, self.config.use_static_masks)
         
-        if self.config.ocean_model_config.name not in _ocean_model_registry.all() and self.config.ocean_model_config.name != "test":
+        if self.config.ocean_model_config.name not in ocean_model_registry.all() and self.config.ocean_model_config.name != "test":
             ds = apply_user_input_ocean_model_specific_changes(ds, self.config.use_static_masks)
 
         self.ds = ds
@@ -365,7 +366,7 @@ class OpenDriftModel(ParticleTrackingManager):
                 }
             )
 
-        elif self.manager_manager_config.seed_flag == "geojson":
+        elif self.config.seed_flag == "geojson":
 
             # geojson needs string representation of time
             _seed_kws["time"] = (
@@ -386,8 +387,8 @@ class OpenDriftModel(ParticleTrackingManager):
 
             # # geojson needs string representation of time
             # self.seed_kws["time"] = self.config.start_time.isoformat()
-            self.geojson["properties"] = self.seed_kws
-            json_string_dumps = json.dumps(self.geojson)
+            self.config.geojson["properties"] = self.seed_kws
+            json_string_dumps = json.dumps(self.config.geojson)
             self.o.seed_from_geojson(json_string_dumps)
 
         else:
@@ -399,8 +400,8 @@ class OpenDriftModel(ParticleTrackingManager):
         """Run the drifters!"""
         
         # add input config to model config
-        self.o.metadata_dict.update(self.config.dict())
-        self.o.metadata_dict.update(self.files.dict())
+        self.o.metadata_dict.update(self.config.model_dump())
+        self.o.metadata_dict.update(self.files.model_dump())
 
         # actually run
         self.o.run(

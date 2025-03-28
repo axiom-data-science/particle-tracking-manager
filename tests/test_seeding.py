@@ -39,11 +39,14 @@ def test_seeding_from_geojson():
     }
     m = ptm.OpenDriftModel(
         seed_flag="geojson",
-        start_time="2000-01-01",
         geojson=geo,
         use_auto_landmask=True,
         number=2,
+        steps=1,
+        lon=None,
+        lat=None
     )
+    m.add_reader()
     m.seed()
 
     expected_lon = [-150.51787, -150.51787]

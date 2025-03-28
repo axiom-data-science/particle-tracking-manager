@@ -166,7 +166,7 @@ def main():
 
         # run this to make sure everything is updated fully
         m.add_reader()
-        print(m.config.dict())
+        print(m.config.model_dump())
 
     else:
 

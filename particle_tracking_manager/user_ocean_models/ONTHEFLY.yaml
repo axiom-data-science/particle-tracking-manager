@@ -1,0 +1,15 @@
+ONTHEFLY:
+  name: "ONTHEFLY"
+  loc_remote: null
+  temporal_resolution_str: ""
+  lon_min: -180
+  lon_max: 180
+  lat_min: -90
+  lat_max: 90
+  start_time_model: "1970-01-01T00:00:00"
+  end_time_fixed: "2100-01-01T00:00:00"
+  oceanmodel_lon0_360: false
+  standard_name_mapping: {}
+  model_drop_vars: []
+  dx: null
+  kerchunk_func_str: null

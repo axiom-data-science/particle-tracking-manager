@@ -7,6 +7,7 @@ import xarray as xr
 from pydantic import ValidationError
 from datetime import datetime, timedelta
 
+import particle_tracking_manager as ptm
 from particle_tracking_manager.models.opendrift.opendrift import (
     OpenDriftModel,
 )
@@ -37,10 +38,15 @@ ds = xr.Dataset(
         "lat_rho": (("Y", "X"), np.array([[1, 1, 1], [2, 2, 2]])),
     },
 )
+ds_info = dict(lon_min=1, lon_max=3, lat_min=1, lat_max=2, start_time_model=0, end_time_fixed=1)
+
+ptm.config_ocean_model.register_on_the_fly(ds_info)
     
+seed_kws = dict(lon=2, lat=1.5, start_time=0, time_step=0.01)
+
 
 def test_drop_vars_do3D_true():
-    m = OpenDriftModel(drift_model="OceanDrift", do3D=True, steps=4)
+    m = OpenDriftModel(drift_model="OceanDrift", do3D=True, duration="1s", ocean_model="ONTHEFLY", **seed_kws)
     # drop variables manually using drop_vars from config to check behavior
     m.add_reader(ds=ds.drop_vars(m.config.drop_vars, errors="ignore"))
     assert m.reader.variables == [
@@ -56,7 +62,7 @@ def test_drop_vars_do3D_true():
 
 
 def test_drop_vars_do3D_false_use_static_masks():
-    m = OpenDriftModel(drift_model="OceanDrift", use_static_masks=True, steps=4)
+    m = OpenDriftModel(drift_model="OceanDrift", use_static_masks=True, duration="1s", ocean_model="ONTHEFLY", **seed_kws)
     # drop variables manually using drop_vars from config to check behavior
     m.add_reader(ds=ds.drop_vars(m.config.drop_vars, errors="ignore"))
     assert m.reader.variables == [
@@ -73,7 +79,9 @@ def test_drop_vars_do3D_false_use_static_masks():
 
 
 def test_drop_vars_no_wind():
-    m = OpenDriftModel(drift_model="OceanDrift", steps=4, stokes_drift=False, wind_drift_factor=0, wind_uncertainty=0, vertical_mixing=False)
+    m = OpenDriftModel(drift_model="OceanDrift", duration="1s", stokes_drift=False, 
+                       wind_drift_factor=0, wind_uncertainty=0, 
+                       vertical_mixing=False, ocean_model="ONTHEFLY", **seed_kws)
     # drop variables manually using drop_vars from config to check behavior
     m.add_reader(ds=ds.drop_vars(m.config.drop_vars, errors="ignore"))
     assert m.reader.variables == [
@@ -88,7 +96,7 @@ def test_Leeway():
     
     m = OpenDriftModel(
         drift_model="Leeway", object_type=">PIW, scuba suit (face up)",
-        stokes_drift=False, steps=1
+        stokes_drift=False, steps=1, ocean_model="ONTHEFLY", **seed_kws
     )
     m._setup_for_simulation()  # creates m.o
     # assert "wind_drift_factor" not in m.config
@@ -97,7 +105,7 @@ def test_Leeway():
 
 
 def test_LarvalFish_add_reader():
-    m = OpenDriftModel(drift_model="LarvalFish", do3D=True, duration="1h")
+    m = OpenDriftModel(drift_model="LarvalFish", do3D=True, duration="1s", ocean_model="ONTHEFLY", **seed_kws)
     m.add_reader(ds=ds.drop_vars(m.config.drop_vars, errors="ignore"))
     assert m.reader.variables == [
             "x_sea_water_velocity",
@@ -331,11 +339,11 @@ def test_parameter_passing():
     do3D = True
 
     seed_kws = dict(
-        lon=4.0,
+        lon=-151,
         lat=60.0,
         radius=5000,
         number=100,
-        start_time=datetime(2015, 9, 22, 6, 0, 0),
+        start_time=datetime(2022, 9, 22, 6, 0, 0),
     )
     m = OpenDriftModel(
         use_auto_landmask=use_auto_landmask,

@@ -10,6 +10,7 @@
     * Moved some configuration parameters from the model "config.json" to "the_manager_config.json"
     * Major improvements of log handling.
     * `time_step` and `time_step_output` changed to minutes from seconds.
+    * ocean_model_registry for known and user-input models
 
 
 ## v0.11.1 (February 4, 2025)

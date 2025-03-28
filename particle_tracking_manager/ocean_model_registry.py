@@ -7,7 +7,6 @@ from typing import Callable, Dict, List, Optional
 from datetime import datetime
 from typing_extensions import Annotated
 from pydantic import BaseModel, Field, ValidationError
-from .models.opendrift.utils import make_nwgoa_kerchunk, make_ciofs_kerchunk
 import xarray as xr
 from pathlib import Path
 import yaml
@@ -28,21 +27,6 @@ def get_model_end_time(name) -> datetime:
         return calculate_CIOFSOP_max()
     else:
         raise NotImplementedError(f"get_model_end_time not implemented for {name}.")
-
-def get_file_date_string(name: str, date: datetime) -> str:
-    if name == "NWGOA":
-        return f"{date.year}-{str(date.month).zfill(2)}-{str(date.day).zfill(2)}"
-    elif name == "CIOFSOP":
-        return f"{date.year}-{str(date.month).zfill(2)}-{str(date.day).zfill(2)}"
-    elif name == "CIOFS":
-        return f"{date.year}_{str(date.timetuple().tm_yday - 1).zfill(4)}"
-    elif name == "CIOFSFRESH":
-        return f"{date.year}_{str(date.timetuple().tm_yday - 1).zfill(4)}"
-
-function_map: Dict[str, Callable[[int, int], int]] = {
-    'make_nwgoa_kerchunk': make_nwgoa_kerchunk,
-    'make_ciofs_kerchunk': make_ciofs_kerchunk,
-}
 
 
 class OceanModelConfig(BaseModel):
@@ -93,14 +77,14 @@ class OceanModelConfig(BaseModel):
         Field(description="Remote location of the model dataset."),
     ]
     dx: Annotated[
-        float,
+        Optional[float],
         Field(description="Approximate horizontal grid resolution (meters), used to calculate horizontal diffusivity."),
     ]
     
     end_time_fixed: Annotated[Optional[datetime], Field(None, description="End time of the model, if doesn't change.")]
 
     kerchunk_func_str: Annotated[
-        str,
+        Optional[str],
         Field(description="Name of function to create a kerchunk file for the model, mapped to function name in function_map."),
     ]
 
@@ -117,6 +101,9 @@ class OceanModelConfig(BaseModel):
         
         Might be overwritten by user-input in other model config.
         """
+        
+        if self.dx is None:
+            return None
 
         # horizontal diffusivity is calculated based on the mean horizontal grid resolution
         # for the model being used.
@@ -232,17 +219,35 @@ class OceanModelRegistry:
     def all_models(self):
         return list(self._registry.values())
     
+    def update_model(self, name, changes: dict):
+        if name in self._registry:
+            for key, value in changes.items():
+                setattr(self._registry[name], key, value)
+        else:
+            raise ValueError(f"Model {name} not found in registry.")    
     
     
 # Directory with YAML files
 directory = Path(__file__).resolve().parent / 'ocean_models'  # This is the directory where the current script is located
+
+file_paths = directory.glob('*.yaml')
+
+# Directory with user-defined files, if any
+import os
+import itertools
+
+config_dir = Path(os.getenv('PTM_CONFIG_DIR', Path(__file__).resolve().parent / 'user_ocean_models'))  # Default to 'user_ocean_models' if not set
+file_paths = itertools.chain(file_paths, config_dir.glob('*.yaml'))
+
+# file_paths += config_dir.glob('*.yaml')
+
 
 # directory = Path('ocean_models')
 
 ocean_model_registry = OceanModelRegistry()
 
 # Iterate through all .yaml files in the directory
-for file_path in directory.glob('*.yaml'):
+for file_path in file_paths:
     with open(file_path, 'r') as f:
         config_data = yaml.safe_load(f)[file_path.stem]
         

@@ -7,7 +7,8 @@ from pydantic import  Field, model_validator
 from pydantic.fields import FieldInfo
 from typing_extensions import Self
 
-from particle_tracking_manager.config_the_manager import TheManagerConfig
+from ...config_the_manager import TheManagerConfig
+# from particle_tracking_manager.config_the_manager import TheManagerConfig
 # from particle_tracking_manager.config_ocean_model import _KNOWN_MODELS
 
 logger = logging.getLogger()
@@ -58,30 +59,30 @@ class PlotTypeEnum(str, Enum):
 # class OpenDriftConfig(BaseModel):
 class OpenDriftConfig(TheManagerConfig):
     """Some of the parameters in this mirror OpenDriftSimulation clss in OpenDrift"""
-    drift_model: DriftModelEnum = Field(default=DriftModelEnum.OceanDrift, description="Drift model to use for simulation.")
+    drift_model: DriftModelEnum = Field(default=DriftModelEnum.OceanDrift.value, description="Drift model to use for simulation.")
     
     save_interpolator: bool = Field(default=False, description="Whether to save the interpolator.")
 
 
     # interpolator_filename: str = Field("", description="Filename to save interpolator to.", ptm_level=3)
-    interpolator_filename: Optional[str] = Field(None, description="Filename to save interpolator to or read interpolator from. Exclude suffix (which should be .pickle).", ptm_level=3)
+    interpolator_filename: Optional[str] = Field(None, description="Filename to save interpolator to or read interpolator from. Exclude suffix (which should be .pickle).", json_schema_extra=dict(ptm_level=3))
     
     export_variables: Optional[List[str]] = Field(
         default=None,
         description="List of variables to export. Options available with `m.all_export_variables` for a given `drift_model`. "
                     "['lon', 'lat', 'ID', 'status', 'z'] will always be exported. Default of None means all possible variables are exported.",
-        ptm_level=3,
+        json_schema_extra=dict(ptm_level=3),
     )
     
-    plots: Optional[Dict[str, dict]] = Field(default=None, ptm_level=1, description="Dictionary of plots to generate using OpenDrift.")
+    plots: Optional[Dict[str, dict]] = Field(default=None, json_schema_extra=dict(ptm_level=1), description="Dictionary of plots to generate using OpenDrift.")
     
     radius: float = Field(
         default=1000.0, 
-        ptm_level=2, ge=0.0, le=1000000, units="m", description="Radius around each lon-lat pair, within which particles will be randomly seeded.")
+        ge=0.0, le=1000000, description="Radius around each lon-lat pair, within which particles will be randomly seeded.", json_schema_extra=dict(ptm_level=2, units="m", ))
     
     radius_type: RadiusTypeEnum = Field(
-        default=RadiusTypeEnum.gaussian, 
-        ptm_level=3, description="Radius type. Options: 'gaussian' or 'uniform'.")
+        default=RadiusTypeEnum.gaussian.value, 
+        description="Radius type. Options: 'gaussian' or 'uniform'.", json_schema_extra=dict(ptm_level=3, ))
     
     # OpenDriftSimulation parameters
 
@@ -90,9 +91,7 @@ class OpenDriftConfig(TheManagerConfig):
         description="Typical maximum speed of elements, used to estimate reader buffer size",
         gt=0,
         title="Maximum speed",
-        units="m/s",
-        od_mapping="drift:max_speed", 
-        ptm_level=1
+        json_schema_extra={"units": "m/s", "od_mapping": "drift:max_speed", "ptm_level": 1},
     )
 
     
@@ -100,16 +99,14 @@ class OpenDriftConfig(TheManagerConfig):
         default=True,
         description="A built-in GSHHG global landmask is used if True, otherwise landmask is taken from reader or fallback value.",
         title="Use Auto Landmask",
-        od_mapping="general:use_auto_landmask", 
-        ptm_level=3,
+        json_schema_extra={"od_mapping": "general:use_auto_landmask", "ptm_level": 3},
     )
 
     coastline_action: CoastlineActionEnum = Field(
-        default=CoastlineActionEnum.stranding,
+        default=CoastlineActionEnum.stranding.value,
         description="None means that objects may also move over land. stranding means that objects are deactivated if they hit land. previous means that objects will move back to the previous location if they hit land",
         title="Coastline Action",
-        od_mapping="general:coastline_action", 
-        ptm_level=2,
+        json_schema_extra={"od_mapping": "general:coastline_action", "ptm_level": 2},
     )
 
     current_uncertainty: float = Field(
@@ -118,9 +115,7 @@ class OpenDriftConfig(TheManagerConfig):
         title="Current Uncertainty",
         ge=0,
         le=5,
-        units="m/s",
-        od_mapping="drift:current_uncertainty", 
-        ptm_level=2,
+        json_schema_extra={"units": "m/s", "od_mapping": "drift:current_uncertainty", "ptm_level": 2},
     )
     
     wind_uncertainty: float = Field(
@@ -129,30 +124,29 @@ class OpenDriftConfig(TheManagerConfig):
         title="Wind Uncertainty",
         ge=0,
         le=5,
-        units="m/s",
-        od_mapping="drift:wind_uncertainty", 
-        ptm_level=2,
+        json_schema_extra={"units": "m/s", "od_mapping": "drift:wind_uncertainty", "ptm_level": 2},
     )
 
     # add od_mapping to what should otherwise be in TheManagerConfig
     horizontal_diffusivity: Optional[float] = FieldInfo.merge_field_infos(TheManagerConfig.model_fields['horizontal_diffusivity'],
-                                                             Field(od_mapping="drift:horizontal_diffusivity"))
+                                                             Field(json_schema_extra=dict(od_mapping="drift:horizontal_diffusivity")))
     stokes_drift: bool = FieldInfo.merge_field_infos(TheManagerConfig.model_fields['stokes_drift'],
-                                                             Field(od_mapping="drift:stokes_drift"))
+                                                             Field(json_schema_extra=dict(od_mapping="drift:stokes_drift")))
     z: Optional[float] = FieldInfo.merge_field_infos(TheManagerConfig.model_fields['z'],
-                                                             Field(od_mapping="seed:z"))
+                                                             Field(json_schema_extra=dict(od_mapping="seed:z")))
     number: int = FieldInfo.merge_field_infos(TheManagerConfig.model_fields['number'],
-                                                             Field(od_mapping="seed:number"))
+                                                             Field(json_schema_extra=dict(od_mapping="seed:number")))
     time_step: float = FieldInfo.merge_field_infos(TheManagerConfig.model_fields['time_step'],
-                                                             Field(od_mapping='general:time_step_minutes'))
+                                                             Field(json_schema_extra=dict(od_mapping='general:time_step_minutes')))
     time_step_output: float = FieldInfo.merge_field_infos(TheManagerConfig.model_fields['time_step_output'],
-                                                             Field(od_mapping='general:time_step_output_minutes'))
+                                                             Field(json_schema_extra=dict(od_mapping='general:time_step_output_minutes')))
     
 
-    class Config:
-        validate_defaults = True
-        use_enum_values=True
-        extra="forbid"
+    model_config = {
+        "validate_defaults": True,
+        "use_enum_values": True,
+        "extra": "forbid",
+    }
 
     @model_validator(mode='after')
     def check_interpolator_filename(self) -> Self:
@@ -389,15 +383,15 @@ class ObjectTypeEnum(str, Enum):
     MEDICAL_WASTE_SYRINGES_SMALL = ">>Medical waste, syringes, small"
 
 class LeewayModelConfig(OpenDriftConfig):
-    drift_model: DriftModelEnum = DriftModelEnum.Leeway
+    drift_model: DriftModelEnum = DriftModelEnum.Leeway.value
     # drift_model: Literal["Leeway"] = "Leeway"
     
     object_type: ObjectTypeEnum = Field(
-        default=ObjectTypeEnum.PERSON_IN_WATER_UNKNOWN,
+        default=ObjectTypeEnum.PERSON_IN_WATER_UNKNOWN.value,
+        # default="PERSON_IN_WATER_UNKNOWN",
         description="Leeway object category for this simulation",
         title="Object Type",
-        od_mapping="seed:object_type", 
-        ptm_level=1,
+        json_schema_extra={"od_mapping": "seed:object_type", "ptm_level": 1},
     )
 
     # modify default values
@@ -421,24 +415,26 @@ class LeewayModelConfig(OpenDriftConfig):
 
 
 class OceanDriftModelConfig(OpenDriftConfig):
-    drift_model: DriftModelEnum = DriftModelEnum.OceanDrift
+    drift_model: DriftModelEnum = DriftModelEnum.OceanDrift.value
     # drift_model: Literal["OceanDrift"] = "OceanDrift"
     
     seed_seafloor: bool = Field(
         default=False,
         description="Elements are seeded at seafloor, and seeding depth (z) is neglected.",
         title="Seed Seafloor",
-        od_mapping="seed:seafloor", 
-        ptm_level=2
+        json_schema_extra={"od_mapping": "seed:seafloor", "ptm_level": 2},
     )
     
     diffusivitymodel: DiffusivityModelEnum = Field(
-        default=DiffusivityModelEnum.environment,
+        # default="environment",
+        default=DiffusivityModelEnum.environment.value,
         description="Algorithm/source used for profile of vertical diffusivity. Environment means that diffusivity is acquired from readers or environment constants/fallback.",
         title="Diffusivity model",
-        units="seconds",
-        od_mapping="vertical_mixing:diffusivitymodel", 
-        ptm_level=3
+        json_schema_extra={
+            "units": "seconds",
+            "od_mapping": "vertical_mixing:diffusivitymodel",
+            "ptm_level": 3,
+        },
     )
     
     mixed_layer_depth: float = Field(
@@ -446,17 +442,22 @@ class OceanDriftModelConfig(OpenDriftConfig):
         description="Fallback value for ocean_mixed_layer_thickness if not available from any reader",
         title="Mixed Layer Depth",
         ge=0.0,
-        units="m",
-        od_mapping="environment:fallback:ocean_mixed_layer_thickness", 
-        ptm_level=3,
+        json_schema_extra={
+            "units": "m",
+            "od_mapping": "environment:mixed_layer_depth",
+            "ptm_level": 3,
+        },
     )
     
     seafloor_action: SeafloorActionEnum = Field(
-        default=SeafloorActionEnum.lift_to_seafloor,
+        # default="lift_to_seafloor",
+        default=SeafloorActionEnum.lift_to_seafloor.value,
         description="deactivate: elements are deactivated; lift_to_seafloor: elements are lifted to seafloor level; previous: elements are moved back to previous position; none; seafloor is ignored.",
         title="Seafloor Action",
-        od_mapping="general:seafloor_action", 
-        ptm_level=2,
+        json_schema_extra={
+            "od_mapping": "general:seafloor_action",
+            "ptm_level": 2,
+        },
     )
     
     wind_drift_depth: Optional[float] = Field(
@@ -465,9 +466,11 @@ class OceanDriftModelConfig(OpenDriftConfig):
         title="Wind Drift Depth",
         ge=0,
         le=10,
-        units="meters",
-        od_mapping="drift:wind_drift_depth", 
-        ptm_level=3,
+        json_schema_extra={
+            "units": "meters",
+            "od_mapping": "drift:wind_drift_depth",
+            "ptm_level": 3,
+        },
     )
     
     vertical_mixing_timestep: float = Field(
@@ -476,9 +479,11 @@ class OceanDriftModelConfig(OpenDriftConfig):
         title="Vertical Mixing Timestep",
         ge=0.1,
         le=3600,
-        units="seconds",
-        od_mapping="vertical_mixing:timestep", 
-        ptm_level=3,
+        json_schema_extra={
+            "units": "seconds",
+            "od_mapping": "vertical_mixing:timestep",
+            "ptm_level": 3,
+        },
     )
 
     wind_drift_factor: float = Field(
@@ -486,16 +491,21 @@ class OceanDriftModelConfig(OpenDriftConfig):
         description="Elements at surface are moved with this fraction of the wind vector, in addition to currents and Stokes drift",
         title="Wind Drift Factor",
         ge=0,
-        units="1",
-        ptm_level=2, 
-        od_mapping="seed:wind_drift_factor",
+        json_schema_extra={
+            "units": "1",
+            "od_mapping": "seed:wind_drift_factor",
+            "ptm_level": 2,
+        },
     )
 
     vertical_mixing: bool = Field(
         default=False,
         description="Activate vertical mixing scheme with inner loop",
         title="Vertical Mixing",
-        ptm_level=2, od_mapping='drift:vertical_mixing',
+        json_schema_extra={
+            "od_mapping": "vertical_mixing:vertical_mixing",
+            "ptm_level": 2,
+        },
     )
 
 # # Make OilTypeEnum with:
@@ -1790,14 +1800,15 @@ class DropletSizeDistributionEnum(str, Enum):
 
 
 class OpenOilModelConfig(OceanDriftModelConfig):
-    drift_model: DriftModelEnum = DriftModelEnum.OpenOil
+    # drift_model: DriftModelEnum = "OpenOil"
+    drift_model: DriftModelEnum = DriftModelEnum.OpenOil.value
     # drift_model: Literal["OpenOil"] = "OpenOil"
     
     oil_type: OilTypeEnum = Field(
-        default=OilTypeEnum.GENERIC_BUNKER_C_AD04012,
+        default=OilTypeEnum.GENERIC_BUNKER_C_AD04012.value,
         description="Oil type to be used for the simulation, from the NOAA ADIOS database.",
         title="Oil Type",
-                          od_mapping="seed:oil_type", ptm_level=1,
+        json_schema_extra={"od_mapping": "seed:oil_type", "ptm_level": 1},
     )
     
     m3_per_hour: float = Field(
@@ -1805,24 +1816,29 @@ class OpenOilModelConfig(OceanDriftModelConfig):
         description="The amount (volume) of oil released per hour (or total amount if release is instantaneous)",
         title="M3 Per Hour",
         gt=0,
-        units="m3 per hour",
-        od_mapping="seed:m3_per_hour", ptm_level=2,
+        json_schema_extra={"units": "m3 per hour", "od_mapping": "seed:m3_per_hour", "ptm_level": 1},
     )
     
     oil_film_thickness: float = Field(
         default=0.001,
         description="Seeding value of oil_film_thickness",
         title="Oil Film Thickness",
-        units="m",
-        od_mapping="seed:oil_film_thickness", ptm_level=3,
+        json_schema_extra={
+            "units": "m",
+            "od_mapping": "seed:oil_film_thickness",
+            "ptm_level": 3,
+        },
     )
     
     droplet_size_distribution: DropletSizeDistributionEnum = Field(
-        default=DropletSizeDistributionEnum.uniform,
+        default=DropletSizeDistributionEnum.uniform.value,
         description="Droplet size distribution used for subsea release.",
         title="Droplet Size Distribution",
-        enum=["uniform", "normal", "lognormal"],
-        od_mapping="seed:droplet_size_distribution", ptm_level=3,
+        # enum=["uniform", "normal", "lognormal"],
+        json_schema_extra={
+            "od_mapping": "seed:droplet_size_distribution",
+            "ptm_level": 3,
+        },
     )
     
     droplet_diameter_mu: float = Field(
@@ -1831,8 +1847,11 @@ class OpenOilModelConfig(OceanDriftModelConfig):
         title="Droplet Diameter Mu",
         ge=1e-08,
         le=1,
-        units="meters",
-        od_mapping="seed:droplet_diameter_mu", ptm_level=3,
+        json_schema_extra={
+            "units": "meters",
+            "od_mapping": "seed:droplet_diameter_mu",
+            "ptm_level": 3,
+        },
     )
     
     droplet_diameter_sigma: float = Field(
@@ -1841,8 +1860,11 @@ class OpenOilModelConfig(OceanDriftModelConfig):
         title="Droplet Diameter Sigma",
         ge=1e-08,
         le=1,
-        units="meters",
-        od_mapping="seed:droplet_diameter_sigma", ptm_level=3,
+        json_schema_extra={
+            "units": "meters",
+            "od_mapping": "seed:droplet_diameter_sigma",
+            "ptm_level": 3,
+        },
     )
     
     droplet_diameter_min_subsea: float = Field(
@@ -1851,8 +1873,11 @@ class OpenOilModelConfig(OceanDriftModelConfig):
         title="Droplet Diameter Min Subsea",
         ge=1e-08,
         le=1,
-        units="meters",
-        od_mapping="seed:droplet_diameter_min_subsea", ptm_level=3,
+        json_schema_extra={
+            "units": "meters",
+            "od_mapping": "seed:droplet_diameter_min_subsea",
+            "ptm_level": 3,
+        },
     )
     
     droplet_diameter_max_subsea: float = Field(
@@ -1861,29 +1886,41 @@ class OpenOilModelConfig(OceanDriftModelConfig):
         title="Droplet Diameter Max Subsea",
         ge=1e-08,
         le=1,
-        units="meters",
-        od_mapping="seed:droplet_diameter_max_subsea", ptm_level=3,
+        json_schema_extra={
+            "units": "meters",
+            "od_mapping": "seed:droplet_diameter_max_subsea",
+            "ptm_level": 3,
+        },
     )
     
     emulsification: bool = Field(
         default=True,
         description="Surface oil is emulsified, i.e. water droplets are mixed into oil due to wave mixing, with resulting increas of viscosity.",
         title="Emulsification",
-        od_mapping="processes:emulsification", ptm_level=2,
+        json_schema_extra={
+            "od_mapping": "processes:emulsification",
+            "ptm_level": 2,
+        },
     )
     
     dispersion: bool = Field(
         default=True,
         description="Oil is removed from simulation (dispersed), if entrained as very small droplets.",
         title="Dispersion",
-        od_mapping="processes:dispersion", ptm_level=2,
-        )
+        json_schema_extra={
+            "od_mapping": "processes:dispersion",
+            "ptm_level": 2,
+        },
+    )
     
     evaporation: bool = Field(
         default=True,
         description="Surface oil is evaporated.",
         title="Evaporation",
-        od_mapping="processes:evaporation", ptm_level=2,
+        json_schema_extra={
+            "od_mapping": "processes:evaporation",
+            "ptm_level": 2,
+        },
         )
 
 
@@ -1891,14 +1928,20 @@ class OpenOilModelConfig(OceanDriftModelConfig):
         default=False,
         description="Oil film thickness is calculated at each time step. The alternative is that oil film thickness is kept constant with value provided at seeding.",
         title="Update Oilfilm Thickness",
-        od_mapping="processes:update_oilfilm_thickness", ptm_level=2,
+        json_schema_extra={
+            "od_mapping": "processes:update_oilfilm_thickness",
+            "ptm_level": 2,
+        },
         )
     
     biodegradation: bool = Field(
         default=False,
         description="Oil mass is biodegraded (eaten by bacteria).",
         title="Biodegradation",
-        od_mapping="processes:biodegradation", ptm_level=2,
+        json_schema_extra={
+            "od_mapping": "processes:biodegradation",
+            "ptm_level": 2,
+        },
         )
     
     # overwrite the defaults from OceanDriftModelConfig for a few inherited parameters,
@@ -1935,25 +1978,31 @@ class OpenOilModelConfig(OceanDriftModelConfig):
 
 
 class LarvalFishModelConfig(OceanDriftModelConfig):
-    drift_model: DriftModelEnum = DriftModelEnum.LarvalFish
+    drift_model: DriftModelEnum = DriftModelEnum.LarvalFish.value
     # drift_model: Literal["LarvalFish"] = "LarvalFish"
 
     diameter: float = Field(
         default=0.0014,
         description="Seeding value of diameter",
         title="Diameter",
-        units="m",
         gt=0,
-        od_mapping="seed:diameter", ptm_level=2, 
+        json_schema_extra={
+            "units": "m",
+            "od_mapping": "seed:diameter",
+            "ptm_level": 2,
+        },
                             )
     
     neutral_buoyancy_salinity: float = Field(
         default=31.25,
         description="Seeding value of neutral_buoyancy_salinity",
         title="Neutral Buoyancy Salinity",
-        units="PSU",
         gt=0,
-                                             od_mapping="seed:neutral_buoyancy_salinity", ptm_level=2, 
+        json_schema_extra= {
+            "units": "PSU",
+            "od_mapping": "seed:neutral_buoyancy_salinity",
+            "ptm_level": 2,
+        },
                                              )
 
     
@@ -1961,36 +2010,48 @@ class LarvalFishModelConfig(OceanDriftModelConfig):
         default=0.0,
         description="Seeding value of stage_fraction",
         title="Stage Fraction",
-        units="",
-        od_mapping="seed:stage_fraction", ptm_level=2,
+        json_schema_extra={
+            "units": "",
+            "od_mapping": "seed:stage_fraction",
+            "ptm_level": 2,
+        }
         )
     
     hatched: int = Field(
         default=0,
         description="Seeding value of hatched",
         title="Hatched",
-        units="",
         ge=0,
         le=1,
-        od_mapping="seed:hatched", ptm_level=2,
+        json_schema_extra={
+            "units": "",
+            "od_mapping": "seed:hatched",
+            "ptm_level": 2,
+        },
     )
 
     length: float = Field(
         default=0,
         description="Seeding value of length",
         title="Length",
-        units="mm",
         gt=0,
-        od_mapping="seed:length", ptm_level=2,
+        json_schema_extra={
+            "units": "mm",
+            "od_mapping": "seed:length",
+            "ptm_level": 2,
+        },
     )
     
     weight: float = Field(
         default=0.08,
         description="Seeding value of weight",
         title="Weight",
-        units="mg",
         gt=0,
-        od_mapping="seed:weight", ptm_level=2,
+        json_schema_extra={
+            "units": "mg",
+            "od_mapping": "seed:weight",
+            "ptm_level": 2,
+        },
     )
     
     # override inherited parameter defaults

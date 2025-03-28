@@ -3,6 +3,7 @@ from typing import Optional, List, Dict, Self, Annotated, Callable
 from datetime import datetime, timedelta
 import xarray as xr
 from .ocean_model_registry import ocean_model_registry, OceanModelConfig
+from .models.opendrift.utils import make_nwgoa_kerchunk, make_ciofs_kerchunk
 import logging
 from enum import Enum
 
@@ -115,6 +116,12 @@ class OceanModelSimulation(BaseModel):
     # oceanmodel_lon0_360: bool
     ocean_model_local: bool
     
+    model_config = {
+        "validate_defaults": True,
+        "use_enum_values": True,
+        "extra": "forbid",
+    }
+    
     
     @model_validator(mode='after')
     def check_config_oceanmodel_lon0_360(self) -> Self:
@@ -188,21 +195,62 @@ class OceanModelSimulation(BaseModel):
 #     start_time=(datetime, Field(..., ge=getattr(ocean_model, "start_time_model"), le=getattr(ocean_model, "end_time_model"), description="Start time of the simulation.")),
 #     end_time=(datetime, Field(..., ge=getattr(ocean_model, "start_time_model"), le=getattr(ocean_model, "end_time_model"), description="End time of the simulation.")),
 # )
-ocean_model_simulation_mapper = {}
-for ocean_model in ocean_model_registry.all_models():# [NWGOA, CIOFS, CIOFSOP, CIOFSFRESH]:
-# for ocean_model in ocean_model_mapper.values():# [NWGOA, CIOFS, CIOFSOP, CIOFSFRESH]:
+# ocean_model_simulation_mapper = {}
+# for ocean_model in ocean_model_registry.all_models():# [NWGOA, CIOFS, CIOFSOP, CIOFSFRESH]:
+# # for ocean_model in ocean_model_mapper.values():# [NWGOA, CIOFS, CIOFSOP, CIOFSFRESH]:
+#     ocean_model_name = ocean_model.name
+#     simulation_model = create_model(
+#         ocean_model_name,  # Model name
+#         __base__=OceanModelSimulation,
+#         lon=(Optional[float], Field(..., ge=getattr(ocean_model, "lon_min"), le=getattr(ocean_model, "lon_max"), description="Longitude of the simulation within the model bounds.")),
+#         lat=(Optional[float], Field(..., ge=getattr(ocean_model, "lat_min"), le=getattr(ocean_model, "lat_max"), description="Latitude of the simulation within the model bounds.")),
+#         start_time=(datetime, Field(..., ge=getattr(ocean_model, "start_time_model"), le=getattr(ocean_model, "end_time_model"), description="Start time of the simulation.")),
+#         end_time=(datetime, Field(..., ge=getattr(ocean_model, "start_time_model"), le=getattr(ocean_model, "end_time_model"), description="End time of the simulation.")),
+#         ocean_model_config=(OceanModelConfig, ocean_model)
+#     )
+#     ocean_model_simulation_mapper[ocean_model_name] = simulation_model
+
+
+def create_ocean_model_simulation(ocean_model: OceanModelConfig) -> OceanModelSimulation:
+    """Create an ocean model simulation object."""
     ocean_model_name = ocean_model.name
     simulation_model = create_model(
         ocean_model_name,  # Model name
         __base__=OceanModelSimulation,
-        lon=(float, Field(..., ge=getattr(ocean_model, "lon_min"), le=getattr(ocean_model, "lon_max"), description="Longitude of the simulation within the model bounds.")),
-        lat=(float, Field(..., ge=getattr(ocean_model, "lat_min"), le=getattr(ocean_model, "lat_max"), description="Latitude of the simulation within the model bounds.")),
+        lon=(Optional[float], Field(..., ge=getattr(ocean_model, "lon_min"), le=getattr(ocean_model, "lon_max"), description="Longitude of the simulation within the model bounds.")),
+        lat=(Optional[float], Field(..., ge=getattr(ocean_model, "lat_min"), le=getattr(ocean_model, "lat_max"), description="Latitude of the simulation within the model bounds.")),
         start_time=(datetime, Field(..., ge=getattr(ocean_model, "start_time_model"), le=getattr(ocean_model, "end_time_model"), description="Start time of the simulation.")),
         end_time=(datetime, Field(..., ge=getattr(ocean_model, "start_time_model"), le=getattr(ocean_model, "end_time_model"), description="End time of the simulation.")),
         ocean_model_config=(OceanModelConfig, ocean_model)
     )
-    ocean_model_simulation_mapper[ocean_model_name] = simulation_model
+    return simulation_model    
 
+ocean_model_simulation_mapper = {}
+for ocean_model in ocean_model_registry.all_models():# [NWGOA, CIOFS, CIOFSOP, CIOFSFRESH]:
+    ocean_model_simulation_mapper[ocean_model.name] = create_ocean_model_simulation(ocean_model)
+
+# def create_ocean_model_simulation_mapper
+
+
+# ocean_model_simulation_mapper = create_ocean_model_simulation_mapper()
+
+
+
+def get_file_date_string(name: str, date: datetime) -> str:
+    if name == "NWGOA":
+        return f"{date.year}-{str(date.month).zfill(2)}-{str(date.day).zfill(2)}"
+    elif name == "CIOFSOP":
+        return f"{date.year}-{str(date.month).zfill(2)}-{str(date.day).zfill(2)}"
+    elif name == "CIOFS":
+        return f"{date.year}_{str(date.timetuple().tm_yday - 1).zfill(4)}"
+    elif name == "CIOFSFRESH":
+        return f"{date.year}_{str(date.timetuple().tm_yday - 1).zfill(4)}"
+
+
+function_map: Dict[str, Callable[[int, int], int]] = {
+    'make_nwgoa_kerchunk': make_nwgoa_kerchunk,
+    'make_ciofs_kerchunk': make_ciofs_kerchunk,
+}
 
 def loc_local(name, kerchunk_func_str, start_sim, end_sim) -> dict:
     """This sets up a short kerchunk file for reading in just enough model output."""
@@ -221,3 +269,22 @@ def loc_local(name, kerchunk_func_str, start_sim, end_sim) -> dict:
     return loc_local
     
     
+    
+def register_on_the_fly(ds_info: dict) -> None:
+    """Register a new ocean model on the fly.
+    
+    It has to be called "ONTHEFLY".
+    
+    ds_info can contain any of the OceanModelConfig fields.
+    """
+
+    # Update the "ONTHEFLY" user ocean model template with user dataset information
+    ocean_model_registry.update_model("ONTHEFLY", ds_info)
+
+    # Create the ocean model simulation object for the new ocean model
+    ONTHEFLYSimulation = create_ocean_model_simulation(ocean_model_registry.get("ONTHEFLY"))
+
+    # Update the ocean model simulation mapper with the new ocean model simulation
+    ocean_model_simulation_mapper.update({"ONTHEFLY": ONTHEFLYSimulation})
+
+    logger.info("Registered new ocean model")
