@@ -1,8 +1,13 @@
-
+import tempfile
+import os
+import yaml
+import particle_tracking_manager
 from particle_tracking_manager.ocean_model_registry import ocean_model_registry
 from particle_tracking_manager.config_ocean_model import ocean_model_simulation_mapper
 import pytest
 from pydantic import ValidationError
+import importlib
+from pathlib import Path
 
 # Valid values
 # end_time calculated as 1 5-minute step
@@ -83,4 +88,56 @@ def test_start_end_times():
 
 
 def test_user_registry():
-    pass
+
+    # Create a temporary directory
+    with tempfile.TemporaryDirectory() as temp_dir:
+        # Define the content of the YAML file
+        data = {
+            'USER': {
+                'name': "USER",
+                'loc_remote': None,
+                'temporal_resolution_str': "PT1H",
+                'lon_min': -180,
+                'lon_max': 180,
+                'lat_min': -90,
+                'lat_max': 90,
+                'start_time_model': "2009-01-01T00:00",
+                'end_time_fixed': "2010-01-01T00:00:00",
+                'oceanmodel_lon0_360': False,
+                'standard_name_mapping': {},
+                'model_drop_vars': [],
+                'dx': 1000,
+                'kerchunk_func_str': None
+            }
+        }
+
+        # Define the path for the YAML file
+        yaml_file_path = Path(temp_dir) / f'USER.yaml'
+
+        # Write the YAML data to the file
+        with open(yaml_file_path, 'w') as file:
+            yaml.dump(data, file)
+
+        # Set an environment variable for testing purposes
+        # this defines where to find user templates with *.yaml
+        os.environ["PTM_CONFIG_DIR"] = str(temp_dir)
+
+        # Check if it's defined
+        env_var = os.getenv("PTM_CONFIG_DIR")
+
+        
+        # reload particle_tracking_manager since we changed the environment variable
+        importlib.reload(particle_tracking_manager.ocean_model_registry)
+        
+        # now USER is in the registry
+        assert "USER" in particle_tracking_manager.ocean_model_registry.ocean_model_registry.all()
+
+
+def test_onthefly_registry():
+
+    ds_info = dict(temporal_resolution_str="PT1H", lon_min=1, lon_max=3, lat_min=1, lat_max=2, start_time_model=0, end_time_fixed=1)
+    particle_tracking_manager.config_ocean_model.register_on_the_fly(ds_info)
+        
+    # now new config is in the registry
+    assert ocean_model_registry.get("ONTHEFLY").lon_min == 1
+

@@ -142,9 +142,9 @@ class OpenDriftModel(ParticleTrackingManager):
 
     def _check_interpolator_filename_exists(self):
         if Path(self.config.interpolator_filename).exists():
-            logger.info(f"Will load the interpolator from {self.config.interpolator_filename}.")
+            logger.debug(f"Will load the interpolator from {self.config.interpolator_filename}.")
         else:
-            logger.info(f"A new interpolator will be saved to {self.config.interpolator_filename}.")
+            logger.debug(f"A new interpolator will be saved to {self.config.interpolator_filename}.")
 
     def _create_opendrift_model_object(self):
         # do this right away so I can query the object
@@ -210,18 +210,18 @@ class OpenDriftModel(ParticleTrackingManager):
         # If 2D surface simulation (and not Leeway since not available), truncate model output below 0.5 m
         if not self.config.do3D and self.config.z == 0 and self.config.drift_model != "Leeway":
             self.o.set_config("drift:truncate_ocean_model_below_m", 0.5)
-            logger.info("Truncating model output below 0.5 m.")
+            logger.debug("Truncating model output below 0.5 m.")
 
 
         # If 2D simulation (and not Leeway since not available), turn off vertical advection
         if not self.config.do3D and self.config.drift_model != "Leeway":
             self.o.set_config("drift:vertical_advection", False)
-            logger.info("Disabling vertical advection.")
+            logger.debug("Disabling vertical advection.")
 
         # If 3D simulation, turn on vertical advection
         if self.config.do3D:
             self.o.set_config("drift:vertical_advection", True)
-            logger.info("do3D is True so turning on vertical advection.")
+            logger.debug("do3D is True so turning on vertical advection.")
 
     def _setup_for_simulation(self):
 
@@ -259,7 +259,7 @@ class OpenDriftModel(ParticleTrackingManager):
         # narrowed to the simulation size
         if not self.config.ocean_model_local:
             ds = narrow_dataset_to_simulation_time(ds, self.config.start_time, self.config.end_time)
-            logger.info("Narrowed model output to simulation time")
+            logger.debug("Narrowed model output to simulation time")
         
         ds = apply_known_ocean_model_specific_changes(ds, self.config.ocean_model_config.name, self.config.use_static_masks)
         

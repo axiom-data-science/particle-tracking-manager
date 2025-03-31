@@ -7,10 +7,13 @@
 * Major refactoring:
     * Removed `surface_only` flag.
     * Changed default value for `vertical_mixing` to False to match `do3D` default of False.
-    * Moved some configuration parameters from the model "config.json" to "the_manager_config.json"
+    * Moved some configuration parameters between configuration objects.
     * Major improvements of log handling.
     * `time_step` and `time_step_output` changed to minutes from seconds.
     * ocean_model_registry for known and user-input models
+    * changed some logger statement from "info" to "debug"
+    * now pinned to `opendrift` v1.13.0
+    * can run plots from a parquet or netcdf output file now
 
 
 ## v0.11.1 (February 4, 2025)

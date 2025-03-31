@@ -146,9 +146,15 @@ directory = Path(__file__).resolve().parent / 'ocean_models'  # This is the dire
 file_paths = directory.glob('*.yaml')
 
 # Directory with user-defined files, if any
+config_dir = Path(os.getenv('PTM_CONFIG_DIR', ""))
+if len(str(config_dir)) > 1:
+    file_paths = itertools.chain(file_paths, config_dir.glob('*.yaml'))
 
-config_dir = Path(os.getenv('PTM_CONFIG_DIR', Path(__file__).resolve().parent / 'user_ocean_models'))  # Default to 'user_ocean_models' if not set
+# also combine *.yaml files in the user_ocean_models directory specifically (not just by default)
+config_dir = Path(__file__).resolve().parent / 'user_ocean_models'
 file_paths = itertools.chain(file_paths, config_dir.glob('*.yaml'))
+
+# Create an instance of the OceanModelRegistry
 ocean_model_registry = OceanModelRegistry()
 
 # Iterate through all .yaml files in the directory

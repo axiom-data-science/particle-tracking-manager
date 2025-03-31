@@ -44,7 +44,7 @@ class OceanModelSimulation(BaseModel):
                 if -180 < self.lon < 0:
                     orig_lon = self.lon
                     self.lon += 360
-                    logger.info(f"Shifting longitude from {orig_lon} to {self.lon}.")
+                    logger.debug(f"Shifting longitude from {orig_lon} to {self.lon}.")
         return self
 
     def open_dataset(self, drop_vars: list) -> xr.Dataset:
@@ -68,7 +68,7 @@ class OceanModelSimulation(BaseModel):
                     drop_variables=drop_vars,
                     decode_times=False,
                 )
-                logger.info(
+                logger.debug(
                     f"Opened local dataset with start time {start_time} and end time {end_time} and number outputs {ds.ocean_time.size}."
                 )
 
@@ -92,7 +92,7 @@ class OceanModelSimulation(BaseModel):
                         decode_times=False,
                     )
 
-                logger.info(
+                logger.debug(
                     f"Opened remote dataset {self.ocean_model_config.loc_remote} with number outputs {ds.ocean_time.size}."
                 )
         return ds
@@ -151,21 +151,36 @@ def loc_local(name, kerchunk_func_str, start_sim, end_sim) -> dict:
     
     
     
-def register_on_the_fly(ds_info: dict) -> None:
+def register_on_the_fly(ds_info: dict, ocean_model: str = "ONTHEFLY") -> None:
     """Register a new ocean model on the fly.
     
-    It has to be called "ONTHEFLY".
+    The default model to register is "ONTHEFLY", which is a placeholder for user-defined models.
+    However, alternations could also be made to any exiting model in the registry.
     
     ds_info can contain any of the OceanModelConfig fields.
     """
 
     # Update the "ONTHEFLY" user ocean model template with user dataset information
-    ocean_model_registry.update_model("ONTHEFLY", ds_info)
+    ocean_model_registry.update_model(ocean_model, ds_info)
 
     # Create the ocean model simulation object for the new ocean model
-    ONTHEFLYSimulation = create_ocean_model_simulation(ocean_model_registry.get("ONTHEFLY"))
+    ONTHEFLYSimulation = create_ocean_model_simulation(ocean_model_registry.get(ocean_model))
 
     # Update the ocean model simulation mapper with the new ocean model simulation
-    ocean_model_simulation_mapper.update({"ONTHEFLY": ONTHEFLYSimulation})
+    ocean_model_simulation_mapper.update({ocean_model: ONTHEFLYSimulation})
 
-    logger.info("Registered new ocean model")
+    logger.info("Registered new ocean model or altered exising ocean model in the registry.")
+
+
+def update_TXLA_with_download_location() -> None:
+    """The user-defined TXLA model is missing the download location
+    
+    because it depends on the user's operating system and setup. Run this
+    function to update the TXLA model with the location of the downloaded
+    file.
+    """
+    
+    import xroms
+    url = xroms.datasets.CLOVER.fetch("ROMS_example_full_grid.nc")
+    ds_info = dict(loc_remote = url)
+    register_on_the_fly(ds_info, ocean_model="TXLA")

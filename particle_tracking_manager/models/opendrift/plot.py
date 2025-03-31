@@ -159,8 +159,6 @@ def plot(plot_name, input_kwargs, o, filename, drift_model):
 
         o.plot(filename=filename, **kwargs)
 
-        logger.info(f"Saved spaghetti plot to {filename}")
-
     elif (
         "animation" in plot_name and "profile" not in plot_name
     ) or plot_name == "all":
@@ -226,6 +224,8 @@ def plot(plot_name, input_kwargs, o, filename, drift_model):
         filename = make_filename_string(plot_name, filename, kwargs)
 
         o.plot_property(filename=filename, **kwargs)
+
+    logger.info(f"Saved plot to {filename}")
 
     return filename
 

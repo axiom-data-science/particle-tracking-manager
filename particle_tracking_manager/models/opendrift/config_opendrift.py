@@ -189,11 +189,11 @@ class OpenDriftConfig(TheManagerConfig):
             # change interpolator_filename to string
             self.interpolator_filename = str(self.interpolator_filename)
             
-            logger.info(f"Interpolator filename: {self.interpolator_filename}")
+            logger.debug(f"Interpolator filename: {self.interpolator_filename}")
 
         else:
             self.save_interpolator = False
-            logger.info("Interpolator will not be saved.")
+            logger.debug("Interpolator will not be saved.")
 
         return self
 
@@ -207,9 +207,9 @@ class OpenDriftConfig(TheManagerConfig):
         # don't need w if not 3D movement
         if not self.do3D:
             drop_vars += ["w"]
-            logger.info("Dropping vertical velocity (w) because do3D is False")
+            logger.debug("Dropping vertical velocity (w) because do3D is False")
         else:
-            logger.info("Retaining vertical velocity (w) because do3D is True")
+            logger.debug("Retaining vertical velocity (w) because do3D is True")
 
         # don't need winds if stokes drift, wind drift, added wind_uncertainty, and vertical_mixing are off
         # It's possible that winds aren't required for every OpenOil simulation but seems like
@@ -222,33 +222,33 @@ class OpenDriftConfig(TheManagerConfig):
             and not self.vertical_mixing
         ):
             drop_vars += ["Uwind", "Vwind", "Uwind_eastward", "Vwind_northward"]
-            logger.info(
+            logger.debug(
                 "Dropping wind variables because stokes_drift, wind_drift_factor, wind_uncertainty, and vertical_mixing are all off and drift_model is not 'OpenOil'"
             )
         else:
-            logger.info(
+            logger.debug(
                 "Retaining wind variables because stokes_drift, wind_drift_factor, wind_uncertainty, or vertical_mixing are on or drift_model is 'OpenOil'"
             )
 
         # only keep salt and temp for LarvalFish or OpenOil
         if self.drift_model not in ["LarvalFish", "OpenOil"]:
             drop_vars += ["salt", "temp"]
-            logger.info(
+            logger.debug(
                 "Dropping salt and temp variables because drift_model is not LarvalFish nor OpenOil"
             )
         else:
-            logger.info(
+            logger.debug(
                 "Retaining salt and temp variables because drift_model is LarvalFish or OpenOil"
             )
 
         # keep some ice variables for OpenOil (though later see if these are used)
         if self.drift_model != "OpenOil":
             drop_vars += ["aice", "uice_eastward", "vice_northward"]
-            logger.info(
+            logger.debug(
                 "Dropping ice variables because drift_model is not OpenOil"
             )
         else:
-            logger.info(
+            logger.debug(
                 "Retaining ice variables because drift_model is OpenOil"
             )
 
@@ -259,13 +259,13 @@ class OpenDriftConfig(TheManagerConfig):
             # TODO: Can the mapping include all possible mappings or does it need to be exact?
             # standard_name_mapping.update({"mask_rho": "land_binary_mask"})
             drop_vars += ["wetdry_mask_rho", "wetdry_mask_u", "wetdry_mask_v"]
-            logger.info(
+            logger.debug(
                 "Dropping wetdry masks because using static masks instead."
             )
         else:
             # standard_name_mapping.update({"wetdry_mask_rho": "land_binary_mask"})
             drop_vars += ["mask_rho", "mask_u", "mask_v", "mask_psi"]
-            logger.info(
+            logger.debug(
                 "Dropping mask_rho, mask_u, mask_v, mask_psi because using wetdry masks instead."
             )
         return drop_vars    

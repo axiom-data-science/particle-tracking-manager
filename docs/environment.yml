@@ -16,7 +16,7 @@ dependencies:
    - jupytext
    - kerchunk
    - numpydoc
-   - opendrift>=1.11.13
+   - opendrift==1.13.0
    - sphinx
    - sphinx_rtd_theme
    - ipython

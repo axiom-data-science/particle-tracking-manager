@@ -9,6 +9,7 @@ import xarray as xr
 import particle_tracking_manager as ptm
 
 
+# set up an alternate dataset on-the-fly
 ds = xr.Dataset(
     data_vars={
         "u": (("ocean_time", "Z", "Y", "X"), np.zeros((2, 3, 2, 3))),
@@ -33,6 +34,12 @@ ds = xr.Dataset(
 ds_info = dict(lon_min=1, lon_max=3, lat_min=1, lat_max=2, start_time_model=0, end_time_fixed=1)
 
 ptm.config_ocean_model.register_on_the_fly(ds_info)
+
+
+# also to use the user-defined template of the TXLA model, need to input where pooch is downloading
+# the file
+ptm.config_ocean_model.update_TXLA_with_download_location()
+
 
 @pytest.mark.slow
 def test_add_new_reader():

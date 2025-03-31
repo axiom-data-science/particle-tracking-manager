@@ -171,10 +171,10 @@ class TheManagerConfig(BaseModel):
         if self.steps is None:
             if self.duration is not None:
                 self.steps = int(pd.Timedelta(self.duration) / pd.Timedelta(minutes=self.time_step))
-                logger.info(f"Setting steps to {self.steps} based on duration.")
+                logger.debug(f"Setting steps to {self.steps} based on duration.")
             elif self.end_time is not None and self.start_time is not None:
                 self.steps = int(abs(self.end_time - self.start_time) / timedelta(minutes=self.time_step))
-                logger.info(f"Setting steps to {self.steps} based on end_time and start_time.")
+                logger.debug(f"Setting steps to {self.steps} based on end_time and start_time.")
             else:
                 raise ValueError("steps has not been calculated")
 
@@ -183,42 +183,44 @@ class TheManagerConfig(BaseModel):
                 self.duration = pd.Timedelta(abs(self.end_time - self.start_time)).isoformat()
                 # # convert to ISO 8601 string
                 # self.duration = pd.Timedelta(abs(self.end_time - self.start_time)).isoformat()
-                logger.info(f"Setting duration to {self.duration} based on end_time and start_time.")
+                logger.debug(f"Setting duration to {self.duration} based on end_time and start_time.")
             elif self.steps is not None:
                 self.duration = pd.Timedelta(self.steps * timedelta(minutes=self.time_step)).isoformat()
                 # # convert to ISO 8601 string
                 # self.duration = (self.steps * pd.Timedelta(minutes=self.time_step)).isoformat()
-                logger.info(f"Setting duration to {self.duration} based on steps.")
+                logger.debug(f"Setting duration to {self.duration} based on steps.")
             else:
                 raise ValueError("duration has not been calculated")
 
         if self.end_time is None:
             if self.steps is not None and self.start_time is not None:
                 self.end_time = self.start_time + self.timedir * self.steps * timedelta(minutes=self.time_step)
-                logger.info(f"Setting end_time to {self.end_time} based on start_time and steps.")
+                logger.debug(f"Setting end_time to {self.end_time} based on start_time and steps.")
             elif self.duration is not None and self.start_time is not None:
                 self.end_time = self.start_time + self.timedir * self.duration
-                logger.info(f"Setting end_time to {self.end_time} based on start_time and duration.")
+                logger.debug(f"Setting end_time to {self.end_time} based on start_time and duration.")
             else:
                 raise ValueError("end_time has not been calculated")
 
         if self.start_time is None:
             if self.end_time is not None and self.steps is not None:
                 self.start_time = self.end_time - self.timedir * self.steps * timedelta(minutes=self.time_step)
-                logger.info(f"Setting start_time to {self.start_time} based on end_time and steps.")
+                logger.debug(f"Setting start_time to {self.start_time} based on end_time and steps.")
             elif self.duration is not None and self.end_time is not None:
                 self.start_time = self.end_time - self.timedir * self.duration
-                logger.info(f"Setting start_time to {self.start_time} based on end_time and duration.")
+                logger.debug(f"Setting start_time to {self.start_time} based on end_time and duration.")
             else:
                 raise ValueError("start_time has not been calculated")
         
         return self
   
     @computed_field
+    @property
     def ocean_model_config(self) -> OceanModelConfig:
         return ocean_model_registry.get(self.ocean_model)
     
     @computed_field
+    @property
     def ocean_model_simulation(self) -> OceanModelSimulation:
         inputs = {
             "lon": self.lon,
@@ -241,7 +243,7 @@ class TheManagerConfig(BaseModel):
 
         # check horizontal_diffusivity from TheManagerConfig
         if self.horizontal_diffusivity is not None:
-            logger.info(
+            logger.debug(
                 f"Setting horizontal_diffusivity to user-selected value {self.horizontal_diffusivity}."
             )
 
@@ -249,7 +251,7 @@ class TheManagerConfig(BaseModel):
         elif self.ocean_model_config is not None and self.ocean_model_config.name in ocean_model_registry.all():
 
             self.horizontal_diffusivity = self.ocean_model_config.horizontal_diffusivity
-            logger.info(
+            logger.debug(
                 f"Setting horizontal_diffusivity parameter to one tuned to reader model of value {self.horizontal_diffusivity}."
             )
 
@@ -258,7 +260,7 @@ class TheManagerConfig(BaseModel):
             and self.horizontal_diffusivity is None
         ):
 
-            logger.info(
+            logger.debug(
                 """Since ocean_model is user-input, changing horizontal_diffusivity parameter from None to 0.0.
                 You can also set it to a specific value with `m.horizontal_diffusivity=[number]`."""
             )
@@ -271,11 +273,11 @@ class TheManagerConfig(BaseModel):
     @model_validator(mode='after')
     def check_config_ocean_model_local(self) -> Self:
         if self.ocean_model_local:
-            logger.info(
+            logger.debug(
                 "Using local output for ocean_model."
             )
         else:
-            logger.info(
+            logger.debug(
                 "Using remote output for ocean_model."
             )
         return self

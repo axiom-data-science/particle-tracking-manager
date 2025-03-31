@@ -26,4 +26,4 @@ def test_setup_library():
     m = ptm.OpenDriftModel(
         steps=3,
     )
-    m.config.dict()
+    m.config.model_dump()

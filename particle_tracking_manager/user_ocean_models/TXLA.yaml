@@ -1,6 +1,6 @@
 TXLA:
   name: "TXLA"
-  loc_remote: "/home/kristen/.cache/xroms/ROMS_example_full_grid.nc"
+  loc_remote: null  # local address once downloaded using pooch has to be filled in
   temporal_resolution_str: "PT1H"
   lon_min: -93.04208536
   lon_max: -88.0137713
