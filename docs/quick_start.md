@@ -17,7 +17,7 @@ kernelspec:
 
 The simplest way to run `particle-tracking-manager` is to choose a built-in ocean model and select a location to initialize drifters, then use the built-in defaults for everything else (including start time which defaults to the first time step in the model output). You can do this interacting with the software as a Python library or using a command line interface.
 
-Alternatively, you can run the package with new model output by inputting the necessary information into the `Manager`.
+Alternatively, you can run the package with new model output by either setting up a user-input ocean model configuration yaml file or setting one up on the fly. See information for both built-in and user-input ocean models in {doc}`ocean_models`.
 
 Details about what setup and configuration are available in {doc}`configuration`.
 
@@ -30,12 +30,14 @@ Run directly from the Lagrangian model you want to use, which will inherit from 
 ```
 import particle_tracking_manager as ptm
 
-m = ptm.OpenDriftModel(ocean_model="NWGOA", lon=-151, lat=59, steps=1)
+m = ptm.OpenDriftModel(steps=1)
 # Can modify `m` between these steps, or look at `OpenDrift` config with `m.drift_model_config()`
 m.run_all()
 ```
 
-Then find results in file `m.outfile_name`.
+This example uses defaults to fill in important information including the `ocean_model` ("CIOFSOP"), the `start_time` (something during CIOFSOP's time range), lon/lat (a location in Cook Inlet, AK); `steps`, `duration`, or `end_time` is required with `start_time`. Most users will need to add the `ocean_model_local=False` flag, if not running on Axiom servers directly.
+
+Then find results in file `m.config.output_file`.
 
 +++
 
@@ -44,43 +46,30 @@ Then find results in file `m.outfile_name`.
 The equivalent for the set up above for using the command line is:
 
 ```
-ptm lon=-151 lat=59 ocean_model=NWGOA steps=1
+ptm steps=1
 ```
 
 To just initialize the simulation and print the `OpenDrift` configuration to screen without running the simulation, add the `--dry-run` flag:
 
 ```
-ptm lon=-151 lat=59 ocean_model=NWGOA steps=1 --dry-run
+ptm steps=1 --dry-run
 ```
 
-You can choose to output one or more plots with the `plots` keyword. For example, the following will output a spaghetti plot made from the track file, using OpenDrift's plotting capabilities:
+You can choose to output one or more plots with the `plots` keyword. For example, the following will output a spaghetti plot made from the track file, using OpenDrift's plotting capabilities (also running with other inputs):
 
 ```
-ptm lon=-151 lat=59 ocean_model=NWGOA steps=1 plots="{'spaghetti': {}}"
+ptm lon=-151.2 lat=59.1 start_time=2006-02-02T00:00 ocean_model=NWGOA duration="1h" plots="{'spaghetti': {}}"
 ```
 
 You can instead run your simulation and then later make plots with:
 
 ```
-ptm outfile=[path for outfile including suffix] plots="{'spaghetti': {}}"
+ptm output_file=[path for outfile including suffix] plots="{'spaghetti': {}}"
 ```
 
-`m.outfile_name` is printed to the screen after the command has been run. `ptm` is installed as an entry point with `particle-tracking-manager`.
+`m.config.output_file` is printed to the screen after the command has been run. `ptm` is installed as an entry point with `particle-tracking-manager`.
 
-
-If you are running this locally (this is for Axiom people), you'll want to run it like this:
-
-```
-ptm lon=-151 lat=59 ocean_model=NWGOA steps=1 ocean_model_local=True start_time=2000-1-1T01 plots="{'spaghetti': {}}"
-```
-
-where you should include `ocean_model_local=True` since you are running the model locally on a server, if you are doing so, you need to input a `start_time` since it will create a kerchunk file on the fly for `ocean_model` that you select. Note that each plot option should be input in a dictionary but then within a string to be correctly interpreted by the CLI. More information on plot options in PTM is available in {ref}`plots`. Many options are available, including animations (see [OpenDrift docs for more information](https://opendrift.github.io/)).
-
-Similarly you would do:
-
-```
-ptm lon=-151 lat=59 ocean_model=NWGOA steps=1 ocean_model_local=True start_time=2000-1-1T01 --dry-run
-```
+Note that each plot option should be input in a dictionary but then within a string to be correctly interpreted by the CLI. More information on plot options in PTM is available in {ref}`plots`. Many options are available, including animations (see [OpenDrift docs for more information](https://opendrift.github.io/)).
 
 
 +++
@@ -88,58 +77,29 @@ ptm lon=-151 lat=59 ocean_model=NWGOA steps=1 ocean_model_local=True start_time=
 (new_reader)=
 ## Python package with local model output
 
-This demo will run using easily-available ROMS model output from `xroms` and create a spaghetti plot.
+There is a short example of ROMS ocean model output available through `xroms` that we will use for demonstration purposes. A configuration file for it is included in this package under the name "TXLA". We will use this example here, but also the configuration file acts as an example template for users who want to set up their own ocean model configuration files. More information on this template {ref}`here<user_templates>`.
+
+To use the "TXLA" ocean model you need to run one extra step to make sure the correct location is available for the model output based on where the package `pooch` will download it for you locally. To do this you run `ptm.config_ocean_model.update_TXLA_with_download_location()`. This requires you to also set `ocean_model_local=False` to access the file correctly.
 
 ```{code-cell} ipython3
 
 import particle_tracking_manager as ptm
-import xroms
-import xarray as xr
 import ast
 
+ptm.config_ocean_model.update_TXLA_with_download_location()
 
-m = ptm.OpenDriftModel(lon = -90, lat = 28.7, number=10, steps=20,
-                       use_static_masks=True, plots={'spaghetti': {}})
+m = ptm.OpenDriftModel(lon=-90, lat=28.7, number=10, steps=20,
+                       start_time="2009-11-19T13:00",
+                       use_static_masks=True, plots={'spaghetti': {}},
+                       ocean_model="TXLA", ocean_model_local=False)
 
-
-url = xroms.datasets.CLOVER.fetch("ROMS_example_full_grid.nc")
-ds = xr.open_dataset(url, decode_times=False)
-m.add_reader(ds=ds)
-
-# m.run_all() or the following
-m.seed()
-m.run()
+m.run_all()
 ```
 
 You can access the plot name as follows (note you need to use `ast.literal_eval()` because `plots` is stored as a string in the file).
 
 ```{code-cell} ipython3
-ast.literal_eval(m.plots)["spaghetti"]["filename"]
-```
-
-
-## Idealized simulation
-
-To run an idealized scenario, no reader should be added but configuration parameters can be manually changed, for example:
-
-```{code-cell} ipython3
-import particle_tracking_manager as ptm
-from datetime import datetime
-m = ptm.OpenDriftModel(lon=4.0, lat=60.0, start_time=datetime(2015, 9, 22, 6),
-                       use_auto_landmask=True, steps=20)
-
-# idealized simulation, provide a fake current
-m.o.set_config('environment:fallback:y_sea_water_velocity', 1)
-
-# seed
-m.seed()
-
-# run simulation
-m.run()
-```
-
-```{code-cell} ipython3
-m.o.plot(fast=True)
+ast.literal_eval(m.config.plots)["spaghetti"]["filename"]
 ```
 
 ## Ways to Get Information
@@ -162,14 +122,14 @@ Get reader/ocean model properties (gathered metadata about model):
 m.reader_metadata(<key>)
 ```
 
-Show configuration details — many more details on this in {doc}`configuration`:
+Show schema details — many more details on this in {doc}`configuration`:
 
 ```
-m.show_config()
+m.config.model_json_schema()
 ```
 
-Show `OpenDrift` configuration for selected `drift_model`:
+Show configuration values for your model:
 
 ```
-m.drift_model_config()
+m.config.model_dump()
 ```

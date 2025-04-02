@@ -20,82 +20,59 @@ import xarray as xr
 import particle_tracking_manager as ptm
 import xroms
 import cmocean.cm as cmo
+import pprint
+
+# Have to run this to use the TXLA ocean model
+ptm.config_ocean_model.update_TXLA_with_download_location()
 ```
 
-## Ocean Models
+After a drift simulation is run, results can be found in file with name `m.config.outfile_name`. Detailed information on ocean models is available {doc}`ocean_models`. The example below use the user-defined "TXLA" ocean model.
 
-### Known Models
+## OceanDrift (Physics)
 
-Three ocean models are built into PTM and can be accessed by name `ocean_model=` "NWGOA", "CIOFS", and "CIOFSOP", and either accessed remotely or locally if run on an internal server (at Axiom) (with `ocean_model_local=True`).
+This model can run in 2D or 3D with or without horizontal or vertical mixing, wind drift, Stokes drift, etc.
 
-### Wet/dry vs. Static Masks
-
-The known models in PTM have wet/dry masks from ROMS so they have had to be specially handled, requiring some new development in `OpenDrift`. There are two options:
-
-* (DEFAULT) Use the typical, static, ROMS masks (`mask_rho`, `mask_u`, `mask_v`). For ROMS simulations run in [wet/dry mode](https://www.myroms.org/wiki/WET_DRY), grid cells in `mask_rho` are 0 if they are permanently dry and 1 if they are ever wet. This saves some computational time but is inconsistent with the ROMS output files in some places since the drifters may be allowed (due to the static mask) to enter a cell they wouldn't otherwise. However, it doesn't make much of a difference for simulations that aren't in the tidal flats.
-* Use the time-varying wet/dry masks (`wetdry_mask_rho`, `wetdry_mask_u`, `wetdry_mask_v`). This costs some more computational time but is fully consistent with the ROMS output files. This option should be selected if drifters are expected to run in the tidal flats.
-
-### User-input Models
-
-As opposed to known models, a user can input their own xarray Dataset, which we will do for this tutorial. When you input your own Dataset, you have to add the reader by hand as opposed to being able to input the `ocean_model` name in the initial call.
-
-```{code-cell} ipython3
-url = xroms.datasets.CLOVER.fetch("ROMS_example_full_grid.nc")
-ds = xr.open_dataset(url, decode_times=False)
-```
-
-## Drift Models
-
-After a drift simulation is run, results can be found in file with name `m.outfile_name`.
-
-### OceanDrift (Physics)
-
-This model can in 2D or 3D with or without horizontal or vertical mixing, wind drift, Stokes drift, etc. By default this would be run at the surface in 2D but we can input selections to run in 3D starting at depth.
-
-#### Initialize manager `m`
+### Initialize manager `m`
 
 ```{code-cell} ipython3
 m = ptm.OpenDriftModel(lon=-90, lat=28.7, number=10, steps=40,
                        z=-5, do3D=True, horizontal_diffusivity=100,
+                       ocean_model="TXLA",
+                       ocean_model_local=False,
+                       start_time="2009-11-19T12:00",
                        plots={'spaghetti': {'linecolor': 'z', 'cmap': 'cmo.deep'}})
 ```
 
-The drift_model-specific parameters chosen by the user and PTM for this simulation are:
+The configuration parameters for this simulation are:
 
 ```{code-cell} ipython3
-m.drift_model_config()
+pprint.pprint(m.config.model_dump())
 ```
 
-You can also find the full PTM and `OpenDrift` configuration information with:
+### Run
 
 ```{code-cell} ipython3
----
-editable: true
-slideshow:
-  slide_type: ''
----
-m.show_config()
-```
-
-#### Add reader and run
-
-```{code-cell} ipython3
-m.add_reader(ds=ds)
 m.run_all()
 ```
 
 
-### Leeway (Search and Rescue)
+## Leeway (Search and Rescue)
 
 These are simulations of objects that stay at the surface and are transported by both the wind and ocean currents at rates that depend on how much the object sticks up out of and down into the water. The constants to use for those rates have been experimentally determined by the coastguard and are used in this model.
 
-#### Initialize manager `m`
+### Initialize manager `m`
 
 ```{code-cell} ipython3
 m = ptm.OpenDriftModel(drift_model="Leeway", lon = -89.8, lat = 29.08,
                        number=10, steps=40,
+                       ocean_model="TXLA",
+                       start_time="2009-11-19T12:00",
+                       ocean_model_local=False,
                        object_type="Fishing vessel, general (mean values)",
                        plots={'spaghetti': {}})
+
+# setup opendrift object (need to do this to set the wind in the next step)
+m._setup_for_simulation()
 
 # This drift model requires wind data to be set which isn't present in model output
 m.o.set_config('environment:constant:x_wind', -1)
@@ -105,23 +82,22 @@ m.o.set_config('environment:constant:y_wind', 1)
 The objects that can be modeled are:
 
 ```{code-cell} ipython3
-m.show_config(key="seed:object_type")["enum"]
+ptm.LeewayModelConfig.model_json_schema()["$defs"]["ObjectTypeEnum"]["enum"]
 ```
 
-The drift_model-specific parameters chosen by the user and PTM for this simulation are:
+The configuration parameters for this simulation are:
 
 ```{code-cell} ipython3
-m.drift_model_config()
+pprint.pprint(m.config.model_dump())
 ```
 
-#### Add reader and run
+### Run
 
 ```{code-cell} ipython3
-m.add_reader(ds=ds)
 m.run_all()
 ```
 
-### LarvalFish
+## LarvalFish
 
 This model simulates eggs and larvae that move in 3D with the currents and some basic behavior and vertical movement. It also simulates some basic growth of the larvae.
 
@@ -133,15 +109,18 @@ There are specific seeding options for this model:
 * 'length'
 * 'weight'
 
-#### Eggs
+### Eggs
 
 An optional general flag is to initialize the drifters at the seabed, which might make sense for eggs and is demonstrated here.
 
-##### Initialize manager `m`
+#### Initialize manager `m`
 
 ```{code-cell} ipython3
 m = ptm.OpenDriftModel(drift_model="LarvalFish", lon=-89.85, lat=28.8, number=10, steps=45,
                        do3D=True, seed_seafloor=True,
+                       ocean_model="TXLA",
+                       start_time="2009-11-19T12:00",
+                       ocean_model_local=False,
                        plots={'spaghetti': {'linecolor': 'z', 'cmap': 'cmo.deep'},
                               'property1': {'prop': 'length'},
                               'property2': {'prop': 'weight'},
@@ -149,16 +128,15 @@ m = ptm.OpenDriftModel(drift_model="LarvalFish", lon=-89.85, lat=28.8, number=10
                               'property4': {'prop': 'stage_fraction'}})
 ```
 
-The drift_model-specific parameters chosen by the user and PTM for this simulation are:
+The configuration parameters for this simulation are:
 
 ```{code-cell} ipython3
-m.drift_model_config()
+pprint.pprint(m.config.model_dump())
 ```
 
-##### Add reader and run
+#### Run
 
 ```{code-cell} ipython3
-m.add_reader(ds=ds)
 m.run_all()
 ```
 
@@ -176,13 +154,16 @@ m.o.history["z"].data
 m.o.elements
 ```
 
-#### Hatched!
+### Hatched!
 
-##### Initialize manager `m`
+#### Initialize manager `m`
 
 ```{code-cell} ipython3
 m = ptm.OpenDriftModel(drift_model="LarvalFish", lon=-89.85, lat=28.8, number=10, steps=45,
                        do3D=True, seed_seafloor=True, hatched=1,
+                       ocean_model="TXLA",
+                       start_time="2009-11-19T12:00",
+                       ocean_model_local=False,
                        plots={'spaghetti': {'linecolor': 'z', 'cmap': 'cmo.deep'},
                               'property1': {'prop': 'length'},
                               'property2': {'prop': 'weight'},
@@ -190,21 +171,20 @@ m = ptm.OpenDriftModel(drift_model="LarvalFish", lon=-89.85, lat=28.8, number=10
                               'property4': {'prop': 'stage_fraction'}})
 ```
 
-The drift_model-specific parameters chosen by the user and PTM for this simulation are:
+The configuration parameters for this simulation are:
 
 ```{code-cell} ipython3
-m.drift_model_config()
+pprint.pprint(m.config.model_dump())
 ```
 
-##### Add reader and run
+#### Run
 
 ```{code-cell} ipython3
-m.add_reader(ds=ds)
 m.run_all()
 ```
 
 
-### OpenOil
+## OpenOil
 
 This model simulates the transport of oil. Processes optionally modeled (which are included in PTM by default) include:
 * "emulsification"
@@ -222,12 +202,15 @@ There are also specific seeding options for this model:
 * "droplet_diameter_min_subsea"
 * "droplet_diameter_max_subsea"
 
-#### Initialize manager `m`
+### Initialize manager `m`
 
 ```{code-cell} ipython3
 m = ptm.OpenDriftModel(drift_model="OpenOil", lon=-89.85, lat=28.08, number=10, steps=45,
                        z=-10, do3D=True, oil_type='GENERIC BUNKER C',
+                       start_time="2009-11-19T12:00", ocean_model="TXLA",
+                       ocean_model_local=False,
                        )
+m._setup_for_simulation()
 m.o.set_config('environment:constant:x_wind', -1)
 m.o.set_config('environment:constant:y_wind', 1)
 ```
@@ -235,19 +218,19 @@ m.o.set_config('environment:constant:y_wind', 1)
 List available oil types from NOAA's ADIOS database:
 
 ```{code-cell} ipython3
-m.show_config(key="seed:oil_type")
+ptm.LeewayModelConfig.model_json_schema()["$defs"]["OilTypeEnum"]["enum"]
 ```
 
-The drift_model-specific parameters chosen by the user and PTM for this simulation are:
+The configuration parameters for this simulation are:
 
 ```{code-cell} ipython3
-m.drift_model_config()
+pprint.pprint(m.config.model_dump())
 ```
 
-#### Add reader and run
+
+### Run
 
 ```{code-cell} ipython3
-m.add_reader(ds=ds)
 m.run_all()
 ```
 

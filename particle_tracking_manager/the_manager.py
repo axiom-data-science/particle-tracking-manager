@@ -4,7 +4,7 @@ from .config_the_manager import TheManagerConfig
 from .config_misc import ParticleTrackingState, SetupOutputFiles
 from .config_logging import LoggerConfig
 import logging
-from typing import Self
+from typing_extensions import Self
 
 logger = logging.getLogger()
 

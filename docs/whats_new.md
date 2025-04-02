@@ -14,6 +14,8 @@
     * changed some logger statement from "info" to "debug"
     * now pinned to `opendrift` v1.13.0
     * can run plots from a parquet or netcdf output file now
+    * can't run idealized simulations using `OpenDrift` directly in PTM anymore but this could be added back in if needed
+    * updated docs
 
 
 ## v0.11.1 (February 4, 2025)

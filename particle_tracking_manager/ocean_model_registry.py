@@ -10,14 +10,14 @@ from pathlib import Path
 import yaml
 import os
 import itertools
-
+import pprint
 
 
 ## Set up ocean model configuration: doesn't depend on a tracking simulation. ##
 
 
 def calculate_CIOFSOP_max():
-    """read in CIOFSOP max time available, at datetime object"""
+    """read in CIOFSOP max time available, as datetime object"""
     return xr.open_dataset("/mnt/depot/data/packrat/prod/noaa/coops/ofs/aws_ciofs/processed/aws_ciofs_kerchunk.parq", engine="kerchunk").ocean_time[-1].values.astype('datetime64[s]').item()
 
 
@@ -117,11 +117,17 @@ class OceanModelRegistry:
     def __init__(self):
         self._registry = {}
 
+    def __repr__(self):
+        return str(self.all())
+
     def register(self, name, instance):
         self._registry[name] = instance
 
     def get(self, name):
         return self._registry.get(name)
+
+    def show(self, name):
+        return pprint.pprint(self._registry[name].model_dump())
     
     def get_all(self):
         return self._registry.items()

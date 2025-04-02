@@ -1,11 +1,12 @@
 from pydantic import BaseModel, Field, model_validator, create_model
-from typing import Optional, List, Dict, Self, Annotated, Callable
+from typing import Optional, List, Dict, Annotated, Callable
 from datetime import datetime, timedelta
 import xarray as xr
 from .ocean_model_registry import ocean_model_registry, OceanModelConfig
 from .models.opendrift.utils import make_nwgoa_kerchunk, make_ciofs_kerchunk
 import logging
 from enum import Enum
+from typing_extensions import Self
 
 logger = logging.getLogger()
 

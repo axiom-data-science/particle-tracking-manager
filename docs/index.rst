@@ -24,6 +24,7 @@ To install from PyPI:
 
    quick_start
    tutorial
+   ocean_models
    configuration
    plots
 
