@@ -1,4 +1,6 @@
+"""Defines ParticleTrackingState and SetupOutputFiles."""
 
+# Standard library imports
 import datetime
 import json
 import logging
@@ -6,12 +8,11 @@ import pathlib
 from enum import Enum
 from typing import Any, Dict, Optional, Union
 
+# Third-party imports
 import xarray as xr
-from dateutil.parser import parse
 from pydantic import (
     BaseModel,
     ConfigDict,
-    Extra,
     Field,
     computed_field,
     create_model,
@@ -21,8 +22,7 @@ from pydantic import (
 from pydantic.fields import FieldInfo
 from typing_extensions import Self
 
-# from .utils import calc_known_horizontal_diffusivity
-from .models.opendrift.utils import make_nwgoa_kerchunk, make_ciofs_kerchunk
+# Local imports
 from .config_the_manager import TheManagerConfig, OutputFormatEnum
 
 logger = logging.getLogger()
@@ -30,12 +30,14 @@ logger = logging.getLogger()
 
 class ParticleTrackingState(BaseModel):
     """Track simulation state."""
+    has_run_setup: bool = False  # this may not be required for all models
     has_added_reader: bool = False
     has_run_seeding: bool = False
     has_run: bool = False
 
 
-def generate_default_output_file():
+def generate_default_output_file() -> str:
+    """Generate a default output file name based on the current date and time."""
     return f"output-results_{datetime.datetime.now():%Y-%m-%dT%H%M%SZ}"
 
 class SetupOutputFiles(BaseModel):
@@ -52,18 +54,20 @@ class SetupOutputFiles(BaseModel):
 
     @field_validator("output_file", mode="after")
     def assign_output_file_if_needed(value: Optional[str]) -> str:
+        """Assign a default output file name if not provided."""
         if value is None:
             return generate_default_output_file()
         return value
 
     @field_validator("output_file", mode="after")
     def clean_output_file(value: str) -> str:
+        """Clean the output file name by removing extensions."""
         value = value.replace(".nc", "").replace(".parquet", "").replace(".parq", "")
         return value
 
     @model_validator(mode="after")
     def add_output_file_extension(self) -> Self:
-
+        """Add the appropriate file extension based on the output format."""
         if self.output_format is not None:
             if self.output_format == "netcdf":
                 self.output_file = str(pathlib.Path(self.output_file).with_suffix(".nc"))
@@ -75,4 +79,5 @@ class SetupOutputFiles(BaseModel):
 
     @computed_field
     def logfile_name(self) -> str:
+        """Generate a log file name based on the output file name."""
         return pathlib.Path(self.output_file).stem + ".log"

@@ -3,14 +3,14 @@
 # also installed ipython, h5py, cf_xarray, pynco
 # copied to /mnt/vault/ciofs/HINDCAST/ciofs_kerchunk_to2012.json
 
-from pathlib import Path
-import xarray as xr
+# Standard library imports
 from datetime import datetime
-import logging
-import pandas as pd
+from pathlib import Path
 
+# Third-party imports
 import fsspec
-
+import pandas as pd
+import xarray as xr
 from kerchunk.combine import MultiZarrToZarr
 
 
@@ -89,7 +89,7 @@ def apply_user_input_ocean_model_specific_changes(ds: xr.Dataset, use_static_mas
     return ds
 
 
-def make_ciofs_kerchunk(start, end, name):
+def make_ciofs_kerchunk(start: str, end: str, name: str) -> dict:
     """_summary_
 
     Parameters
@@ -119,14 +119,14 @@ def make_ciofs_kerchunk(start, end, name):
     if name in ["CIOFS", "CIOFSFRESH"]:
     
         # base for matching
-        def base_str(a_time):
+        def base_str(a_time: str) -> str:
             return f"{output_dir_single_files}/{a_time}_*.json"
         date_format = "%Y_0%j"
 
     elif name == "CIOFSOP":
 
         # base for matching
-        def base_str(a_time):
+        def base_str(a_time: str) -> str:
             return f"{output_dir_single_files}/ciofs_{a_time}-*.json"
         date_format = "ciofs_%Y-%m-%d"
     else:
@@ -159,7 +159,7 @@ def make_ciofs_kerchunk(start, end, name):
     # `coo_map = {"ocean_time": "cf:ocean_time"}` is necessary so that both the time
     # values and units are read and interpreted instead of just the values.
 
-    def fix_fill_values(out):
+    def fix_fill_values(out: dict) -> dict:
         """Fix problem when fill_value and scara both equal 0.0.
 
         If the fill value and the scalar value are both 0, nan is filled instead. This fixes that.
@@ -170,7 +170,7 @@ def make_ciofs_kerchunk(start, end, name):
                 out[k] = out[k].replace('"fill_value":0.0', '"fill_value":"NaN"')
         return out
 
-    def postprocess(out):
+    def postprocess(out: dict) -> dict:
         """postprocess function to fix fill values"""
         out = fix_fill_values(out)
         return out
@@ -265,7 +265,7 @@ def make_ciofs_kerchunk(start, end, name):
     return out
 
 
-def make_nwgoa_kerchunk(start, end, name="NWGOA"):
+def make_nwgoa_kerchunk(start: str, end: str, name: str="NWGOA") -> dict:
     """_summary_
 
     Parameters
@@ -287,7 +287,8 @@ def make_nwgoa_kerchunk(start, end, name="NWGOA"):
     fs2 = fsspec.filesystem("")  # local file system to save final jsons to
 
     # base for matching
-    def base_str(a_time):
+    def base_str(a_time: str) -> str:
+        # this is the base string for the json files
         return f"{output_dir_single_files}/nwgoa_{a_time}-*.json"
     date_format = "nwgoa_%Y-%m-%d"
 
@@ -316,7 +317,7 @@ def make_nwgoa_kerchunk(start, end, name="NWGOA"):
     # account for double compression
     # Look at individual variables in the files to see what needs to be changed with
     # h5dump -d ocean_time -p /mnt/depot/data/packrat/prod/aoos/nwgoa/processed/1999/nwgoa_1999-02-01.nc
-    def preprocess(refs):
+    def preprocess(refs: dict) -> dict:
         """preprocess function to fix fill values"""
         for k in list(refs):
             if k.endswith("/.zarray"):
@@ -332,13 +333,13 @@ def make_nwgoa_kerchunk(start, end, name="NWGOA"):
 
     import zarr
 
-    def add_time_attr(out):
+    def add_time_attr(out: dict) -> dict:
         """add time attributes to the ocean_time variable"""
         out_ = zarr.open(out)
         out_.ocean_time.attrs["axis"] = "T"
         return out
 
-    def postprocess(out):
+    def postprocess(out: dict) -> dict:
         """postprocess function to fix fill values"""
         out = add_time_attr(out)
         return out

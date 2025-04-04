@@ -1,16 +1,18 @@
 """Command line interface to get inputs from web application."""
 
+# Standard library imports
 import argparse
 import ast
-
 from datetime import datetime
 
+# Third-party imports
 import pandas as pd
 
+# Local imports
 import particle_tracking_manager as ptm
 
 
-def is_int(s):
+def is_int(s: str) -> bool:
     """Check if string is actually int."""
     try:
         int(s)
@@ -19,7 +21,7 @@ def is_int(s):
         return False
 
 
-def is_float(s):
+def is_float(s: str) -> bool:
     """Check if string is actually float."""
     try:
         float(s)
@@ -28,7 +30,7 @@ def is_float(s):
         return False
 
 
-def is_None(s):
+def is_None(s: str) -> bool:
     """Check if string is actually None."""
     if s == "None":
         return True
@@ -36,7 +38,7 @@ def is_None(s):
         return False
 
 
-def is_datestr(s):
+def is_datestr(s: str) -> bool:
     """Check if string is actually a datestring."""
 
     try:
@@ -47,7 +49,7 @@ def is_datestr(s):
         return False
 
 
-def is_deltastr(s):
+def is_deltastr(s: str) -> bool:
     """Check if string is actually a Timedelta."""
 
     try:
@@ -62,7 +64,7 @@ def is_deltastr(s):
 class ParseKwargs(argparse.Action):
     """With can user can input dicts on CLI."""
 
-    def __call__(self, parser, namespace, values, option_string=None):
+    def __call__(self, parser, namespace, values, option_string=None) -> None:
         """With can user can input dicts on CLI."""
         setattr(namespace, self.dest, dict())
         for value in values:

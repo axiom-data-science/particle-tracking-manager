@@ -171,12 +171,12 @@ This plots a single property over time, either for every track or the average ov
 You can make a property plot with the following — you must input a "prop" to plot!
 
 ```
-plots={'property': {'prop': 'z'}}
+plots={'property': {'variable': 'z'}}
 ```
 
 To run this with the CLI, the plots section would be
 ```
-plots="{'property': {'prop': 'z'}}"
+plots="{'property': {'variable': 'z'}}"
 ```
 
 ### Options
@@ -198,15 +198,12 @@ import xarray as xr
 import cmocean.cm as cmo
 import pandas as pd
 
-m = ptm.OpenDriftModel(lon=-90, lat=28.7, number=10, duration=pd.Timedelta("3h"),
+m = ptm.OpenDriftModel(lon=-90, lat=28.7, number=10, duration="3h",
                        do3D=True, use_static_masks=True,
-                       plots={'all': {},
-})
-
-url = xroms.datasets.CLOVER.fetch("ROMS_example_full_grid.nc")
-ds = xr.open_dataset(url, decode_times=False)
-m.add_reader(ds=ds)
-
+                       ocean_model="TXLA",
+                       ocean_model_local=False,
+                       start_time="2009-11-19T12:00",
+                       plots={'all': {},})
 m.run_all()
 ```
 
@@ -216,12 +213,12 @@ To show the animations:
 from IPython.display import Image
 import ast
 
-gif_filename = ast.literal_eval(m.plots)["animation"]["filename"]
+gif_filename = ast.literal_eval(m.config.plots)["animation"]["filename"]
 Image(filename=gif_filename)
 ```
 
 ```{code-cell} ipython3
-gif_filename = ast.literal_eval(m.plots)["animation_profile"]["filename"]
+gif_filename = ast.literal_eval(m.config.plots)["animation_profile"]["filename"]
 Image(filename=gif_filename)
 ```
 
@@ -231,33 +228,29 @@ Image(filename=gif_filename)
 This example plots particle tracks and additionally plots tracks colored by a variable, and runs the plot after the simulation has been run.
 
 ```{code-cell} ipython3
-m = ptm.OpenDriftModel(drift_model="LarvalFish", lon=-90, lat=28.7, number=10, duration=pd.Timedelta("3h"),
+m = ptm.OpenDriftModel(drift_model="LarvalFish", lon=-90, lat=28.7, number=10, duration="3h",
+                       z=None,
                        do3D=True, use_static_masks=True,
+                       ocean_model="TXLA",
+                       ocean_model_local=False,
+                       start_time="2009-11-19T12:00",
                        hatched=1,
-                       seed_seafloor=True,
-                       export_variables=["sea_floor_depth_below_sea_level",
-                                          "sea_water_temperature"])
-
-
-url = xroms.datasets.CLOVER.fetch("ROMS_example_full_grid.nc")
-ds = xr.open_dataset(url, decode_times=False)
-m.add_reader(ds=ds)
-
+                       seed_seafloor=True,)
 m.run_all()
 ```
 
 To create the plots:
 ```{code-cell} ipython3
 import particle_tracking_manager.models.opendrift.plot as plot
-out_plots = plot.make_plots_after_simulation(m.output_file,
+out_plots = plot.make_plots_after_simulation(m.config.output_file,
           plots={'spaghetti': {},
                   'spaghetti2': {'linecolor': 'sea_water_temperature', 'cmap': 'cmo.thermal'},
                   'animation': {},
                   'animation_profile': {},
                   'animation_profile2': {'markersize_scaling': 80, 'cmap': 'cmo.amp',
                                         'color': 'weight', 'fps': 4},
-                  'property': {'prop': 'z'},
-                  'propertymean': {'prop': 'z', 'mean': True},})
+                  'property': {'variable': 'z'},
+                  'propertymean': {'variable': 'z', 'mean': True},})
 ```
 
 To show the animations:
@@ -286,8 +279,11 @@ Image(filename=gif_filename)
 
 
 ```{code-cell} ipython3
-m = ptm.OpenDriftModel(drift_model="OpenOil", lon=-90, lat=28.7, number=10, duration=pd.Timedelta("3h"),
+m = ptm.OpenDriftModel(drift_model="OpenOil", lon=-90, lat=28.7, number=10, duration="3h",
                        do3D=False, use_static_masks=True, z=0,
+                       ocean_model="TXLA",
+                       ocean_model_local=False,
+                       start_time="2009-11-19T12:00",
                        plots={'spaghetti': {},
                               'spaghetti2': {'linecolor': 'viscosity', 'cmap': 'cmo.speed'},
                               'animation': {},
@@ -296,43 +292,43 @@ m = ptm.OpenDriftModel(drift_model="OpenOil", lon=-90, lat=28.7, number=10, dura
                               'animation_profile': {},
                               'animation_profile2': {'markersize_scaling': 80, 'cmap': 'cmo.amp',
                                                      'color': 'mass_oil', 'fps': 4},
-                              'property': {'prop': 'sea_water_salinity'},
-                              'propertymean': {'prop': 'sea_water_salinity', 'mean': True},
+                              'property': {'variable': 'sea_water_salinity'},
+                              'propertymean': {'variable': 'sea_water_salinity', 'mean': True},
                               'oil': {},
 })
+m.setup_for_simulation()
 m.o.set_config('environment:constant:x_wind', 1)
 m.o.set_config('environment:constant:y_wind', -1)
-
-
-url = xroms.datasets.CLOVER.fetch("ROMS_example_full_grid.nc")
-ds = xr.open_dataset(url, decode_times=False)
-m.add_reader(ds=ds)
-
 m.run_all()
 ```
-
-To show the animations:
 
 ```{code-cell} ipython3
 from IPython.display import Image
 import ast
 
-gif_filename = ast.literal_eval(m.plots)["animation"]["filename"]
+filename = ast.literal_eval(m.config.plots)["oil"]["filename"]
+Image(filename=filename)
+```
+
+To show the animations:
+
+```{code-cell} ipython3
+gif_filename = ast.literal_eval(m.config.plots)["animation"]["filename"]
 Image(filename=gif_filename)
 ```
 
 ```{code-cell} ipython3
-gif_filename = ast.literal_eval(m.plots)["animation2"]["filename"]
+gif_filename = ast.literal_eval(m.config.plots)["animation2"]["filename"]
 Image(filename=gif_filename)
 ```
 
 ```{code-cell} ipython3
-gif_filename = ast.literal_eval(m.plots)["animation_profile"]["filename"]
+gif_filename = ast.literal_eval(m.config.plots)["animation_profile"]["filename"]
 Image(filename=gif_filename)
 ```
 
 ```{code-cell} ipython3
-gif_filename = ast.literal_eval(m.plots)["animation_profile2"]["filename"]
+gif_filename = ast.literal_eval(m.config.plots)["animation_profile2"]["filename"]
 Image(filename=gif_filename)
 
 ```

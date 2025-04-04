@@ -59,7 +59,7 @@ def check_plots(which_plots, export_variables, drift_model):
             "linecolor",
             "color",
             "background",
-            "prop",
+            "variable",
             "markersize",
         ]
         missing_variables = []
@@ -193,7 +193,7 @@ def plot(plot_name, input_kwargs, o, filename, drift_model):
         # add input plot kwargs to the default kwargs
         kwargs = {}
         kwargs = {
-            "show_wind_and_current": False,
+            "show_wind_and_current": True,
             "show_watercontent_and_viscosity": True,
         }
         kwargs.update(input_kwargs)
@@ -208,9 +208,9 @@ def plot(plot_name, input_kwargs, o, filename, drift_model):
 
     elif "property" in plot_name:  # or plot_name == "all":
 
-        if not "prop" in input_kwargs:
+        if not "variable" in input_kwargs:
             raise ValueError(
-                "Property plot must be specified as 'prop' in the plots dictionary."
+                "Property plot must be specified as 'variable' in the plots dictionary."
             )
 
         filename += "_property"

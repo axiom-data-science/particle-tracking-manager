@@ -79,14 +79,12 @@ Note that each plot option should be input in a dictionary but then within a str
 
 There is a short example of ROMS ocean model output available through `xroms` that we will use for demonstration purposes. A configuration file for it is included in this package under the name "TXLA". We will use this example here, but also the configuration file acts as an example template for users who want to set up their own ocean model configuration files. More information on this template {ref}`here<user_templates>`.
 
-To use the "TXLA" ocean model you need to run one extra step to make sure the correct location is available for the model output based on where the package `pooch` will download it for you locally. To do this you run `ptm.config_ocean_model.update_TXLA_with_download_location()`. This requires you to also set `ocean_model_local=False` to access the file correctly.
+To use the "TXLA" ocean model you need to set `ocean_model_local=False` to access the file correctly.
 
 ```{code-cell} ipython3
 
 import particle_tracking_manager as ptm
 import ast
-
-ptm.config_ocean_model.update_TXLA_with_download_location()
 
 m = ptm.OpenDriftModel(lon=-90, lat=28.7, number=10, steps=20,
                        start_time="2009-11-19T13:00",

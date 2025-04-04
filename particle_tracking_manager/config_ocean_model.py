@@ -1,15 +1,23 @@
-from pydantic import BaseModel, Field, model_validator, create_model
-from typing import Optional, List, Dict, Annotated, Callable
-from datetime import datetime, timedelta
-import xarray as xr
-from .ocean_model_registry import ocean_model_registry, OceanModelConfig
-from .models.opendrift.utils import make_nwgoa_kerchunk, make_ciofs_kerchunk
+"""Defines OceanModelSimulation and ocean_model_simulation_mapper, a dict with key, value pairs of ocean model name and OceanModelSimulation class. Each OceanModelSimulation is built using information from an OceanModelConfig instance.
+
+Functions needed to work with ocean model output are defined here. Also register on-the-fly instances of ocean models here.
+"""
+
+# Standard library imports
 import logging
-from enum import Enum
+from datetime import datetime, timedelta
+from typing import Annotated, Callable, Dict, List, Optional
+
+# Third-party imports
+import xarray as xr
+from pydantic import BaseModel, Field, create_model, model_validator
 from typing_extensions import Self
 
-logger = logging.getLogger()
+# Local imports
+from .models.opendrift.utils import make_ciofs_kerchunk, make_nwgoa_kerchunk
+from .ocean_model_registry import OceanModelConfig, ocean_model_registry
 
+logger = logging.getLogger()
 
 
 # Define a function to generate an Enum from the registry
@@ -40,6 +48,7 @@ class OceanModelSimulation(BaseModel):
     
     @model_validator(mode='after')
     def check_config_oceanmodel_lon0_360(self) -> Self:
+        """Check if the ocean model is using 0-360 longitude convention."""
         if self.ocean_model_config.oceanmodel_lon0_360:
             if self.lon is not None and self.lon < 0:
                 if -180 < self.lon < 0:
@@ -119,6 +128,7 @@ for ocean_model in ocean_model_registry.all_models():# [NWGOA, CIOFS, CIOFSOP, C
 
 
 def get_file_date_string(name: str, date: datetime) -> str:
+    """Get the file date string for the given ocean model name and date."""
     if name == "NWGOA":
         return f"{date.year}-{str(date.month).zfill(2)}-{str(date.day).zfill(2)}"
     elif name == "CIOFSOP":
@@ -134,7 +144,7 @@ function_map: Dict[str, Callable[[int, int], int]] = {
     'make_ciofs_kerchunk': make_ciofs_kerchunk,
 }
 
-def loc_local(name, kerchunk_func_str, start_sim, end_sim) -> dict:
+def loc_local(name: str, kerchunk_func_str: str, start_sim: datetime, end_sim: datetime) -> dict:
     """This sets up a short kerchunk file for reading in just enough model output."""
     
     # back each start time back 1 day and end time forward 1 day to make sure enough output is available
@@ -147,10 +157,8 @@ def loc_local(name, kerchunk_func_str, start_sim, end_sim) -> dict:
     
     start = get_file_date_string(name, start_time)
     end = get_file_date_string(name, end_time)
-    loc_local = function_map[kerchunk_func_str](start=start, end=end, name=name)
-    return loc_local
-    
-    
+    return function_map[kerchunk_func_str](start=start, end=end, name=name)
+
     
 def register_on_the_fly(ds_info: dict, ocean_model: str = "ONTHEFLY") -> None:
     """Register a new ocean model on the fly.
@@ -185,3 +193,4 @@ def update_TXLA_with_download_location() -> None:
     url = xroms.datasets.CLOVER.fetch("ROMS_example_full_grid.nc")
     ds_info = dict(loc_remote = url)
     register_on_the_fly(ds_info, ocean_model="TXLA")
+    logger.debug("Updated TXLA model with download location.")

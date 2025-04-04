@@ -1,27 +1,37 @@
-"""Register instances of ocean models here. This allows for temporary registrations too."""
+"""Defines OceanModelConfig with classes stored in ocean_model_registry.
 
-from enum import Enum
-from typing import Callable, Dict, List, Optional
-from datetime import datetime
-from typing_extensions import Annotated
-from pydantic import BaseModel, Field, ValidationError
-import xarray as xr
-from pathlib import Path
-import yaml
+Set up ocean model configuration: doesn't depend on a tracking simulation. 
+OceanModelConfig instances contain information about ocean models that is relevant to the model itself, separate from a particle tracking simulation.
+"""
+
+# Standard library imports
 import os
-import itertools
 import pprint
+from datetime import datetime
+from pathlib import Path
+import itertools
+
+# Third-party imports
+import pandas as pd
+import xarray as xr
+import yaml
+from pydantic import BaseModel, Field
+from typing_extensions import Annotated
+
+# Local imports
+from .config_ocean_model import OceanModelEnum
 
 
-## Set up ocean model configuration: doesn't depend on a tracking simulation. ##
 
-
-def calculate_CIOFSOP_max():
+def calculate_CIOFSOP_max() -> datetime:
     """read in CIOFSOP max time available, as datetime object"""
-    return xr.open_dataset("/mnt/depot/data/packrat/prod/noaa/coops/ofs/aws_ciofs/processed/aws_ciofs_kerchunk.parq", engine="kerchunk").ocean_time[-1].values.astype('datetime64[s]').item()
+    try:
+        date = xr.open_dataset("/mnt/depot/data/packrat/prod/noaa/coops/ofs/aws_ciofs/processed/aws_ciofs_kerchunk.parq", engine="kerchunk").ocean_time[-1].values.astype('datetime64[s]').item()
+    except:
+        date = (pd.Timestamp.now() + pd.Timedelta('1d')).isoformat()
+    return date
 
-
-def get_model_end_time(name) -> datetime:
+def get_model_end_time(name: str) -> datetime:
     # This is only run when the property is requested
     if name == "CIOFSOP":
         return calculate_CIOFSOP_max()
@@ -90,6 +100,7 @@ class OceanModelConfig(BaseModel):
 
     @property
     def end_time_model(self) -> datetime:
+        """Get the end time of the model."""
         if self.end_time_fixed:
             return self.end_time_fixed
         else:  # there is only one that uses this currently
@@ -115,30 +126,39 @@ class OceanModelConfig(BaseModel):
 
 class OceanModelRegistry:
     def __init__(self):
+        """Initialize the OceanModelRegistry."""
         self._registry = {}
 
     def __repr__(self):
+        """Return a string representation of the registry."""
         return str(self.all())
 
-    def register(self, name, instance):
+    def register(self, name: str, instance: OceanModelConfig):
+        """Register an OceanModelConfig instance by its name."""
         self._registry[name] = instance
 
-    def get(self, name):
+    def get(self, name: str):
+        """Get an OceanModelConfig instance by its name."""
         return self._registry.get(name)
 
-    def show(self, name):
+    def show(self, name: str):
+        """Show the details of a registered OceanModelConfig instance."""
         return pprint.pprint(self._registry[name].model_dump())
     
     def get_all(self):
+        """Return all registered OceanModelConfig instances."""
         return self._registry.items()
     
     def all(self):
+        """Return all registered OceanModelConfig instance names."""
         return list(self._registry.keys())
     
     def all_models(self):
+        """Return all registered OceanModelConfig instances."""
         return list(self._registry.values())
     
     def update_model(self, name, changes: dict):
+        """Update a registered OceanModelConfig instance with new values."""
         if name in self._registry:
             for key, value in changes.items():
                 setattr(self._registry[name], key, value)

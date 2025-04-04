@@ -16,6 +16,8 @@
     * can run plots from a parquet or netcdf output file now
     * can't run idealized simulations using `OpenDrift` directly in PTM anymore but this could be added back in if needed
     * updated docs
+    * property plot now requires keyword "variable" instead of "prop"
+    * most configuration parameters are under `m.config` now instead of just `m`, if `m` represents a Manager instance.
 
 
 ## v0.11.1 (February 4, 2025)

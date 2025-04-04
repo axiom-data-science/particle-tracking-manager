@@ -1,16 +1,25 @@
+"""Defines LoggerConfig to set up and manage logs."""
 
+"""Defines LoggerConfig to set up and manage logs."""
+
+# Standard library imports
 import logging
+
+# Third-party imports
 from pydantic import BaseModel, Field
-from .config_the_manager import TheManagerConfig, LogLevelEnum
+
+# Local imports
+from .config_the_manager import LogLevelEnum, TheManagerConfig
 
 logger = logging.getLogger()
+
 
 class LoggerConfig(BaseModel):
     """Methods for loggers."""
 
     log_level: LogLevelEnum = Field(TheManagerConfig.model_json_schema()["properties"]["log_level"]["default"])
 
-    def close_loggers(self, logger):
+    def close_loggers(self, logger: logging.Logger) -> None:
         """Close and remove all handlers from the logger."""
         for handler in logger.handlers[:]:
             handler.close()

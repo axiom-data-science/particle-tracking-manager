@@ -1,13 +1,18 @@
+"""Defines the ParticleTrackingManager class which is the base class for any Lagrangian model to inherit from."""
+
+# Standard library imports
+import logging
 from abc import ABC, abstractmethod
 
-from .config_the_manager import TheManagerConfig
-from .config_misc import ParticleTrackingState, SetupOutputFiles
-from .config_logging import LoggerConfig
-import logging
+# Third-party imports
 from typing_extensions import Self
 
-logger = logging.getLogger()
+# Local imports
+from .config_logging import LoggerConfig
+from .config_misc import ParticleTrackingState, SetupOutputFiles
+from .config_the_manager import TheManagerConfig
 
+logger = logging.getLogger()
 
         
 class ParticleTrackingManager(ABC):
@@ -98,7 +103,7 @@ class ParticleTrackingManager(ABC):
 
     _config: TheManagerConfig
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs:) -> None:
         """Initialize the ParticleTrackingManager."""
 
         # Set up strings for the output files, which will be used in Logger setup and for all other output files.
@@ -113,16 +118,30 @@ class ParticleTrackingManager(ABC):
 
     @classmethod
     def from_config(cls, config: TheManagerConfig) -> Self:
-        """Create an OpenDriftModel from a config."""
+        """Create an OpenDriftModel from a config.
+        
+        Not currently working.
+        """
         return cls(**config.dict())
     
-    def add_reader(self, **kwargs):
+    def setup_for_simulation(self) -> None:
+        """Set up the simulation.
+        
+        This may not be necessary to separate out but is sometimes necessary.
+        """
+
+        self._setup_for_simulation()
+        
+        # Set up state
+        self.state.has_run_setup = True
+    
+    def add_reader(self, **kwargs: dict) -> None:
         """Add reader to model class."""
         self._add_reader(**kwargs)
         
         self.state.has_added_reader = True
 
-    def seed(self):
+    def seed(self) -> None:
         """Seed drifters."""
 
         if not self.state.has_added_reader:
@@ -133,7 +152,7 @@ class ParticleTrackingManager(ABC):
 
         self.state.has_run_seeding = True
 
-    def run(self):
+    def run(self) -> None:
         """Call model run_drifters function.
         
         Also run some other items.
@@ -150,7 +169,7 @@ class ParticleTrackingManager(ABC):
         self.state.has_run = True
         
 
-    def run_all(self):
+    def run_all(self) -> None:
         """Run all steps."""
         if not self.state.has_added_reader:
             self.add_reader()
@@ -158,6 +177,11 @@ class ParticleTrackingManager(ABC):
             self.seed()
         if not self.state.has_run:
             self.run()
+    
+    @abstractmethod
+    def _setup_for_simulation(self, **kwargs: dict) -> None:
+        """Steps to setup for specific model's simulation."""
+        raise NotImplementedError("This should be implemented in the model class.")
     
     @abstractmethod
     def _add_reader(self, **kwargs) -> None:

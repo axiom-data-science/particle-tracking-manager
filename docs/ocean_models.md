@@ -25,6 +25,9 @@ The built-in ocean models are:
 * **CIOFSOP** (mid-2021 through 48 hours from present time) which is the nowcast/forecast version of the CIOFS model. (Shi, L., L. Lanerolle, Y. Chen, D. Cao, R. Patchen, A. Zhang,
 and E. P. Myers, 2020. NOS Cook Inlet Operational Forecast System: Model development and hindcast skill assessment, NOAA Technical Report NOS CS 40, Silver Spring, Maryland, September 2020.)
 
+
+### Show available ocean models
+
 Show all available ocean_models as list of strings:
 
 ```{code-cell} ipython3
@@ -32,6 +35,8 @@ from particle_tracking_manager.ocean_model_registry import ocean_model_registry
 
 ocean_model_registry.all()
 ```
+
+### Show a specific ocean model
 
 Show each individual ocean_model:
 
@@ -47,12 +52,13 @@ ocean_model_registry.show("CIOFS")
 ocean_model_registry.show("CIOFSOP")
 ```
 
+### Return ocean model object
+
 To instead return the ocean model config object, use `get`:
 
 ```{code-cell} ipython3
 ocean_model_registry.get("CIOFSOP")
 ```
-
 
 
 ## User Configurations
@@ -69,10 +75,7 @@ ocean_model_registry.show("TXLA")
 If you want to set up your own ocean model configuration file, start from the TXLA file and save your own version defining a different model and either place it in `user_ocean_models` or a directory defined in the `PTM_CONFIG_DIR` variable path. `ocean_model_registry` will find any *.yaml file placed in either location.
 
 ***Note:***
-If you are going to run a simulation with "TXLA" you first need to run the following to input the local download location for the file. You also need to run with `ocean_model_local=False`.
-```
-ptm.config_ocean_model.update_TXLA_with_download_location()
-```
+If you are going to run a simulation with "TXLA" you need to run with `ocean_model_local=False`. Also in the background the package downloads the necessary model output file using `pooch` if you use this model.
 
 
 ### On-the-fly Configurations

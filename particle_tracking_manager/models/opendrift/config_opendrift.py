@@ -1,13 +1,18 @@
+"""Defines classes OpenDriftConfig, LeewayModelConfig, OceanDriftModelConfig, OpenOilModelConfig, and LarvalFishModelConfig."""
+
+# Standard library imports
 import logging
 from enum import Enum
 from pathlib import Path
-from typing import List, Literal, Optional, Dict, Union
 
-from pydantic import  Field, model_validator
+# Third-party imports
+from pydantic import Field, model_validator
 from pydantic.fields import FieldInfo
 from typing_extensions import Self
 
+# Local imports
 from ...config_the_manager import TheManagerConfig
+
 
 logger = logging.getLogger()
 
@@ -61,18 +66,16 @@ class OpenDriftConfig(TheManagerConfig):
     
     save_interpolator: bool = Field(default=False, description="Whether to save the interpolator.")
 
-
-    # interpolator_filename: str = Field("", description="Filename to save interpolator to.", ptm_level=3)
-    interpolator_filename: Optional[str] = Field(None, description="Filename to save interpolator to or read interpolator from. Exclude suffix (which should be .pickle).", json_schema_extra=dict(ptm_level=3))
+    interpolator_filename: str | None = Field(None, description="Filename to save interpolator to or read interpolator from. Exclude suffix (which should be .pickle).", json_schema_extra=dict(ptm_level=3))
     
-    export_variables: Optional[List[str]] = Field(
+    export_variables: list[str] | None = Field(
         default=None,
         description="List of variables to export. Options available with `m.all_export_variables` for a given `drift_model`. "
                     "['lon', 'lat', 'ID', 'status', 'z'] will always be exported. Default of None means all possible variables are exported.",
         json_schema_extra=dict(ptm_level=3),
     )
     
-    plots: Optional[Dict[str, dict]] = Field(default=None, json_schema_extra=dict(ptm_level=1), description="Dictionary of plots to generate using OpenDrift.")
+    plots: dict[str, dict] | None = Field(default=None, json_schema_extra=dict(ptm_level=1), description="Dictionary of plots to generate using OpenDrift.")
     
     radius: float = Field(
         default=1000.0, 
@@ -126,11 +129,11 @@ class OpenDriftConfig(TheManagerConfig):
     )
 
     # add od_mapping to what should otherwise be in TheManagerConfig
-    horizontal_diffusivity: Optional[float] = FieldInfo.merge_field_infos(TheManagerConfig.model_fields['horizontal_diffusivity'],
+    horizontal_diffusivity: float | None = FieldInfo.merge_field_infos(TheManagerConfig.model_fields['horizontal_diffusivity'],
                                                              Field(json_schema_extra=dict(od_mapping="drift:horizontal_diffusivity")))
     stokes_drift: bool = FieldInfo.merge_field_infos(TheManagerConfig.model_fields['stokes_drift'],
                                                              Field(json_schema_extra=dict(od_mapping="drift:stokes_drift")))
-    z: Optional[float] = FieldInfo.merge_field_infos(TheManagerConfig.model_fields['z'],
+    z: float | None = FieldInfo.merge_field_infos(TheManagerConfig.model_fields['z'],
                                                              Field(json_schema_extra=dict(od_mapping="seed:z")))
     number: int = FieldInfo.merge_field_infos(TheManagerConfig.model_fields['number'],
                                                              Field(json_schema_extra=dict(od_mapping="seed:number")))
@@ -170,7 +173,6 @@ class OpenDriftConfig(TheManagerConfig):
         return self
     
     
-    # TODO: move this back to OpenDriftModel?
     @model_validator(mode='after')
     def setup_interpolator(self) -> Self:
         """Setup interpolator."""
@@ -181,7 +183,6 @@ class OpenDriftConfig(TheManagerConfig):
                 cache_dir = Path(appdirs.user_cache_dir(appname="particle-tracking-manager", appauthor="axiom-data-science"))
                 cache_dir.mkdir(parents=True, exist_ok=True)
                 self.interpolator_filename = cache_dir / Path(f"{self.ocean_model}_interpolator").with_suffix(".pickle")
-                # self.interpolator_filename = cache_dir / Path(f"{self.ocean_model.name}_interpolator").with_suffix(".pickle")
             else:
                 self.interpolator_filename = Path(self.interpolator_filename).with_suffix(".pickle")
             self.save_interpolator = True
@@ -293,8 +294,6 @@ class OpenDriftConfig(TheManagerConfig):
         return self
 
 
-# TODO: implement my defaults over opendrift defaults — no, instead set it up to take a config of my preferred inputs
-
 class ObjectTypeEnum(str, Enum):
     PERSON_IN_WATER_UNKNOWN = "Person-in-water (PIW), unknown state (mean values)"
     PIW_VERTICAL_PFD_TYPE_III_CONSCIOUS = ">PIW, vertical PFD type III conscious"
@@ -382,11 +381,9 @@ class ObjectTypeEnum(str, Enum):
 
 class LeewayModelConfig(OpenDriftConfig):
     drift_model: DriftModelEnum = DriftModelEnum.Leeway.value
-    # drift_model: Literal["Leeway"] = "Leeway"
     
     object_type: ObjectTypeEnum = Field(
         default=ObjectTypeEnum.PERSON_IN_WATER_UNKNOWN.value,
-        # default="PERSON_IN_WATER_UNKNOWN",
         description="Leeway object category for this simulation",
         title="Object Type",
         json_schema_extra={"od_mapping": "seed:object_type", "ptm_level": 1},
@@ -455,7 +452,7 @@ class OceanDriftModelConfig(OpenDriftConfig):
         },
     )
     
-    wind_drift_depth: Optional[float] = Field(
+    wind_drift_depth: float | None = Field(
         default=0.1,
         description="The direct wind drift (windage) is linearly decreasing from the surface value (wind_drift_factor) until 0 at this depth.",
         title="Wind Drift Depth",
@@ -1949,9 +1946,8 @@ class OpenOilModelConfig(OceanDriftModelConfig):
     #                                                     Field(default=True))
 
     
-    # @computed_field
     @property
-    def oil_type_input(self) -> str:
+    def oil_type_input(self) -> str | None:
         """Save oil type input with both name and id"""
         if self.drift_model == "OpenOil":
             return self.oil_type
@@ -1962,9 +1958,7 @@ class OpenOilModelConfig(OceanDriftModelConfig):
         """remove id from oil_type string if needed"""
         if self.drift_model == "OpenOil":
             # only keep first part of string, which is the name of the oil
-            # import pdb; pdb.set_trace()
             self.oil_type = self.oil_type_input.split(" (")[0]
-            # self.oil_type.name = self.oil_type_input.split(" (")[0]
         return self
 
 

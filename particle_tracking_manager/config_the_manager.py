@@ -1,20 +1,24 @@
-from datetime import datetime, timedelta
+"""Defines TheManagerConfig class for the particle tracking manager."""
+
+# Standard library imports
 import logging
+from datetime import datetime, timedelta
 from enum import Enum
 from typing import Optional
-import pandas as pd
 
-from dateutil.parser import parse
-from pydantic import (
-    BaseModel,
-    Field,
-    computed_field,
-    model_validator,
-)
+# Third-party imports
+import pandas as pd
+from pydantic import BaseModel, Field, computed_field, model_validator
 from typing_extensions import Self
-import logging
-from .config_ocean_model import ocean_model_simulation_mapper, OceanModelSimulation, OceanModelEnum
-from .ocean_model_registry import ocean_model_registry, OceanModelConfig
+
+# Local imports
+from .config_ocean_model import (
+    OceanModelEnum,
+    OceanModelSimulation,
+    ocean_model_simulation_mapper,
+    update_TXLA_with_download_location,
+)
+from .ocean_model_registry import OceanModelConfig, ocean_model_registry
 
 logger = logging.getLogger()
 
@@ -126,12 +130,14 @@ class TheManagerConfig(BaseModel):
 
     @model_validator(mode='after')
     def check_config_seed_flag_elements(self) -> Self:
+        """Check if lon and lat are set when using seed_flag 'elements'."""
         if self.seed_flag == "elements" and (self.lon is None or self.lat is None):
             raise ValueError("lon and lat need non-None values if using `seed_flag=\"elements\"`.")
         return self
 
     @model_validator(mode='after')
     def check_config_seed_flag_geojson(self) -> Self:
+        """Check if geojson is set when using seed_flag 'geojson'."""
         if self.seed_flag == "geojson" and self.geojson is None:
             raise ValueError("geojson need non-None value if using `seed_flag=\"geojson\"`.")
         if self.seed_flag == "geojson" and (self.lon is not None or self.lat is not None):
@@ -140,6 +146,7 @@ class TheManagerConfig(BaseModel):
 
     @model_validator(mode='after')
     def check_config_time_parameters(self) -> Self:
+        """Check if exactly two of start_time, end_time, duration, and steps are set."""
         non_none_count = sum(x is not None for x in [self.start_time, self.end_time, self.duration, self.steps])
         if non_none_count == 4:
             # calculate duration and steps from start_time and end_time and make sure they are the same as what
@@ -160,6 +167,7 @@ class TheManagerConfig(BaseModel):
 
     @computed_field
     def timedir(self) -> int:
+        """Set timedir to 1 for forward, -1 for backward."""
         if self.run_forward:
             value = 1
         else:
@@ -168,6 +176,7 @@ class TheManagerConfig(BaseModel):
 
     @model_validator(mode='after')
     def calculate_config_times(self) -> Self:
+        """Calculate start_time, end_time, duration, and steps based on the other parameters."""
         if self.steps is None:
             if self.duration is not None:
                 self.steps = int(pd.Timedelta(self.duration) / pd.Timedelta(minutes=self.time_step))
@@ -217,11 +226,13 @@ class TheManagerConfig(BaseModel):
     @computed_field
     @property
     def ocean_model_config(self) -> OceanModelConfig:
+        """Select ocean model config based on ocean_model."""
         return ocean_model_registry.get(self.ocean_model)
     
     @computed_field
     @property
     def ocean_model_simulation(self) -> OceanModelSimulation:
+        """Select ocean model simulation based on ocean_model."""
         inputs = {
             "lon": self.lon,
             "lat": self.lat,
@@ -272,6 +283,7 @@ class TheManagerConfig(BaseModel):
     
     @model_validator(mode='after')
     def check_config_ocean_model_local(self) -> Self:
+        """Descrive how ocean_model_local is set."""
         if self.ocean_model_local:
             logger.debug(
                 "Using local output for ocean_model."
@@ -280,4 +292,11 @@ class TheManagerConfig(BaseModel):
             logger.debug(
                 "Using remote output for ocean_model."
             )
+        return self
+    
+    @model_validator(mode='after')
+    def setup_TXLA_if_used(self) -> Self:
+        """Set up TXLA if used."""
+        if self.ocean_model == "TXLA":
+            update_TXLA_with_download_location()
         return self
