@@ -1,20 +1,23 @@
 """Defines OceanModelConfig with classes stored in ocean_model_registry.
 
-Set up ocean model configuration: doesn't depend on a tracking simulation. 
+Set up ocean model configuration: doesn't depend on a tracking simulation.
 OceanModelConfig instances contain information about ocean models that is relevant to the model itself, separate from a particle tracking simulation.
 """
+
+import itertools
 
 # Standard library imports
 import os
 import pprint
+
 from datetime import datetime
 from pathlib import Path
-import itertools
 
 # Third-party imports
 import pandas as pd
 import xarray as xr
 import yaml
+
 from pydantic import BaseModel, Field
 from typing_extensions import Annotated
 
@@ -22,14 +25,22 @@ from typing_extensions import Annotated
 from .config_ocean_model import OceanModelEnum
 
 
-
 def calculate_CIOFSOP_max() -> datetime:
     """read in CIOFSOP max time available, as datetime object"""
     try:
-        date = xr.open_dataset("/mnt/depot/data/packrat/prod/noaa/coops/ofs/aws_ciofs/processed/aws_ciofs_kerchunk.parq", engine="kerchunk").ocean_time[-1].values.astype('datetime64[s]').item()
+        date = (
+            xr.open_dataset(
+                "/mnt/depot/data/packrat/prod/noaa/coops/ofs/aws_ciofs/processed/aws_ciofs_kerchunk.parq",
+                engine="kerchunk",
+            )
+            .ocean_time[-1]
+            .values.astype("datetime64[s]")
+            .item()
+        )
     except:
-        date = (pd.Timestamp.now() + pd.Timedelta('1d')).isoformat()
+        date = (pd.Timestamp.now() + pd.Timedelta("1d")).isoformat()
     return date
+
 
 def get_model_end_time(name: str) -> datetime:
     # This is only run when the property is requested
@@ -72,7 +83,9 @@ class OceanModelConfig(BaseModel):
     ]
     oceanmodel_lon0_360: Annotated[
         bool,
-        Field(description="Set to True to use 0-360 longitude convention for this model."),
+        Field(
+            description="Set to True to use 0-360 longitude convention for this model."
+        ),
     ]
     standard_name_mapping: Annotated[
         Dict[str, str],
@@ -80,22 +93,31 @@ class OceanModelConfig(BaseModel):
     ]
     model_drop_vars: Annotated[
         List[str],
-        Field(description="List of variables to drop from the model dataset. These variables are not needed for particle tracking."),
+        Field(
+            description="List of variables to drop from the model dataset. These variables are not needed for particle tracking."
+        ),
     ]
     loc_remote: Annotated[
-        Optional[str],
+        str | None,
         Field(description="Remote location of the model dataset."),
     ]
     dx: Annotated[
-        Optional[float],
-        Field(description="Approximate horizontal grid resolution (meters), used to calculate horizontal diffusivity."),
+        float | None,
+        Field(
+            description="Approximate horizontal grid resolution (meters), used to calculate horizontal diffusivity."
+        ),
     ]
-    
-    end_time_fixed: Annotated[Optional[datetime], Field(None, description="End time of the model, if doesn't change.")]
+
+    end_time_fixed: Annotated[
+        datetime | None,
+        Field(None, description="End time of the model, if doesn't change."),
+    ]
 
     kerchunk_func_str: Annotated[
-        Optional[str],
-        Field(description="Name of function to create a kerchunk file for the model, mapped to function name in function_map."),
+        str | None,
+        Field(
+            description="Name of function to create a kerchunk file for the model, mapped to function name in function_map."
+        ),
     ]
 
     @property
@@ -109,10 +131,10 @@ class OceanModelConfig(BaseModel):
     @property
     def horizontal_diffusivity(self) -> float:
         """Calculate horizontal diffusivity based on known ocean_model.
-        
+
         Might be overwritten by user-input in other model config.
         """
-        
+
         if self.dx is None:
             return None
 
@@ -144,53 +166,55 @@ class OceanModelRegistry:
     def show(self, name: str):
         """Show the details of a registered OceanModelConfig instance."""
         return pprint.pprint(self._registry[name].model_dump())
-    
+
     def get_all(self):
         """Return all registered OceanModelConfig instances."""
         return self._registry.items()
-    
+
     def all(self):
         """Return all registered OceanModelConfig instance names."""
         return list(self._registry.keys())
-    
+
     def all_models(self):
         """Return all registered OceanModelConfig instances."""
         return list(self._registry.values())
-    
+
     def update_model(self, name, changes: dict):
         """Update a registered OceanModelConfig instance with new values."""
         if name in self._registry:
             for key, value in changes.items():
                 setattr(self._registry[name], key, value)
         else:
-            raise ValueError(f"Model {name} not found in registry.")    
-    
-    
-# Directory with YAML files
-directory = Path(__file__).resolve().parent / 'ocean_models'  # This is the directory where the current script is located
+            raise ValueError(f"Model {name} not found in registry.")
 
-file_paths = directory.glob('*.yaml')
+
+# Directory with YAML files
+directory = (
+    Path(__file__).resolve().parent / "ocean_models"
+)  # This is the directory where the current script is located
+
+file_paths = directory.glob("*.yaml")
 
 # Directory with user-defined files, if any
-config_dir = Path(os.getenv('PTM_CONFIG_DIR', ""))
+config_dir = Path(os.getenv("PTM_CONFIG_DIR", ""))
 if len(str(config_dir)) > 1:
-    file_paths = itertools.chain(file_paths, config_dir.glob('*.yaml'))
+    file_paths = itertools.chain(file_paths, config_dir.glob("*.yaml"))
 
 # also combine *.yaml files in the user_ocean_models directory specifically (not just by default)
-config_dir = Path(__file__).resolve().parent / 'user_ocean_models'
-file_paths = itertools.chain(file_paths, config_dir.glob('*.yaml'))
+config_dir = Path(__file__).resolve().parent / "user_ocean_models"
+file_paths = itertools.chain(file_paths, config_dir.glob("*.yaml"))
 
 # Create an instance of the OceanModelRegistry
 ocean_model_registry = OceanModelRegistry()
 
 # Iterate through all .yaml files in the directory
 for file_path in file_paths:
-    with open(file_path, 'r') as f:
+    with open(file_path, "r") as f:
         config_data = yaml.safe_load(f)[file_path.stem]
-        
+
         # Assuming your config_data needs to be loaded into a Pydantic model
         # Create the OceanModelConfig instance from the data
         config = OceanModelConfig(**config_data)
-        
+
         # Register the configuration, perhaps by its name
         ocean_model_registry.register(config.name, config)

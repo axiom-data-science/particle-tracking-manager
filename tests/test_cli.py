@@ -14,9 +14,7 @@ def test_setup():
 
     No drifters are run due to dryrun flag
     """
-    ret_value = os.system(
-        f"ptm steps=1 --dry-run"
-    )
+    ret_value = os.system(f"ptm steps=1 --dry-run")
     assert ret_value == 0
 
 

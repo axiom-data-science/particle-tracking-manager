@@ -158,5 +158,3 @@ The built-in models in PTM have wet/dry masks from ROMS so they have had to be s
 
 * (DEFAULT) Use the typical, static, ROMS masks (`mask_rho`, `mask_u`, `mask_v`). For ROMS simulations run in [wet/dry mode](https://www.myroms.org/wiki/WET_DRY), grid cells in `mask_rho` are 0 if they are permanently dry and 1 if they are ever wet. This saves some computational time but is inconsistent with the ROMS output files in some places since the drifters may be allowed (due to the static mask) to enter a cell they wouldn't otherwise. However, it doesn't make much of a difference for simulations that aren't in the tidal flats.
 * Use the time-varying wet/dry masks (`wetdry_mask_rho`, `wetdry_mask_u`, `wetdry_mask_v`). This costs some more computational time but is fully consistent with the ROMS output files. This option should be selected if drifters are expected to run in the tidal flats.
-
-

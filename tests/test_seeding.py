@@ -34,7 +34,7 @@ def test_seeding_from_geojson():
         number=2,
         steps=1,
         lon=None,
-        lat=None
+        lat=None,
     )
     m.add_reader()
     m.seed()

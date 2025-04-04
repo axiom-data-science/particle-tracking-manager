@@ -1,20 +1,18 @@
 """From Copilot"""
 
+from datetime import datetime, timedelta
+
 import numpy as np
 import pandas as pd
 import pytest
 import xarray as xr
+
 from pydantic import ValidationError
-from datetime import datetime, timedelta
 
 import particle_tracking_manager as ptm
-from particle_tracking_manager.models.opendrift.opendrift import (
-    OpenDriftModel,
-)
-from particle_tracking_manager.models.opendrift.config_opendrift import (
-    OpenDriftConfig,
-)
 
+from particle_tracking_manager.models.opendrift.config_opendrift import OpenDriftConfig
+from particle_tracking_manager.models.opendrift.opendrift import OpenDriftModel
 
 
 ds = xr.Dataset(
@@ -38,15 +36,23 @@ ds = xr.Dataset(
         "lat_rho": (("Y", "X"), np.array([[1, 1, 1], [2, 2, 2]])),
     },
 )
-ds_info = dict(lon_min=1, lon_max=3, lat_min=1, lat_max=2, start_time_model=0, end_time_fixed=1)
+ds_info = dict(
+    lon_min=1, lon_max=3, lat_min=1, lat_max=2, start_time_model=0, end_time_fixed=1
+)
 
 ptm.config_ocean_model.register_on_the_fly(ds_info)
-    
+
 seed_kws = dict(lon=2, lat=1.5, start_time=0, time_step=0.01)
 
 
 def test_drop_vars_do3D_true():
-    m = OpenDriftModel(drift_model="OceanDrift", do3D=True, duration="1s", ocean_model="ONTHEFLY", **seed_kws)
+    m = OpenDriftModel(
+        drift_model="OceanDrift",
+        do3D=True,
+        duration="1s",
+        ocean_model="ONTHEFLY",
+        **seed_kws
+    )
     # drop variables manually using drop_vars from config to check behavior
     m.add_reader(ds=ds.drop_vars(m.config.drop_vars, errors="ignore"))
     assert m.reader.variables == [
@@ -62,7 +68,13 @@ def test_drop_vars_do3D_true():
 
 
 def test_drop_vars_do3D_false_use_static_masks():
-    m = OpenDriftModel(drift_model="OceanDrift", use_static_masks=True, duration="1s", ocean_model="ONTHEFLY", **seed_kws)
+    m = OpenDriftModel(
+        drift_model="OceanDrift",
+        use_static_masks=True,
+        duration="1s",
+        ocean_model="ONTHEFLY",
+        **seed_kws
+    )
     # drop variables manually using drop_vars from config to check behavior
     m.add_reader(ds=ds.drop_vars(m.config.drop_vars, errors="ignore"))
     assert m.reader.variables == [
@@ -79,9 +91,16 @@ def test_drop_vars_do3D_false_use_static_masks():
 
 
 def test_drop_vars_no_wind():
-    m = OpenDriftModel(drift_model="OceanDrift", duration="1s", stokes_drift=False, 
-                       wind_drift_factor=0, wind_uncertainty=0, 
-                       vertical_mixing=False, ocean_model="ONTHEFLY", **seed_kws)
+    m = OpenDriftModel(
+        drift_model="OceanDrift",
+        duration="1s",
+        stokes_drift=False,
+        wind_drift_factor=0,
+        wind_uncertainty=0,
+        vertical_mixing=False,
+        ocean_model="ONTHEFLY",
+        **seed_kws
+    )
     # drop variables manually using drop_vars from config to check behavior
     m.add_reader(ds=ds.drop_vars(m.config.drop_vars, errors="ignore"))
     assert m.reader.variables == [
@@ -93,10 +112,14 @@ def test_drop_vars_no_wind():
 
 
 def test_Leeway():
-    
+
     m = OpenDriftModel(
-        drift_model="Leeway", object_type=">PIW, scuba suit (face up)",
-        stokes_drift=False, steps=1, ocean_model="ONTHEFLY", **seed_kws
+        drift_model="Leeway",
+        object_type=">PIW, scuba suit (face up)",
+        stokes_drift=False,
+        steps=1,
+        ocean_model="ONTHEFLY",
+        **seed_kws
     )
     m._setup_for_simulation()  # creates m.o
     # assert "wind_drift_factor" not in m.config
@@ -105,21 +128,27 @@ def test_Leeway():
 
 
 def test_LarvalFish_add_reader():
-    m = OpenDriftModel(drift_model="LarvalFish", do3D=True, duration="1s", ocean_model="ONTHEFLY", **seed_kws)
+    m = OpenDriftModel(
+        drift_model="LarvalFish",
+        do3D=True,
+        duration="1s",
+        ocean_model="ONTHEFLY",
+        **seed_kws
+    )
     m.add_reader(ds=ds.drop_vars(m.config.drop_vars, errors="ignore"))
     assert m.reader.variables == [
-            "x_sea_water_velocity",
-            "y_sea_water_velocity",
-            "upward_sea_water_velocity",
-            "sea_water_salinity",
-            "sea_water_temperature",
-            "land_binary_mask",
-            "x_wind",
-            "y_wind",
-            "wind_speed",
-            "sea_water_speed",
-        ]
-    
+        "x_sea_water_velocity",
+        "y_sea_water_velocity",
+        "upward_sea_water_velocity",
+        "sea_water_salinity",
+        "sea_water_temperature",
+        "land_binary_mask",
+        "x_wind",
+        "y_wind",
+        "wind_speed",
+        "sea_water_speed",
+    ]
+
 
 def test_LarvalFish_seeding():
     """Make sure special seed parameter comes through"""
@@ -135,7 +164,7 @@ def test_LarvalFish_seeding():
         steps=1,
         vertical_mixing=True,
         wind_drift_factor=0,
-        wind_drift_depth=0
+        wind_drift_depth=0,
     )
     m._setup_for_simulation()  # creates m.o
     assert m.o._config["seed:hatched"]["value"] == 1
@@ -159,7 +188,7 @@ def test_OpenOil_seeding():
         droplet_diameter_sigma=0.9,
         oil_film_thickness=5,
         oil_type="Generic Diesel (GN00002)",
-        steps=1
+        steps=1,
     )
     m._setup_for_simulation()  # creates m.o
 
@@ -179,7 +208,9 @@ def test_OpenOil_seeding():
     assert m.o._config["seed:droplet_size_distribution"]["value"] == "normal"
     assert m.o._config["seed:droplet_diameter_sigma"]["value"] == 0.9
     # assert m.o.elements_scheduled.oil_film_thickness == 5
-    assert m.o._config["seed:oil_type"]["value"] == "Generic Diesel"  # don't use ID because it is stripped off
+    assert (
+        m.o._config["seed:oil_type"]["value"] == "Generic Diesel"
+    )  # don't use ID because it is stripped off
 
 
 def test_wind_drift():
@@ -194,7 +225,7 @@ def test_wind_drift():
         wind_drift_depth=10,
         start_time="2023-01-01T00:00:00",
         use_auto_landmask=True,
-        steps=1
+        steps=1,
     )
     m._setup_for_simulation()  # creates m.o
     assert m.o._config["seed:wind_drift_factor"]["value"] == 1
@@ -215,16 +246,14 @@ def test_plots_linecolor():
     #     )
 
     m = OpenDriftModel(
-        drift_model="OceanDrift",
-        plots={"spaghetti": {"linecolor": "x_wind"}},
-        steps=1
+        drift_model="OceanDrift", plots={"spaghetti": {"linecolor": "x_wind"}}, steps=1
     )
 
     m = OpenDriftModel(
         drift_model="OceanDrift",
         plots={"spaghetti": {"linecolor": "x_wind"}},
         export_variables=None,
-        steps=1
+        steps=1,
     )
 
     # this should work bc "z" should already be included
@@ -248,7 +277,7 @@ def test_plots_background():
     m = OpenDriftModel(
         drift_model="OceanDrift",
         plots={"animation": {"background": "sea_surface_height"}},
-        steps=1
+        steps=1,
     )
 
 
@@ -264,8 +293,7 @@ def test_plots_oil():
     #     )
 
     m = OpenDriftModel(
-        drift_model="OpenOil", plots={"oil": {"show_wind_and_current": True}},
-        steps=1
+        drift_model="OpenOil", plots={"oil": {"show_wind_and_current": True}}, steps=1
     )
 
     with pytest.raises(ValidationError):
@@ -288,7 +316,7 @@ def test_plots_property():
         drift_model="LarvalFish",
         do3D=True,
         plots={"property": {"prop": "survival"}},
-        steps=1
+        steps=1,
     )
 
 
@@ -302,30 +330,27 @@ def test_plots_all():
                 "spaghetti": {"line_color": "x_wind"},
                 "animation": {"background": "sea_surface_height"},
             },
-            steps=1
+            steps=1,
         )
 
 
 def test_plots_names():
-    
+
     with pytest.raises(ValidationError):
         m = OpenDriftModel(
             plots={
                 "random_plot_name": {},
             },
-            steps=1
+            steps=1,
         )
 
-    
     with pytest.raises(ValidationError):
         m = OpenDriftModel(
             plots={
                 "something_spaghetti": {},
             },
-            steps=1
+            steps=1,
         )
-
-
 
 
 # @pytest.mark.slow
@@ -355,7 +380,7 @@ def test_parameter_passing():
         do3D=do3D,
         **seed_kws
     )
-    
+
     m._setup_for_simulation()  # creates m.o
 
     # idealized simulation, provide a fake current
@@ -370,8 +395,11 @@ def test_parameter_passing():
     )
 
     # check diff model
-    assert m.o.get_configspec()["vertical_mixing:diffusivitymodel"]["value"] == diffmodel
+    assert (
+        m.o.get_configspec()["vertical_mixing:diffusivitymodel"]["value"] == diffmodel
+    )
 
     # check use_auto_landmask coming through
-    assert m.o.get_configspec()["general:use_auto_landmask"]["value"] == use_auto_landmask
-
+    assert (
+        m.o.get_configspec()["general:use_auto_landmask"]["value"] == use_auto_landmask
+    )

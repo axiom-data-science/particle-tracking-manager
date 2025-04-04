@@ -17,7 +17,7 @@ NWGOA:
   start_time_model: "1999-01-01T00:00:00"
   end_time_fixed: "2009-01-01T00:00:00"
   oceanmodel_lon0_360: true
-  standard_name_mapping: 
+  standard_name_mapping:
     mask_rho: "mask_rho"
     wetdry_mask_rho: "wetdry_mask_rho"
     u_eastward: "x_sea_water_velocity"

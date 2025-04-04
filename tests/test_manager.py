@@ -7,9 +7,10 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from particle_tracking_manager.the_manager import ParticleTrackingManager
 from pydantic import ValidationError
+
 from particle_tracking_manager.config_the_manager import TheManagerConfig
+from particle_tracking_manager.the_manager import ParticleTrackingManager
 
 
 class TestConfig(TheManagerConfig):
@@ -19,21 +20,19 @@ class TestConfig(TheManagerConfig):
 # Set up a subclass for testing. This is meant to be a simple version of the
 # OpenDriftModel.
 class TestParticleTrackingManager(ParticleTrackingManager):
-    
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
         self.config = TestConfig(**kwargs)
-        
+
     def _add_reader(self):
         pass
 
     def _seed(self):
         pass
-        
+
     def _run(self):
         pass
-
 
 
 def test_order():
@@ -48,7 +47,7 @@ def test_seed_order():
     m = TestParticleTrackingManager(steps=1, start_time="2022-01-01")
     m.state.has_added_reader = True
     m.seed()
-    
+
     m = TestParticleTrackingManager(steps=1, start_time="2022-01-01")
     with pytest.raises(ValueError):
         m.seed()

@@ -1,7 +1,5 @@
 """Defines LoggerConfig to set up and manage logs."""
 
-"""Defines LoggerConfig to set up and manage logs."""
-
 # Standard library imports
 import logging
 
@@ -11,13 +9,16 @@ from pydantic import BaseModel, Field
 # Local imports
 from .config_the_manager import LogLevelEnum, TheManagerConfig
 
+
 logger = logging.getLogger()
 
 
 class LoggerConfig(BaseModel):
     """Methods for loggers."""
 
-    log_level: LogLevelEnum = Field(TheManagerConfig.model_json_schema()["properties"]["log_level"]["default"])
+    log_level: LogLevelEnum = Field(
+        TheManagerConfig.model_json_schema()["properties"]["log_level"]["default"]
+    )
 
     def close_loggers(self, logger: logging.Logger) -> None:
         """Close and remove all handlers from the logger."""
@@ -36,11 +37,11 @@ class LoggerConfig(BaseModel):
         logger.setLevel(getattr(logging, self.log_level))
 
         # Add handlers from the main logger to the OpenDrift logger if not already added
-        
+
         # Create file handler to save log to file
         file_handler = logging.FileHandler(logfile_name)
         fmt = "%(asctime)s %(levelname)-7s %(name)s.%(module)s.%(funcName)s:%(lineno)d: %(message)s"
-        datefmt = '%Y-%m-%d %H:%M:%S'
+        datefmt = "%Y-%m-%d %H:%M:%S"
         formatter = logging.Formatter(fmt, datefmt)
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
@@ -49,7 +50,7 @@ class LoggerConfig(BaseModel):
         stream_handler = logging.StreamHandler()
         stream_handler.setFormatter(formatter)
         logger.addHandler(stream_handler)
-        
+
         logger.info("Particle tracking manager simulation.")
         logger.info(f"Log filename: {logfile_name}")
         return logger

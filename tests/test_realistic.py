@@ -2,8 +2,8 @@
 
 import pickle
 
-import pytest
 import numpy as np
+import pytest
 import xarray as xr
 
 import particle_tracking_manager as ptm
@@ -31,7 +31,9 @@ ds = xr.Dataset(
         "lat_rho": (("Y", "X"), np.array([[1, 1, 1], [2, 2, 2]])),
     },
 )
-ds_info = dict(lon_min=1, lon_max=3, lat_min=1, lat_max=2, start_time_model=0, end_time_fixed=1)
+ds_info = dict(
+    lon_min=1, lon_max=3, lat_min=1, lat_max=2, start_time_model=0, end_time_fixed=1
+)
 
 ptm.config_ocean_model.register_on_the_fly(ds_info)
 
@@ -45,8 +47,11 @@ ptm.config_ocean_model.update_TXLA_with_download_location()
 def test_add_new_reader():
     """Add a separate reader from the defaults using ds."""
 
-    manager = ptm.OpenDriftModel(steps=1, ocean_model="ONTHEFLY", lon=2, lat=1.5, start_time=0, time_step=0.01)
+    manager = ptm.OpenDriftModel(
+        steps=1, ocean_model="ONTHEFLY", lon=2, lat=1.5, start_time=0, time_step=0.01
+    )
     manager.add_reader(ds=ds)
+
 
 @pytest.mark.slow
 def test_run_parquet():
@@ -54,8 +59,12 @@ def test_run_parquet():
 
     seeding_kwargs = dict(lon=-90, lat=28.7, number=1, start_time="2009-11-19T12:00:00")
     manager = ptm.OpenDriftModel(
-        **seeding_kwargs, use_static_masks=True, steps=2, output_format="parquet",
-        ocean_model="TXLA", ocean_model_local=False
+        **seeding_kwargs,
+        use_static_masks=True,
+        steps=2,
+        output_format="parquet",
+        ocean_model="TXLA",
+        ocean_model_local=False
     )
     manager.run_all()
 

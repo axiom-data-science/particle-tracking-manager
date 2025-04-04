@@ -2,6 +2,7 @@
 
 # Standard library imports
 import logging
+
 from abc import ABC, abstractmethod
 
 # Third-party imports
@@ -12,12 +13,13 @@ from .config_logging import LoggerConfig
 from .config_misc import ParticleTrackingState, SetupOutputFiles
 from .config_the_manager import TheManagerConfig
 
+
 logger = logging.getLogger()
 
-        
+
 class ParticleTrackingManager(ABC):
     """Manager class that controls particle tracking model.
-    
+
     Parameters
     ----------
     model : str
@@ -98,16 +100,20 @@ class ParticleTrackingManager(ABC):
         Horizontal diffusivity is None by default but will be set to a grid-dependent value for known ocean_model values. This is calculated as 0.1 m/s sub-gridscale velocity that is missing from the model output and multiplied by an estimate of the horizontal grid resolution. This leads to a larger value for NWGOA which has a larger value for mean horizontal grid resolution (lower resolution). If the user inputs their own ocean_model information, they can input their own horizontal_diffusivity value. A user can use a known ocean_model and then overwrite the horizontal_diffusivity value to some value.
     log_level : str, optional
         Options are the logging input options. By default "INFO"
-    
+
     """
 
     _config: TheManagerConfig
 
-    def __init__(self, **kwargs:) -> None:
+    def __init__(self, **kwargs: dict) -> None:
         """Initialize the ParticleTrackingManager."""
 
         # Set up strings for the output files, which will be used in Logger setup and for all other output files.
-        inputs = {key: kwargs[key] for key in ["output_file", "output_format"] if key in kwargs}
+        inputs = {
+            key: kwargs[key]
+            for key in ["output_file", "output_format"]
+            if key in kwargs
+        }
         self.files = SetupOutputFiles(**inputs)
 
         # Setup logging, this also contains the log_level parameter
@@ -119,26 +125,26 @@ class ParticleTrackingManager(ABC):
     @classmethod
     def from_config(cls, config: TheManagerConfig) -> Self:
         """Create an OpenDriftModel from a config.
-        
+
         Not currently working.
         """
         return cls(**config.dict())
-    
+
     def setup_for_simulation(self) -> None:
         """Set up the simulation.
-        
+
         This may not be necessary to separate out but is sometimes necessary.
         """
 
         self._setup_for_simulation()
-        
+
         # Set up state
         self.state.has_run_setup = True
-    
+
     def add_reader(self, **kwargs: dict) -> None:
         """Add reader to model class."""
         self._add_reader(**kwargs)
-        
+
         self.state.has_added_reader = True
 
     def seed(self) -> None:
@@ -154,20 +160,21 @@ class ParticleTrackingManager(ABC):
 
     def run(self) -> None:
         """Call model run_drifters function.
-        
+
         Also run some other items.
         """
 
         if not self.state.has_run_seeding:
             raise ValueError("first run seeding with `manager.seed()`.")
 
-        logger.info(f"start_time: {self.config.start_time}, end_time: {self.config.end_time}, steps: {self.config.steps}, duration: {self.config.duration}")
+        logger.info(
+            f"start_time: {self.config.start_time}, end_time: {self.config.end_time}, steps: {self.config.steps}, duration: {self.config.duration}"
+        )
 
         self._run()  # in child class
 
         self.logger_config.close_loggers(logger)
         self.state.has_run = True
-        
 
     def run_all(self) -> None:
         """Run all steps."""
@@ -177,12 +184,12 @@ class ParticleTrackingManager(ABC):
             self.seed()
         if not self.state.has_run:
             self.run()
-    
+
     @abstractmethod
     def _setup_for_simulation(self, **kwargs: dict) -> None:
         """Steps to setup for specific model's simulation."""
         raise NotImplementedError("This should be implemented in the model class.")
-    
+
     @abstractmethod
     def _add_reader(self, **kwargs) -> None:
         """Add reader to model class."""

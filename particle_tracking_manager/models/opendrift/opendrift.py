@@ -1,26 +1,27 @@
 """Uses OpenDrift for particle tracking model."""
 
-"""Uses OpenDrift for particle tracking model."""
-
 # Standard library imports
 import json
 import logging
+
 from pathlib import Path
+
+import xarray as xr
 
 # Third-party imports
 from opendrift.readers import reader_ROMS_native
-import xarray as xr
 
 # Local imports
 from ...ocean_model_registry import ocean_model_registry
 from ...the_manager import ParticleTrackingManager
-from .config_opendrift import open_drift_mapper
+from .config_opendrift import OpenDriftConfig, open_drift_mapper
 from .plot import make_plots
 from .utils import (
-    narrow_dataset_to_simulation_time,
     apply_known_ocean_model_specific_changes,
     apply_user_input_ocean_model_specific_changes,
+    narrow_dataset_to_simulation_time,
 )
+
 
 # Initialize logger
 logger = logging.getLogger()
@@ -28,7 +29,7 @@ logger = logging.getLogger()
 
 class OpenDriftModel(ParticleTrackingManager):
     """OpenDrift particle tracking model.
-    
+
     Parameters
     ----------
     drift_model : str
@@ -50,7 +51,7 @@ class OpenDriftModel(ParticleTrackingManager):
         Algorithm/source used for profile of vertical diffusivity. Environment means that diffusivity is acquired from readers or environment constants/fallback. Turned on if ``vertical_mixing==True``.
     stokes_drift : bool
         Set to True to turn on Stokes drift, by default True. This enables 3 settings in OpenDrift:
-            
+
         * o.set_config('drift:use_tabularised_stokes_drift', True)
         * o.set_config('drift:tabularised_stokes_drift_fetch', '25000')  # default
         * o.set_config('drift:stokes_drift_profile', 'Phillips')  # default
@@ -129,16 +130,16 @@ class OpenDriftModel(ParticleTrackingManager):
         # Initialize the parent class
         # This sets up the logger and ParticleTrackingState and SetupOutputFiles.
         super().__init__(**kwargs)
-        
+
         # OpenDriftConfig is a subclass of TheManagerConfig so it knows about all the
         # TheManagerConfig parameters. TheManagerConfig is run with OpenDriftConfig.
         drift_model = kwargs.get("drift_model", "OceanDrift")
         if "drift_model" in kwargs:
             del kwargs["drift_model"]
-        self.config = open_drift_mapper[drift_model](**kwargs)
-        
-        # copy output_file from files to config. This isn't strictly necessary and it 
-        # seems like there is a better way to do this but do it for now to avoid 
+        self.config: OpenDriftConfig = open_drift_mapper[drift_model](**kwargs)
+
+        # copy output_file from files to config. This isn't strictly necessary and it
+        # seems like there is a better way to do this but do it for now to avoid
         # confusion between self.files.output_file and self.config.output_file otherwise
         # being different
         self.config.output_file = self.files.output_file
@@ -153,17 +154,20 @@ class OpenDriftModel(ParticleTrackingManager):
         # TODO: streamline this
         self.checked_plot = False
 
-
     def _check_interpolator_filename_exists(self) -> None:
         """Check if the interpolator filename exists."""
         if Path(self.config.interpolator_filename).exists():
-            logger.debug(f"Will load the interpolator from {self.config.interpolator_filename}.")
+            logger.debug(
+                f"Will load the interpolator from {self.config.interpolator_filename}."
+            )
         else:
-            logger.debug(f"A new interpolator will be saved to {self.config.interpolator_filename}.")
+            logger.debug(
+                f"A new interpolator will be saved to {self.config.interpolator_filename}."
+            )
 
     def _create_opendrift_model_object(self) -> None:
         """Create the OpenDrift model object."""
-        
+
         # do this right away so I can query the object
         # we don't actually input output_format here because we first output to netcdf, then
         # resave as parquet after adding in extra config
@@ -171,53 +175,60 @@ class OpenDriftModel(ParticleTrackingManager):
         log_level = logger.level
         if self.config.drift_model == "Leeway":
             from opendrift.models.leeway import Leeway
+
             o = Leeway(loglevel=log_level)
 
         elif self.config.drift_model == "OceanDrift":
             from opendrift.models.oceandrift import OceanDrift
+
             o = OceanDrift(
                 loglevel=log_level,
             )
 
         elif self.config.drift_model == "LarvalFish":
             from opendrift.models.larvalfish import LarvalFish
-            o = LarvalFish(
-                loglevel=log_level
-            )
+
+            o = LarvalFish(loglevel=log_level)
 
         elif self.config.drift_model == "OpenOil":
             from opendrift.models.openoil import OpenOil
-            o = OpenOil(
-                loglevel=log_level, weathering_model="noaa"
-            )
+
+            o = OpenOil(loglevel=log_level, weathering_model="noaa")
 
         else:
-            raise ValueError(f"Drifter model {self.config.drift_model} is not recognized.")
-        
+            raise ValueError(
+                f"Drifter model {self.config.drift_model} is not recognized."
+            )
+
         self.o = o
 
     def _update_od_config_from_this_config(self) -> None:
         """Update OpenDrift's config values with OpenDriftConfig and TheManagerConfig.
-        
-        Update the default value in OpenDrift's config dict with the 
+
+        Update the default value in OpenDrift's config dict with the
         config value from OpenDriftConfig, TheManagerConfig, OceanModelConfig, and SetupOutputFiles.
-        
+
         This uses the metadata key "od_mapping" to map from the PTM parameter
         name to the OpenDrift parameter name.
         """
-        
+
         base_models_to_check = [self.config, self.files, self.config.ocean_model_config]
         for base_model in base_models_to_check:
             for key in base_model.model_fields:
-                if getattr(base_model.model_fields[key], "json_schema_extra") is not None:
+                if (
+                    getattr(base_model.model_fields[key], "json_schema_extra")
+                    is not None
+                ):
                     if "od_mapping" in base_model.model_fields[key].json_schema_extra:
-                        od_key = base_model.model_fields[key].json_schema_extra["od_mapping"]
-                        if od_key in self.o._config:# and od_key is not None:
+                        od_key = base_model.model_fields[key].json_schema_extra[
+                            "od_mapping"
+                        ]
+                        if od_key in self.o._config:  # and od_key is not None:
                             field_value = getattr(base_model, key)
                             if isinstance(field_value, Enum):
                                 field_value = field_value.value
                             self.o._config[od_key]["value"] = field_value
-                                
+
     def _modify_opendrift_model_object(self) -> None:
         """Modify the OpenDrift model object."""
         if self.config.stokes_drift:
@@ -226,10 +237,13 @@ class OpenDriftModel(ParticleTrackingManager):
             # self.o.set_config('drift:stokes_drift_profile', 'Phillips')  # default
 
         # If 2D surface simulation (and not Leeway since not available), truncate model output below 0.5 m
-        if not self.config.do3D and self.config.z == 0 and self.config.drift_model != "Leeway":
+        if (
+            not self.config.do3D
+            and self.config.z == 0
+            and self.config.drift_model != "Leeway"
+        ):
             self.o.set_config("drift:truncate_ocean_model_below_m", 0.5)
             logger.debug("Truncating model output below 0.5 m.")
-
 
         # If 2D simulation (and not Leeway since not available), turn off vertical advection
         if not self.config.do3D and self.config.drift_model != "Leeway":
@@ -245,7 +259,7 @@ class OpenDriftModel(ParticleTrackingManager):
         """Set up the simulation.
         This is run before the simulation starts.
         """
-        
+
         self.logger_config.merge_with_opendrift_log()
         self._check_interpolator_filename_exists()
         self._create_opendrift_model_object()
@@ -271,20 +285,31 @@ class OpenDriftModel(ParticleTrackingManager):
         """
         if not self.state.has_run_setup:
             self._setup_for_simulation()
-        
+
         if ds is None:
-            ds = self.config.ocean_model_simulation.open_dataset(drop_vars=self.config.drop_vars)
-        
-        # don't need the following currently if using ocean_model_local since the kerchunk file is already 
+            ds = self.config.ocean_model_simulation.open_dataset(
+                drop_vars=self.config.drop_vars
+            )
+
+        # don't need the following currently if using ocean_model_local since the kerchunk file is already
         # narrowed to the simulation size
         if not self.config.ocean_model_local:
-            ds = narrow_dataset_to_simulation_time(ds, self.config.start_time, self.config.end_time)
+            ds = narrow_dataset_to_simulation_time(
+                ds, self.config.start_time, self.config.end_time
+            )
             logger.debug("Narrowed model output to simulation time")
-        
-        ds = apply_known_ocean_model_specific_changes(ds, self.config.ocean_model_config.name, self.config.use_static_masks)
-        
-        if self.config.ocean_model_config.name not in ocean_model_registry.all() and self.config.ocean_model_config.name != "test":
-            ds = apply_user_input_ocean_model_specific_changes(ds, self.config.use_static_masks)
+
+        ds = apply_known_ocean_model_specific_changes(
+            ds, self.config.ocean_model_config.name, self.config.use_static_masks
+        )
+
+        if (
+            self.config.ocean_model_config.name not in ocean_model_registry.all()
+            and self.config.ocean_model_config.name != "test"
+        ):
+            ds = apply_user_input_ocean_model_specific_changes(
+                ds, self.config.use_static_masks
+            )
 
         self.ds = ds
 
@@ -299,7 +324,6 @@ class OpenDriftModel(ParticleTrackingManager):
         self.o.add_reader([reader])
         self.reader = reader
         # can find reader at manager.o.env.readers[self.ocean_model.name]
-
 
     @property
     def seed_kws(self) -> dict:
@@ -343,8 +367,14 @@ class OpenDriftModel(ParticleTrackingManager):
         }
 
         # update seed_kws with drift_model-specific seed parameters
-        seedlist = {k: v["value"] for k, v in self.o.get_configspec(prefix="seed").items()}
-        seedlist = {one.replace("seed:", ""): two for one, two in seedlist.items() if one not in already_there}
+        seedlist = {
+            k: v["value"] for k, v in self.o.get_configspec(prefix="seed").items()
+        }
+        seedlist = {
+            one.replace("seed:", ""): two
+            for one, two in seedlist.items()
+            if one not in already_there
+        }
         _seed_kws.update(seedlist)
 
         if self.config.seed_flag == "elements":
@@ -362,12 +392,13 @@ class OpenDriftModel(ParticleTrackingManager):
 
             # geojson needs string representation of time
             _seed_kws["time"] = (
-                self.config.start_time.isoformat() if self.config.start_time is not None else None
+                self.config.start_time.isoformat()
+                if self.config.start_time is not None
+                else None
             )
 
         self._seed_kws = _seed_kws
         return self._seed_kws
-
 
     def _seed(self) -> None:
         """Actually seed drifters for model."""
@@ -390,7 +421,7 @@ class OpenDriftModel(ParticleTrackingManager):
 
     def _run(self) -> None:
         """Run the drifters!"""
-        
+
         # add input config to model config
         self.o.metadata_dict.update(self.config.model_dump())
         self.o.metadata_dict.update(self.files.model_dump())
@@ -406,10 +437,13 @@ class OpenDriftModel(ParticleTrackingManager):
 
         # plot if requested
         if self.config.plots:
-            # TODO: fix this for Ahmad
+            assert isinstance(self.files.output_file, str)
             # return plots because now contains the filenames for each plot
             self.config.plots = make_plots(
-                self.config.plots, self.o, self.files.output_file.split(".")[0], self.config.drift_model
+                self.config.plots,
+                self.o,
+                self.files.output_file.split(".")[0],
+                self.config.drift_model,
             )
 
             # convert plots dict into string representation to save in output file attributes
@@ -418,10 +452,12 @@ class OpenDriftModel(ParticleTrackingManager):
 
     def all_export_variables(self) -> list:
         """Output list of all possible export variables."""
-        
+
         if not self.state.has_run_setup:
             self.setup_for_simulation()
-            logger.debug("Running setup for simulation so that full export variable list is available.")
+            logger.debug(
+                "Running setup for simulation so that full export variable list is available."
+            )
 
         vars = (
             list(self.o.elements.variables.keys())

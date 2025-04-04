@@ -11,10 +11,13 @@ from pathlib import Path
 import fsspec
 import pandas as pd
 import xarray as xr
+
 from kerchunk.combine import MultiZarrToZarr
 
 
-def narrow_dataset_to_simulation_time(ds: xr.Dataset, start_time: datetime, end_time: datetime) -> xr.Dataset:
+def narrow_dataset_to_simulation_time(
+    ds: xr.Dataset, start_time: datetime, end_time: datetime
+) -> xr.Dataset:
     """Narrow the dataset to the simulation time."""
     try:
         units = ds.ocean_time.attrs["units"]
@@ -30,9 +33,7 @@ def narrow_dataset_to_simulation_time(ds: xr.Dataset, start_time: datetime, end_
         )  # time step of the model output in seconds
         # want to include the next ocean model output before the first drifter simulation time
         # in case it starts before model times
-        start_time_num = (
-            start_time - units_date
-        ).total_seconds()
+        start_time_num = (start_time - units_date).total_seconds()
         if start_time_num > dt_model:
             start_time_num -= dt_model
         # want to include the next ocean model output after the last drifter simulation time
@@ -53,7 +54,10 @@ def narrow_dataset_to_simulation_time(ds: xr.Dataset, start_time: datetime, end_
         )
     return ds
 
-def apply_known_ocean_model_specific_changes(ds: xr.Dataset, ocean_model: str, use_static_masks: bool) -> xr.Dataset:
+
+def apply_known_ocean_model_specific_changes(
+    ds: xr.Dataset, ocean_model: str, use_static_masks: bool
+) -> xr.Dataset:
     """Apply ocean model specific changes to the dataset.
 
     This includes renaming variables, adding variables, etc.
@@ -68,11 +72,14 @@ def apply_known_ocean_model_specific_changes(ds: xr.Dataset, ocean_model: str, u
         ds = ds.rename_vars({"urot": "u_eastward", "vrot": "v_northward"})
     return ds
 
-def apply_user_input_ocean_model_specific_changes(ds: xr.Dataset, use_static_masks: bool) -> xr.Dataset:
+
+def apply_user_input_ocean_model_specific_changes(
+    ds: xr.Dataset, use_static_masks: bool
+) -> xr.Dataset:
     """Apply user input ocean model specific changes to the dataset.
 
     This includes renaming variables, adding variables, etc.
-    
+
     For now, assume user has dropped variables ahead of time.
     """
 
@@ -85,7 +92,7 @@ def apply_user_input_ocean_model_specific_changes(ds: xr.Dataset, use_static_mas
         )
 
     # ds = ds.drop_vars(self.config.drop_vars, errors="ignore")
-    
+
     return ds
 
 
@@ -117,10 +124,11 @@ def make_ciofs_kerchunk(start: str, end: str, name: str) -> dict:
     fs2 = fsspec.filesystem("")  # local file system to save final jsons to
 
     if name in ["CIOFS", "CIOFSFRESH"]:
-    
+
         # base for matching
         def base_str(a_time: str) -> str:
             return f"{output_dir_single_files}/{a_time}_*.json"
+
         date_format = "%Y_0%j"
 
     elif name == "CIOFSOP":
@@ -128,6 +136,7 @@ def make_ciofs_kerchunk(start: str, end: str, name: str) -> dict:
         # base for matching
         def base_str(a_time: str) -> str:
             return f"{output_dir_single_files}/ciofs_{a_time}-*.json"
+
         date_format = "ciofs_%Y-%m-%d"
     else:
         raise ValueError(f"Name {name} not recognized")
@@ -135,17 +144,23 @@ def make_ciofs_kerchunk(start: str, end: str, name: str) -> dict:
     # only glob start and end year files, order isn't important
     json_list = fs2.glob(base_str(start[:4]))
     if end[:4] != start[:4]:
-            json_list += fs2.glob(base_str(end[:4]))
+        json_list += fs2.glob(base_str(end[:4]))
 
     # forward in time
     if end > start:
         json_list = [
-            j for j in json_list if datetime.strptime(Path(j).stem, date_format).isoformat() >= start and datetime.strptime(Path(j).stem, date_format).isoformat() <= end
+            j
+            for j in json_list
+            if datetime.strptime(Path(j).stem, date_format).isoformat() >= start
+            and datetime.strptime(Path(j).stem, date_format).isoformat() <= end
         ]
     # backward in time
     elif end < start:
         json_list = [
-            j for j in json_list if datetime.strptime(Path(j).stem, date_format).isoformat() <= start and datetime.strptime(Path(j).stem, date_format).isoformat() >= end
+            j
+            for j in json_list
+            if datetime.strptime(Path(j).stem, date_format).isoformat() <= start
+            and datetime.strptime(Path(j).stem, date_format).isoformat() >= end
         ]
 
     if json_list == []:
@@ -265,7 +280,7 @@ def make_ciofs_kerchunk(start: str, end: str, name: str) -> dict:
     return out
 
 
-def make_nwgoa_kerchunk(start: str, end: str, name: str="NWGOA") -> dict:
+def make_nwgoa_kerchunk(start: str, end: str, name: str = "NWGOA") -> dict:
     """_summary_
 
     Parameters
@@ -290,23 +305,30 @@ def make_nwgoa_kerchunk(start: str, end: str, name: str="NWGOA") -> dict:
     def base_str(a_time: str) -> str:
         # this is the base string for the json files
         return f"{output_dir_single_files}/nwgoa_{a_time}-*.json"
+
     date_format = "nwgoa_%Y-%m-%d"
 
     # only glob start and end year files, order isn't important
     json_list = fs2.glob(base_str(start[:4]))
 
     if end[:4] != start[:4]:
-            json_list += fs2.glob(base_str(end[:4]))
+        json_list += fs2.glob(base_str(end[:4]))
 
     # forward in time
     if end > start:
         json_list = [
-            j for j in json_list if datetime.strptime(Path(j).stem, date_format).isoformat() >= start and datetime.strptime(Path(j).stem, date_format).isoformat() <= end
+            j
+            for j in json_list
+            if datetime.strptime(Path(j).stem, date_format).isoformat() >= start
+            and datetime.strptime(Path(j).stem, date_format).isoformat() <= end
         ]
     # backward in time
     elif end < start:
         json_list = [
-            j for j in json_list if datetime.strptime(Path(j).stem, date_format).isoformat() <= start and datetime.strptime(Path(j).stem, date_format).isoformat() >= end
+            j
+            for j in json_list
+            if datetime.strptime(Path(j).stem, date_format).isoformat() <= start
+            and datetime.strptime(Path(j).stem, date_format).isoformat() >= end
         ]
 
     if json_list == []:
