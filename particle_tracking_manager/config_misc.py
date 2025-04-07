@@ -5,6 +5,7 @@ import datetime
 import logging
 import pathlib
 
+from os import PathLike
 from typing import Self
 
 # Third-party imports
@@ -45,15 +46,14 @@ class SetupOutputFiles(BaseModel):
     This class runs first thing. Then logger setup.
     """
 
-    output_file: str | None = Field(
+    output_file: PathLike[str] | None = Field(
         TheManagerConfig.model_json_schema()["properties"]["output_file"]["default"]
     )
     output_format: OutputFormatEnum = Field(
         TheManagerConfig.model_json_schema()["properties"]["output_format"]["default"]
     )
 
-    class Config:
-        validate_default: bool = True
+    model_config = {"validate_default": True}
 
     @field_validator("output_file", mode="after")
     def assign_output_file_if_needed(value: str | None) -> str:
@@ -71,14 +71,13 @@ class SetupOutputFiles(BaseModel):
     @model_validator(mode="after")
     def add_output_file_extension(self) -> Self:
         """Add the appropriate file extension based on the output format."""
+        assert self.output_file is not None
         if self.output_format is not None:
             if self.output_format == "netcdf":
-                self.output_file = str(
-                    pathlib.Path(self.output_file).with_suffix(".nc")
-                )
+                self.output_file = pathlib.Path(self.output_file).with_suffix(".nc")
             elif self.output_format == "parquet":
-                self.output_file = str(
-                    pathlib.Path(self.output_file).with_suffix(".parquet")
+                self.output_file = pathlib.Path(self.output_file).with_suffix(
+                    ".parquet"
                 )
             else:
                 raise ValueError(f"output_format {self.output_format} not recognized.")
@@ -87,4 +86,5 @@ class SetupOutputFiles(BaseModel):
     @computed_field
     def logfile_name(self) -> str:
         """Generate a log file name based on the output file name."""
+        assert self.output_file is not None
         return pathlib.Path(self.output_file).stem + ".log"

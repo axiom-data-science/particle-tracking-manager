@@ -7,7 +7,8 @@ Functions needed to work with ocean model output are defined here. Also register
 import logging
 
 from datetime import datetime, timedelta
-from typing import Annotated, Callable
+from enum import Enum
+from typing import Annotated, Any, Callable
 
 # Third-party imports
 import xarray as xr
@@ -41,6 +42,8 @@ OceanModelEnum = generate_enum_from_registry()
 
 
 class OceanModelSimulation(BaseModel):
+    """Ocean model simulation configuration."""
+
     ocean_model_local: bool
 
     model_config = {
@@ -166,9 +169,7 @@ def create_ocean_model_simulation(
 
 
 ocean_model_simulation_mapper = {}
-for (
-    ocean_model
-) in ocean_model_registry.all_models():  # [NWGOA, CIOFS, CIOFSOP, CIOFSFRESH]:
+for ocean_model in ocean_model_registry.all_models():
     ocean_model_simulation_mapper[ocean_model.name] = create_ocean_model_simulation(
         ocean_model
     )
@@ -184,9 +185,11 @@ def get_file_date_string(name: str, date: datetime) -> str:
         return f"{date.year}_{str(date.timetuple().tm_yday - 1).zfill(4)}"
     elif name == "CIOFSFRESH":
         return f"{date.year}_{str(date.timetuple().tm_yday - 1).zfill(4)}"
+    else:
+        raise ValueError(f"get_file_date_string not implemented for {name}.")
 
 
-function_map: dict[str, Callable[[int, int], int]] = {
+function_map: dict[str, Callable[[str, str, str], dict[Any, Any]]] = {
     "make_nwgoa_kerchunk": make_nwgoa_kerchunk,
     "make_ciofs_kerchunk": make_ciofs_kerchunk,
 }
@@ -207,7 +210,7 @@ def loc_local(
 
     start = get_file_date_string(name, start_time)
     end = get_file_date_string(name, end_time)
-    return function_map[kerchunk_func_str](start=start, end=end, name=name)
+    return function_map[kerchunk_func_str](start, end, name)
 
 
 def register_on_the_fly(ds_info: dict, ocean_model: str = "ONTHEFLY") -> None:

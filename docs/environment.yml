@@ -10,6 +10,7 @@ dependencies:
    - appdirs
    - cmocean
    - fastparquet
+   - geojson_pydantic
    - numpy
    - xarray
    - kerchunk

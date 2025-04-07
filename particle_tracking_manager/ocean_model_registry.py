@@ -21,9 +21,6 @@ import yaml
 from pydantic import BaseModel, Field
 from typing_extensions import Annotated
 
-# Local imports
-from .config_ocean_model import OceanModelEnum
-
 
 def calculate_CIOFSOP_max() -> datetime:
     """read in CIOFSOP max time available, as datetime object"""
@@ -43,6 +40,7 @@ def calculate_CIOFSOP_max() -> datetime:
 
 
 def get_model_end_time(name: str) -> datetime:
+    """Get the end time of the model based on its name."""
     # This is only run when the property is requested
     if name == "CIOFSOP":
         return calculate_CIOFSOP_max()
@@ -51,6 +49,8 @@ def get_model_end_time(name: str) -> datetime:
 
 
 class OceanModelConfig(BaseModel):
+    """Ocean model configuration."""
+
     name: Annotated[
         str,
         Field(description="Name of the model."),
@@ -88,11 +88,11 @@ class OceanModelConfig(BaseModel):
         ),
     ]
     standard_name_mapping: Annotated[
-        Dict[str, str],
+        dict[str, str],
         Field(description="Mapping of model variable names to standard names."),
     ]
     model_drop_vars: Annotated[
-        List[str],
+        list[str],
         Field(
             description="List of variables to drop from the model dataset. These variables are not needed for particle tracking."
         ),
@@ -129,7 +129,7 @@ class OceanModelConfig(BaseModel):
             return get_model_end_time(self.name)
 
     @property
-    def horizontal_diffusivity(self) -> float:
+    def horizontal_diffusivity(self) -> float | None:
         """Calculate horizontal diffusivity based on known ocean_model.
 
         Might be overwritten by user-input in other model config.
@@ -147,6 +147,8 @@ class OceanModelConfig(BaseModel):
 
 
 class OceanModelRegistry:
+    """Registry for OceanModelConfig instances."""
+
     def __init__(self):
         """Initialize the OceanModelRegistry."""
         self._registry = {}
@@ -193,16 +195,16 @@ directory = (
     Path(__file__).resolve().parent / "ocean_models"
 )  # This is the directory where the current script is located
 
-file_paths = directory.glob("*.yaml")
+file_paths: list = list(directory.glob("*.yaml"))
 
 # Directory with user-defined files, if any
 config_dir = Path(os.getenv("PTM_CONFIG_DIR", ""))
 if len(str(config_dir)) > 1:
-    file_paths = itertools.chain(file_paths, config_dir.glob("*.yaml"))
+    file_paths = list(itertools.chain(file_paths, config_dir.glob("*.yaml")))
 
 # also combine *.yaml files in the user_ocean_models directory specifically (not just by default)
 config_dir = Path(__file__).resolve().parent / "user_ocean_models"
-file_paths = itertools.chain(file_paths, config_dir.glob("*.yaml"))
+file_paths = list(itertools.chain(file_paths, config_dir.glob("*.yaml")))
 
 # Create an instance of the OceanModelRegistry
 ocean_model_registry = OceanModelRegistry()

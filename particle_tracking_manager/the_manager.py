@@ -6,7 +6,7 @@ import logging
 from abc import ABC, abstractmethod
 
 # Third-party imports
-from typing_extensions import Self
+from typing import Any, Self
 
 # Local imports
 from .config_logging import LoggerConfig
@@ -103,7 +103,7 @@ class ParticleTrackingManager(ABC):
 
     """
 
-    _config: TheManagerConfig
+    config: TheManagerConfig
 
     def __init__(self, **kwargs: dict) -> None:
         """Initialize the ParticleTrackingManager."""
@@ -186,12 +186,12 @@ class ParticleTrackingManager(ABC):
             self.run()
 
     @abstractmethod
-    def _setup_for_simulation(self, **kwargs: dict) -> None:
+    def _setup_for_simulation(self) -> None:
         """Steps to setup for specific model's simulation."""
         raise NotImplementedError("This should be implemented in the model class.")
 
     @abstractmethod
-    def _add_reader(self, **kwargs) -> None:
+    def _add_reader(self, **kwargs: Any) -> None:
         """Add reader to model class."""
         raise NotImplementedError("This should be implemented in the model class.")
 

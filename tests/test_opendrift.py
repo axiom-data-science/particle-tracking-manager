@@ -187,7 +187,8 @@ def test_OpenOil_seeding():
         droplet_size_distribution="normal",
         droplet_diameter_sigma=0.9,
         oil_film_thickness=5,
-        oil_type="Generic Diesel (GN00002)",
+        oil_type=('ABU SAFAH, ARAMCO', 'AD00010'),
+        # oil_type="Generic Diesel (GN00002)",
         steps=1,
     )
     m._setup_for_simulation()  # creates m.o

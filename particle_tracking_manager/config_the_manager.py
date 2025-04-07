@@ -5,13 +5,14 @@ import logging
 
 from datetime import datetime, timedelta
 from enum import Enum
+from os import PathLike
+from typing import Annotated, Self
 
 # Third-party imports
 import pandas as pd
 
-# from geojson import GeoJSON
+from geojson import GeoJSON
 from pydantic import BaseModel, Field, computed_field, model_validator
-from typing_extensions import Self
 
 # Local imports
 from .config_ocean_model import (
@@ -28,23 +29,31 @@ logger = logging.getLogger()
 
 # Enum for "model"
 class ModelEnum(str, Enum):
+    """Lagrangian model software to use for simulation."""
+
     opendrift = "opendrift"
 
 
 # Enum for "seed_flag"
 class SeedFlagEnum(str, Enum):
+    """Method for seeding drifters."""
+
     elements = "elements"
     geojson = "geojson"
 
 
 # Enum for "output_format"
 class OutputFormatEnum(str, Enum):
+    """Output file format."""
+
     netcdf = "netcdf"
     parquet = "parquet"
 
 
 # Enum for "log_level"
 class LogLevelEnum(str, Enum):
+    """Log verbosity."""
+
     DEBUG = "DEBUG"
     INFO = "INFO"
     WARNING = "WARNING"
@@ -52,12 +61,14 @@ class LogLevelEnum(str, Enum):
     CRITICAL = "CRITICAL"
 
 
-from geojson_pydantic import LineString, Point, Polygon
+# from geojson_pydantic import LineString, Point, Polygon
 
 
 class TheManagerConfig(BaseModel):
+    """Configuration for the particle tracking manager."""
+
     model: ModelEnum = Field(
-        ModelEnum.opendrift.value,
+        ModelEnum.opendrift,
         description="Lagrangian model software to use for simulation.",
         json_schema_extra=dict(ptm_level=1),
     )
@@ -75,20 +86,25 @@ class TheManagerConfig(BaseModel):
         description='Central latitude for seeding drifters. Only used if `seed_flag=="elements"`.',
         json_schema_extra=dict(ptm_level=1, units="degrees_north"),
     )
+    geojson: dict | None = Field(
+        None,
+        description='GeoJSON describing a polygon within which to seed drifters. To use this parameter, also have `seed_flag=="geojson"`.',
+        json_schema_extra=dict(ptm_level=1),
+    )
     # geojson: GeoJSON | None = Field(
     #     None,
     #     description='GeoJSON describing a polygon within which to seed drifters. To use this parameter, also have `seed_flag=="geojson"`.',
     #     json_schema_extra=dict(ptm_level=1),
     # )
-    geojson: Annotated[
-        Union[Point, LineString, Polygon],
-        Field(
-            ...,
-            description="GeoJSON describing a point, line, or polygon for seeding drifters.",  # noqa: E501
-        ),
-    ]
+    # geojson: Annotated[
+    #     Point | LineString | Polygon | None,
+    #     Field(
+    #         None,
+    #         description="GeoJSON describing a point, line, or polygon for seeding drifters.",  # noqa: E501
+    #     ),
+    # ]
     seed_flag: SeedFlagEnum = Field(
-        SeedFlagEnum.elements.value,
+        SeedFlagEnum.elements,
         description='Method for seeding drifters. Options are "elements" or "geojson". If "elements", seed drifters at or around a single point defined by lon and lat. If "geojson", seed drifters within a polygon described by a GeoJSON object.',
         json_schema_extra=dict(ptm_level=1),
     )
@@ -136,8 +152,9 @@ class TheManagerConfig(BaseModel):
         description="The end of the simulation. steps, end_time, or duration must be input by user.",
         json_schema_extra=dict(ptm_level=1),
     )
-    ocean_model: OceanModelEnum | None = Field(
-        OceanModelEnum.CIOFSOP.value,
+    # OceanModelEnum was created dynamically and will trigger an issue with mypy, so we suppress it
+    ocean_model: OceanModelEnum = Field(  # type: ignore
+        "CIOFSOP",
         description="Name of ocean model to use for driving drifter simulation.",
         json_schema_extra=dict(ptm_level=1),
     )
@@ -156,13 +173,13 @@ class TheManagerConfig(BaseModel):
         description="Set to True to use static masks for known models instead of wetdry masks.",
         json_schema_extra=dict(ptm_level=3),
     )
-    output_file: str | None = Field(
+    output_file: PathLike[str] | None = Field(
         None,
         description="Name of file to write output to. If None, default name is used.",
         json_schema_extra=dict(ptm_level=3),
     )
     output_format: OutputFormatEnum = Field(
-        OutputFormatEnum.netcdf.value,
+        OutputFormatEnum.netcdf,
         description='Output file format. Options are "netcdf" or "parquet".',
         json_schema_extra=dict(ptm_level=2),
     )
@@ -171,13 +188,8 @@ class TheManagerConfig(BaseModel):
         description="Set to True to use cache for storing interpolators.",
         json_schema_extra=dict(ptm_level=3),
     )
-    horizontal_diffusivity: float | None = Field(
-        None,
-        description="Horizontal diffusivity for the simulation.",
-        json_schema_extra=dict(ptm_level=2),
-    )
     log_level: LogLevelEnum = Field(
-        LogLevelEnum.INFO.value,
+        LogLevelEnum.INFO,
         description="Log verbosity",
         json_schema_extra=dict(ptm_level=3),
     )
@@ -189,7 +201,7 @@ class TheManagerConfig(BaseModel):
         title="Horizontal Diffusivity",
         ge=0,
         le=100000,
-        json_schema_extra=dict(units="m2/s"),
+        json_schema_extra=dict(units="m2/s", ptm_level=2),
     )
 
     stokes_drift: bool = Field(
@@ -259,6 +271,8 @@ class TheManagerConfig(BaseModel):
         if non_none_count == 4:
             # calculate duration and steps from start_time and end_time and make sure they are the same as what
             # is already saved.
+            assert self.start_time is not None
+            assert self.end_time is not None
             duration = pd.Timedelta(abs(self.end_time - self.start_time)).isoformat()
             steps = int(
                 abs(self.end_time - self.start_time) / timedelta(minutes=self.time_step)
@@ -365,13 +379,13 @@ class TheManagerConfig(BaseModel):
         return self
 
     @computed_field
-    @property
+    # @property
     def ocean_model_config(self) -> OceanModelConfig:
         """Select ocean model config based on ocean_model."""
         return ocean_model_registry.get(self.ocean_model)
 
     @computed_field
-    @property
+    # @property
     def ocean_model_simulation(self) -> OceanModelSimulation:
         """Select ocean model simulation based on ocean_model."""
         inputs = {

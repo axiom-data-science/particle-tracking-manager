@@ -4,8 +4,12 @@
 import json
 import logging
 
+from datetime import datetime
+from enum import Enum
 from pathlib import Path
+from typing import Any
 
+import pandas as pd
 import xarray as xr
 
 # Third-party imports
@@ -134,6 +138,7 @@ class OpenDriftModel(ParticleTrackingManager):
         # OpenDriftConfig is a subclass of TheManagerConfig so it knows about all the
         # TheManagerConfig parameters. TheManagerConfig is run with OpenDriftConfig.
         drift_model = kwargs.get("drift_model", "OceanDrift")
+        assert isinstance(drift_model, str)
         if "drift_model" in kwargs:
             del kwargs["drift_model"]
         self.config: OpenDriftConfig = open_drift_mapper[drift_model](**kwargs)
@@ -156,6 +161,7 @@ class OpenDriftModel(ParticleTrackingManager):
 
     def _check_interpolator_filename_exists(self) -> None:
         """Check if the interpolator filename exists."""
+        assert self.config.interpolator_filename is not None
         if Path(self.config.interpolator_filename).exists():
             logger.debug(
                 f"Will load the interpolator from {self.config.interpolator_filename}."
@@ -224,9 +230,14 @@ class OpenDriftModel(ParticleTrackingManager):
                             "od_mapping"
                         ]
                         if od_key in self.o._config:  # and od_key is not None:
-                            field_value = getattr(base_model, key)
-                            if isinstance(field_value, Enum):
-                                field_value = field_value.value
+                            # want the string representation of only this one used
+                            if od_key == "seed:oil_type":
+                                field_value = str(getattr(base_model, key))
+                            # for others use value
+                            else:
+                                field_value = getattr(base_model, key)
+                                if isinstance(field_value, Enum):
+                                    field_value = field_value.value
                             self.o._config[od_key]["value"] = field_value
 
     def _modify_opendrift_model_object(self) -> None:
@@ -266,13 +277,7 @@ class OpenDriftModel(ParticleTrackingManager):
         self._update_od_config_from_this_config()
         self._modify_opendrift_model_object()
 
-    def _add_reader(
-        self,
-        ds: xr.Dataset = None,
-        name: str = None,
-        oceanmodel_lon0_360: bool = False,
-        standard_name_mapping: dict | None = None,
-    ) -> None:
+    def _add_reader(self, **kwargs: Any) -> None:
         """Add a reader to the OpenDrift model.
 
         Parameters
@@ -283,6 +288,12 @@ class OpenDriftModel(ParticleTrackingManager):
         name : str, optional
             If ds is input, user can also input name of ocean model, otherwise will be called "user_input".
         """
+        # Extract specific parameters from kwargs
+        ds = kwargs.get("ds", None)
+        name = kwargs.get("name", None)
+        oceanmodel_lon0_360 = kwargs.get("oceanmodel_lon0_360", False)
+        standard_name_mapping = kwargs.get("standard_name_mapping", None)
+
         if not self.state.has_run_setup:
             self._setup_for_simulation()
 
@@ -294,6 +305,8 @@ class OpenDriftModel(ParticleTrackingManager):
         # don't need the following currently if using ocean_model_local since the kerchunk file is already
         # narrowed to the simulation size
         if not self.config.ocean_model_local:
+            assert self.config.start_time is not None
+            assert self.config.end_time is not None
             ds = narrow_dataset_to_simulation_time(
                 ds, self.config.start_time, self.config.end_time
             )
@@ -349,17 +362,26 @@ class OpenDriftModel(ParticleTrackingManager):
             "drift:truncate_ocean_model_below_m",
         ]
 
+        time: float | datetime | list[float] | str | None
         if self.config.start_time_end is not None:
             # time can be a list to start drifters linearly in time
             time = [
-                self.config.start_time.to_pydatetime(),
-                self.config.start_time_end.to_pydatetime(),
+                pd.Timestamp(self.config.start_time).to_pydatetime(),
+                pd.Timestamp(self.config.start_time_end).to_pydatetime(),
             ]
         elif self.config.start_time is not None:
             time = self.config.start_time
             # time = self.config.start_time.to_pydatetime()
         else:
             time = None
+
+        if self.config.seed_flag == "geojson":
+            # geojson needs string representation of time
+            time = (
+                self.config.start_time.isoformat()
+                if self.config.start_time is not None
+                else None
+            )
 
         _seed_kws = {
             "time": time,
@@ -388,15 +410,6 @@ class OpenDriftModel(ParticleTrackingManager):
                 }
             )
 
-        elif self.config.seed_flag == "geojson":
-
-            # geojson needs string representation of time
-            _seed_kws["time"] = (
-                self.config.start_time.isoformat()
-                if self.config.start_time is not None
-                else None
-            )
-
         self._seed_kws = _seed_kws
         return self._seed_kws
 
@@ -406,13 +419,14 @@ class OpenDriftModel(ParticleTrackingManager):
         if self.config.seed_flag == "elements":
             self.o.seed_elements(**self.seed_kws)
 
-        elif self.config.seed_flag == "geojson":
+        # elif self.config.seed_flag == "geojson":
+        # fix this when using geojson, can't figure out mypy
 
-            # # geojson needs string representation of time
-            # self.seed_kws["time"] = self.config.start_time.isoformat()
-            self.config.geojson["properties"] = self.seed_kws
-            json_string_dumps = json.dumps(self.config.geojson)
-            self.o.seed_from_geojson(json_string_dumps)
+        #     # # geojson needs string representation of time
+        #     # self.seed_kws["time"] = self.config.start_time.isoformat()
+        #     self.config.geojson["properties"] = self.seed_kws
+        #     json_string_dumps = json.dumps(self.config.geojson)
+        #     self.o.seed_from_geojson(json_string_dumps)
 
         else:
             raise ValueError(f"seed_flag {self.config.seed_flag} not recognized.")
@@ -432,7 +446,7 @@ class OpenDriftModel(ParticleTrackingManager):
             time_step_output=self.config.time_step_output,
             steps=self.config.steps,
             export_variables=self.config.export_variables,
-            outfile=self.files.output_file,
+            outfile=str(self.files.output_file),
         )
 
         # plot if requested
