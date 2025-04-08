@@ -7,7 +7,7 @@ from os import PathLike
 from pathlib import Path
 
 # Third-party imports
-from pydantic import Field, model_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic.fields import FieldInfo
 from typing_extensions import Self
 
@@ -18,6 +18,7 @@ from .enums import (
     DiffusivityModelEnum,
     DriftModelEnum,
     DropletSizeDistributionEnum,
+    ModifyOilTypeJsonSchema,
     ObjectTypeEnum,
     OilTypeEnum,
     PlotTypeEnum,
@@ -164,6 +165,13 @@ class OpenDriftConfig(TheManagerConfig):
         "use_enum_values": True,
         "extra": "forbid",
     }
+
+    @classmethod
+    def model_json_schema(cls, **kwargs) -> dict:
+        """Override the method to customize the JSON schema to include customization of oil_type."""
+        return super().model_json_schema(
+            schema_generator=ModifyOilTypeJsonSchema, **kwargs
+        )
 
     @model_validator(mode="after")
     def check_interpolator_filename(self) -> Self:
@@ -479,7 +487,7 @@ class OpenOilModelConfig(OceanDriftModelConfig):
     drift_model: DriftModelEnum = DriftModelEnum.OpenOil  # .value
 
     oil_type: OilTypeEnum = Field(
-        default=OilTypeEnum.GENERIC_BUNKER_C_AD04012,  # .value,
+        default=OilTypeEnum("GENERIC BUNKER C"),  # .value,
         description="Oil type to be used for the simulation, from the NOAA ADIOS database.",
         title="Oil Type",
         json_schema_extra={"od_mapping": "seed:oil_type", "ptm_level": 1},
@@ -649,6 +657,24 @@ class OpenOilModelConfig(OceanDriftModelConfig):
     #         # only keep first part of string, which is the name of the oil
     #         self.oil_type = self.oil_type_input.split(" (")[0]
     #     return self
+
+    # @model_validator(mode="before")
+    # def validate_oil_type_by_id_from_name(cls, values):
+    #     """Validate oil type by id from name."""
+    #     name_id = values.get('oil_type')
+    #     if name_id not in OceanModelEnum.__members__:
+    #         raise ValueError(f"Invalid ocean model name_id: {name_id}")
+    #     return values
+
+    @field_validator("oil_type", mode="before")
+    def map_oil_type_to_id(cls, v):
+        """Map oil type to enum name (which is the oil type id)."""
+        if v in OilTypeEnum.__members__:  # Check if it matches a name
+            return OilTypeEnum[v]
+        for enum_member in OilTypeEnum:  # Check if it matches a value
+            if enum_member.value == v:
+                return enum_member
+        raise ValueError(f"Invalid value or name '{v}' for OilTypeEnum")
 
 
 class LarvalFishModelConfig(OceanDriftModelConfig):

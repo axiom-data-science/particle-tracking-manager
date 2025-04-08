@@ -230,14 +230,14 @@ class OpenDriftModel(ParticleTrackingManager):
                             "od_mapping"
                         ]
                         if od_key in self.o._config:  # and od_key is not None:
-                            # want the string representation of only this one used
-                            if od_key == "seed:oil_type":
-                                field_value = str(getattr(base_model, key))
-                            # for others use value
-                            else:
-                                field_value = getattr(base_model, key)
-                                if isinstance(field_value, Enum):
-                                    field_value = field_value.value
+                            # # want the string representation of only this one used
+                            # if od_key == "seed:oil_type":
+                            #     field_value = str(getattr(base_model, key))
+                            # # for others use value
+                            # else:
+                            field_value = getattr(base_model, key)
+                            if isinstance(field_value, Enum):
+                                field_value = field_value.value
                             self.o._config[od_key]["value"] = field_value
 
     def _modify_opendrift_model_object(self) -> None:
@@ -419,14 +419,13 @@ class OpenDriftModel(ParticleTrackingManager):
         if self.config.seed_flag == "elements":
             self.o.seed_elements(**self.seed_kws)
 
-        # elif self.config.seed_flag == "geojson":
-        # fix this when using geojson, can't figure out mypy
+        elif self.config.seed_flag == "geojson":
 
-        #     # # geojson needs string representation of time
-        #     # self.seed_kws["time"] = self.config.start_time.isoformat()
-        #     self.config.geojson["properties"] = self.seed_kws
-        #     json_string_dumps = json.dumps(self.config.geojson)
-        #     self.o.seed_from_geojson(json_string_dumps)
+            # # geojson needs string representation of time
+            # self.seed_kws["time"] = self.config.start_time.isoformat()
+            self.config.geojson["properties"] = self.seed_kws  # type: ignore
+            json_string_dumps = json.dumps(self.config.geojson)
+            self.o.seed_from_geojson(json_string_dumps)
 
         else:
             raise ValueError(f"seed_flag {self.config.seed_flag} not recognized.")
@@ -451,12 +450,12 @@ class OpenDriftModel(ParticleTrackingManager):
 
         # plot if requested
         if self.config.plots:
-            assert isinstance(self.files.output_file, str)
+            assert isinstance(self.files.output_file, Path)
             # return plots because now contains the filenames for each plot
             self.config.plots = make_plots(
                 self.config.plots,
                 self.o,
-                self.files.output_file.split(".")[0],
+                str(self.files.output_file).split(".")[0],
                 self.config.drift_model,
             )
 

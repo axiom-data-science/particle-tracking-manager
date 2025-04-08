@@ -17,4 +17,5 @@ from .models.opendrift.config_opendrift import (
     OpenDriftConfig,
     OpenOilModelConfig,
 )
+from .models.opendrift.enums import ModifyOilTypeJsonSchema
 from .models.opendrift.opendrift import OpenDriftModel

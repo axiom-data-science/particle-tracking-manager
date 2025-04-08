@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 
 from pydantic import ValidationError
@@ -160,6 +162,16 @@ def test_OpenOil_parameters():
         assert hasattr(m, param)
 
 
+def test_OpenOil_json_schema():
+    schema = OpenOilModelConfig.model_json_schema()
+    assert [
+        True
+        for item in schema["properties"]["oil_type"]["oneOf"]
+        if "{'const': 'AD00010', 'title': <OilTypeEnum.AD00010: 'ABU SAFAH, ARAMCO'>}"
+        == str(item)
+    ][0]
+
+
 def test_unknown_parameter():
     """Make sure unknown parameters are not input."""
 
@@ -206,4 +218,4 @@ def test_interpolator_filename():
     m = OpenDriftConfig(interpolator_filename=None, use_cache=False, steps=1)
 
     m = OpenDriftConfig(use_cache=True, interpolator_filename="test", steps=1)
-    assert m.interpolator_filename == "test.pickle"
+    assert m.interpolator_filename == Path("test.pickle")

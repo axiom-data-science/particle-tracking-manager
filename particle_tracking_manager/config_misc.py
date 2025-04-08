@@ -65,7 +65,9 @@ class SetupOutputFiles(BaseModel):
     @field_validator("output_file", mode="after")
     def clean_output_file(value: str) -> str:
         """Clean the output file name by removing extensions."""
-        value = value.replace(".nc", "").replace(".parquet", "").replace(".parq", "")
+        value = (
+            str(value).replace(".nc", "").replace(".parquet", "").replace(".parq", "")
+        )
         return value
 
     @model_validator(mode="after")

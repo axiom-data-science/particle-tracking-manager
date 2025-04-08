@@ -2,6 +2,8 @@
 
 import pickle
 
+from pathlib import Path
+
 import numpy as np
 import pytest
 import xarray as xr
@@ -92,7 +94,9 @@ def test_run_netcdf():
     manager.run_all()
 
     assert "nc" in manager.o.outfile_name
-    assert manager.config.interpolator_filename == temp_file.name + ".pickle"
+    assert manager.config.interpolator_filename == Path(temp_file.name).with_suffix(
+        ".pickle"
+    )
 
     # Replace 'path_to_pickle_file.pkl' with the actual path to your pickle file
     with open(manager.config.interpolator_filename, "rb") as file:

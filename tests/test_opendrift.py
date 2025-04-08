@@ -121,7 +121,7 @@ def test_Leeway():
         ocean_model="ONTHEFLY",
         **seed_kws
     )
-    m._setup_for_simulation()  # creates m.o
+    m.setup_for_simulation()  # creates m.o
     # assert "wind_drift_factor" not in m.config
     assert not hasattr(m.config, "wind_drift_factor")
     assert "seed:wind_drift_factor" not in m.o.get_configspec().keys()
@@ -166,13 +166,13 @@ def test_LarvalFish_seeding():
         wind_drift_factor=0,
         wind_drift_depth=0,
     )
-    m._setup_for_simulation()  # creates m.o
+    m.setup_for_simulation()  # creates m.o
     assert m.o._config["seed:hatched"]["value"] == 1
 
 
 def test_OpenOil_seeding():
     """Make sure special seed parameters comes through"""
-
+    oil_type = "ABU SAFAH, ARAMCO"
     m = OpenDriftModel(
         drift_model="OpenOil",
         lon=-151,
@@ -187,11 +187,11 @@ def test_OpenOil_seeding():
         droplet_size_distribution="normal",
         droplet_diameter_sigma=0.9,
         oil_film_thickness=5,
-        oil_type=('ABU SAFAH, ARAMCO', 'AD00010'),
+        oil_type=oil_type,
         # oil_type="Generic Diesel (GN00002)",
         steps=1,
     )
-    m._setup_for_simulation()  # creates m.o
+    m.setup_for_simulation()  # creates m.o
 
     # m.o.set_config("environment:constant:x_wind", -1)
     # m.o.set_config("environment:constant:y_wind", -1)
@@ -210,8 +210,14 @@ def test_OpenOil_seeding():
     assert m.o._config["seed:droplet_diameter_sigma"]["value"] == 0.9
     # assert m.o.elements_scheduled.oil_film_thickness == 5
     assert (
-        m.o._config["seed:oil_type"]["value"] == "Generic Diesel"
+        m.o._config["seed:oil_type"]["value"] == oil_type
     )  # don't use ID because it is stripped off
+
+
+def test_OpenOil_oil_type_id():
+    """Make sure oil type entered as id works"""
+    oil_type = "AD00010"
+    m = OpenDriftModel(drift_model="OpenOil", oil_type=oil_type, steps=1)
 
 
 def test_wind_drift():
@@ -228,7 +234,7 @@ def test_wind_drift():
         use_auto_landmask=True,
         steps=1,
     )
-    m._setup_for_simulation()  # creates m.o
+    m.setup_for_simulation()  # creates m.o
     assert m.o._config["seed:wind_drift_factor"]["value"] == 1
     assert m.o._config["drift:wind_drift_depth"]["value"] == 10
 
@@ -382,7 +388,7 @@ def test_parameter_passing():
         **seed_kws
     )
 
-    m._setup_for_simulation()  # creates m.o
+    m.setup_for_simulation()  # creates m.o
 
     # idealized simulation, provide a fake current
     m.o.set_config("environment:fallback:y_sea_water_velocity", 1)

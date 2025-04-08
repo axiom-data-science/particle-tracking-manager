@@ -19,7 +19,7 @@ def test_output_file():
     """make sure output file is parquet if output_format is parquet"""
 
     m = SetupOutputFiles(output_format="parquet")
-    assert m.output_file.endswith(".parquet")
+    assert m.output_file.suffix == ".parquet"
 
     m = SetupOutputFiles(output_format="netcdf")
-    assert m.output_file.endswith(".nc")
+    assert m.output_file.suffix == ".nc"

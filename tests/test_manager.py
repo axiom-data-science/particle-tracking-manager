@@ -34,6 +34,9 @@ class TestParticleTrackingManager(ParticleTrackingManager):
     def _run(self):
         pass
 
+    def _setup_for_simulation(self):
+        pass
+
 
 def test_order():
     """Have to configure before seeding."""
@@ -71,10 +74,10 @@ def test_output_file():
     """make sure output file is parquet if output_format is parquet"""
 
     m = TestParticleTrackingManager(output_format="parquet", steps=1)
-    assert m.files.output_file.endswith(".parquet")
+    assert m.files.output_file.suffix == ".parquet"
 
     m = TestParticleTrackingManager(output_format="netcdf", steps=1)
-    assert m.files.output_file.endswith(".nc")
+    assert m.files.output_file.suffix == ".nc"
 
 
 def test_ocean_model_not_known():

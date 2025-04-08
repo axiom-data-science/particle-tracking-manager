@@ -11,7 +11,7 @@ from typing import Annotated, Self
 # Third-party imports
 import pandas as pd
 
-from geojson import GeoJSON
+# from geojson import GeoJSON
 from pydantic import BaseModel, Field, computed_field, model_validator
 
 # Local imports

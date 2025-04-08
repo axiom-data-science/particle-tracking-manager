@@ -9,7 +9,7 @@ dependencies:
   - aiohttp
   - appdirs
   - fastparquet
-  - geojson_pydantic
+  # - geojson_pydantic
   - jupyter
   - jupyterlab
   - kerchunk

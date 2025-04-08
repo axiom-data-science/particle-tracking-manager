@@ -9,6 +9,7 @@ import pytest
 import particle_tracking_manager as ptm
 
 
+@pytest.mark.slow
 def test_setup():
     """Test CLI setup with dryrun
 
