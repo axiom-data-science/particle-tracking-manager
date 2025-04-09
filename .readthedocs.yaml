@@ -1,8 +1,8 @@
 version: 2
 
-# Build PDF only
-formats:
-  - pdf
+# # Build PDF only
+# formats:
+#   - pdf
 
 build:
   os: "ubuntu-20.04"
