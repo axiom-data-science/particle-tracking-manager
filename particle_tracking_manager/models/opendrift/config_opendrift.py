@@ -231,6 +231,15 @@ class OpenDriftConfig(TheManagerConfig):
 
             logger.debug(f"Interpolator filename: {self.interpolator_filename}")
 
+            if Path(self.interpolator_filename).exists():
+                logger.debug(
+                    f"Will load the interpolator from {self.interpolator_filename}."
+                )
+            else:
+                logger.debug(
+                    f"A new interpolator will be saved to {self.interpolator_filename}."
+                )
+
         else:
             self.save_interpolator = False
             logger.debug("Interpolator will not be saved.")

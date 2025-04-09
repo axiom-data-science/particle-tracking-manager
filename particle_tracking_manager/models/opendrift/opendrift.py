@@ -159,18 +159,6 @@ class OpenDriftModel(ParticleTrackingManager):
         # TODO: streamline this
         self.checked_plot = False
 
-    def _check_interpolator_filename_exists(self) -> None:
-        """Check if the interpolator filename exists."""
-        assert self.config.interpolator_filename is not None
-        if Path(self.config.interpolator_filename).exists():
-            logger.debug(
-                f"Will load the interpolator from {self.config.interpolator_filename}."
-            )
-        else:
-            logger.debug(
-                f"A new interpolator will be saved to {self.config.interpolator_filename}."
-            )
-
     def _create_opendrift_model_object(self) -> None:
         """Create the OpenDrift model object."""
 
@@ -272,7 +260,6 @@ class OpenDriftModel(ParticleTrackingManager):
         """
 
         self.logger_config.merge_with_opendrift_log()
-        self._check_interpolator_filename_exists()
         self._create_opendrift_model_object()
         self._update_od_config_from_this_config()
         self._modify_opendrift_model_object()

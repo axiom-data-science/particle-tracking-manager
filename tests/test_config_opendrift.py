@@ -212,10 +212,13 @@ def test_z_OceanDrift():
 
 
 def test_interpolator_filename():
-    with pytest.raises(ValueError):
+    with pytest.raises(ValidationError):
         m = OpenDriftConfig(interpolator_filename="test", steps=1, use_cache=False)
 
     m = OpenDriftConfig(interpolator_filename=None, use_cache=False, steps=1)
 
     m = OpenDriftConfig(use_cache=True, interpolator_filename="test", steps=1)
     assert m.interpolator_filename == Path("test.pickle")
+
+    m = OpenDriftConfig(use_cache=True, interpolator_filename=None, steps=1)
+    assert m.interpolator_filename.name == "CIOFSOP_interpolator.pickle"
