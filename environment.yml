@@ -14,7 +14,7 @@ dependencies:
   - jupyterlab
   - kerchunk ==0.2.7
   - xarray
-  - numpy
+  - numpy <=1.26.4  # req from opendrift
   - opendrift <=1.13.0
   - scipy
   - dask

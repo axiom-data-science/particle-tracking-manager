@@ -53,6 +53,7 @@ jobs:
           environment-file: ci/environment-py${{ matrix.python-version }}.yml
           cache-environment: true
           post-cleanup: 'all'
+          generate-run-shell: false  # https://github.com/mamba-org/setup-micromamba/issues/130#issuecomment-1746964394
 
       - name: Install package
         shell: bash -l {0}
