@@ -12,10 +12,10 @@ dependencies:
   # - geojson_pydantic
   - jupyter
   - jupyterlab
-  - kerchunk
+  - kerchunk ==0.2.7
   - xarray
   - numpy
-  - opendrift
+  - opendrift <=1.13.0
   - scipy
   - dask
   - netcdf4
