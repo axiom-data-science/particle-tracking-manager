@@ -1,5 +1,10 @@
 # What's New
 
+## v0.12.1 (April 8, 2025)
+
+* Correction to `interpolator_filename` handling and improvement in testing.
+
+
 ## v0.12.0 (April 9, 2025)
 
 * Major refactoring:
