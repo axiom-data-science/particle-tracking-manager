@@ -274,11 +274,14 @@ def make_plots_after_simulation(output_filepath, plots="all"):
     import opendrift as od
 
     # load output file
-    o = od.open(output_filepath)
+    o = od.open(str(output_filepath))
 
     # want output_file to not include any suffix
     output_filepath = (
-        output_filepath.replace(".nc", "").replace(".parquet", "").replace(".parq", "")
+        str(output_filepath)
+        .replace(".nc", "")
+        .replace(".parquet", "")
+        .replace(".parq", "")
     )
 
     # figure out drift_model

@@ -54,4 +54,4 @@ repos:
     - id: codespell
       args:
         - --quiet-level=2
-      exclude: 'particle_tracking_manager/models/opendrift/config_opendrift.py'
+      exclude: 'particle_tracking_manager/models/opendrift/enums.py'

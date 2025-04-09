@@ -74,7 +74,7 @@ def test_run_parquet():
 
 
 @pytest.mark.slow
-def test_run_netcdf():
+def test_run_netcdf_and_plot():
     """Set up and run."""
 
     import tempfile
@@ -89,17 +89,20 @@ def test_run_netcdf():
             use_cache=True,
             interpolator_filename=temp_file.name,
             ocean_model="TXLA",
-            ocean_model_local=False
+            ocean_model_local=False,
+            plots={
+                "all": {},
+            }
         )
-    manager.run_all()
+        manager.run_all()
 
-    assert "nc" in manager.o.outfile_name
-    assert manager.config.interpolator_filename == Path(temp_file.name).with_suffix(
-        ".pickle"
-    )
+        assert "nc" in manager.o.outfile_name
+        assert manager.config.interpolator_filename == Path(temp_file.name).with_suffix(
+            ".pickle"
+        )
 
-    # Replace 'path_to_pickle_file.pkl' with the actual path to your pickle file
-    with open(manager.config.interpolator_filename, "rb") as file:
-        data = pickle.load(file)
-    assert "spl_x" in data
-    assert "spl_y" in data
+        # Replace 'path_to_pickle_file.pkl' with the actual path to your pickle file
+        with open(manager.config.interpolator_filename, "rb") as file:
+            data = pickle.load(file)
+        assert "spl_x" in data
+        assert "spl_y" in data

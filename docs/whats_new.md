@@ -12,7 +12,7 @@
     * `time_step` and `time_step_output` changed to minutes from seconds.
     * ocean_model_registry for known and user-input models
     * changed some logger statement from "info" to "debug"
-    * now pinned to `opendrift` v1.13.0
+    * now pinned to `opendrift` v1.13.0 and `kerchunk` v0.2.7 because not ready for zarr v3
     * can run plots from a parquet or netcdf output file now
     * can't run idealized simulations using `OpenDrift` directly in PTM anymore but this could be added back in if needed
     * updated docs
