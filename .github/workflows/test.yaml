@@ -28,38 +28,38 @@ jobs:
         with:
           path: ~/conda_pkgs_dir
           key: ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}-${{ hashFiles('ci/environment-py${{ matrix.python-version }}.yml') }}
-      - uses: conda-incubator/setup-miniconda@v3
-        with:
-          # mamba-version: "*" # activate this to build with mamba.
-          python-version: ${{ matrix.python-version }}
-          # miniforge-variant: Mambaforge
-          miniconda-version: "latest"
-          channels: conda-forge, defaults # These need to be specified to use mamba
-          channel-priority: true
-          environment-file: ci/environment-py${{ matrix.python-version }}.yml
+      # - uses: conda-incubator/setup-miniconda@v3
+      #   with:
+      #     # mamba-version: "*" # activate this to build with mamba.
+      #     python-version: ${{ matrix.python-version }}
+      #     miniforge-variant: Mambaforge
+      #     channels: conda-forge, defaults # These need to be specified to use mamba
+      #     channel-priority: true
+      #     environment-file: ci/environment-py${{ matrix.python-version }}.yml
 
-          activate-environment: test_env_particle-tracking-manager
-          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+      #     activate-environment: test_env_particle-tracking-manager
+      #     use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+      # - name: Set up conda environment
+      #   shell: bash -l {0}
+      #   run: |
+      #     python -m pip install -e . --no-deps --force-reinstall
+
+      - name: Setup Micromamba Python ${{ matrix.python-version }}
+        uses: mamba-org/setup-micromamba@v2
+        with:
+          init-shell: bash
+          create-args: >-
+            python=${{ matrix.python-version }} --channel conda-forge
+          environment-file: ci/environment-py${{ matrix.python-version }}.yml
+          cache-environment: true  # https://github.com/mamba-org/setup-micromamba/issues/130#issuecomment-1746964394
+          cache-downloads: true
+          post-cleanup: 'none'
+          # generate-run-shell: false  # https://github.com/mamba-org/setup-micromamba/issues/130#issuecomment-1746964394
+
       - name: Install package
         shell: bash -l {0}
         run: |
           python -m pip install -e . --no-deps --force-reinstall
-
-      # - name: Setup Micromamba Python ${{ matrix.python-version }}
-      #   uses: mamba-org/setup-micromamba@v2
-      #   with:
-      #     init-shell: bash
-      #     create-args: >-
-      #       python=${{ matrix.python-version }} --channel conda-forge
-      #     environment-file: ci/environment-py${{ matrix.python-version }}.yml
-      #     cache-environment: false  # https://github.com/mamba-org/setup-micromamba/issues/130#issuecomment-1746964394
-      #     post-cleanup: 'all'
-      #     generate-run-shell: false  # https://github.com/mamba-org/setup-micromamba/issues/130#issuecomment-1746964394
-
-      # - name: Install package
-      #   shell: bash -l {0}
-      #   run: |
-      #     python -m pip install -e . --no-deps --force-reinstall
 
 
       - name: Run Tests
