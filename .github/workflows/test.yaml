@@ -52,7 +52,7 @@ jobs:
             python=${{ matrix.python-version }} --channel conda-forge
           environment-file: ci/environment-py${{ matrix.python-version }}.yml
           cache-environment: false  # https://github.com/mamba-org/setup-micromamba/issues/130#issuecomment-1746964394
-          # post-cleanup: 'all'
+          post-cleanup: 'all'
           generate-run-shell: false  # https://github.com/mamba-org/setup-micromamba/issues/130#issuecomment-1746964394
 
       - name: Install package
