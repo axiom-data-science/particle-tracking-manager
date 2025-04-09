@@ -2,8 +2,6 @@
 
 ## v0.12.0 (April 9, 2025)
 
-* Suffix for parquet file format is now ".parquet" instead of ".parq".
-* Added a method to run plots from saved OpenDrift output file; also available in CLI. Updated docs.
 * Major refactoring:
     * Removed `surface_only` flag.
     * Changed default value for `vertical_mixing` to False to match `do3D` default of False.
@@ -21,6 +19,12 @@
     * a geojson dict can be input but it is not fully working at the moment
     * `oil_type` can be input as the name or the id from the adios database.
     * `.model_json_schema()` is overridden in `OpenDriftConfig` to include a bit of custom code to modify the `oil_type` output in the JSON schema "properties" area. This shouldn't affect anything other than it being available if people want that.
+
+
+## v0.11.2 (February 6, 2025)
+
+* Suffix for parquet file format is now ".parquet" instead of ".parq".
+* Added a method to run plots from saved OpenDrift output file; also available in CLI. Updated docs.
 
 
 ## v0.11.1 (February 4, 2025)
