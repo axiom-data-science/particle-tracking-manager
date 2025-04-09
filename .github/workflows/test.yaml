@@ -17,7 +17,7 @@ jobs:
       fail-fast: false
       matrix:
         os: ["macos-latest", "ubuntu-latest", "windows-latest"]
-        python-version: ["3.11", "3.12", "3.13"]
+        python-version: ["3.11"] #, "3.12", "3.13"] opendrift can't use >3.11 yet
     steps:
       - uses: actions/checkout@v4
       - name: Cache conda
@@ -53,7 +53,7 @@ jobs:
           environment-file: ci/environment-py${{ matrix.python-version }}.yml
           cache-environment: true  # https://github.com/mamba-org/setup-micromamba/issues/130#issuecomment-1746964394
           cache-downloads: true
-          post-cleanup: 'none'
+          post-cleanup: 'all'
           # generate-run-shell: false  # https://github.com/mamba-org/setup-micromamba/issues/130#issuecomment-1746964394
 
       - name: Install package
