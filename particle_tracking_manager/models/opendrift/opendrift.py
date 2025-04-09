@@ -462,7 +462,7 @@ class OpenDriftModel(ParticleTrackingManager):
             # convert plots dict into string representation to save in output file attributes
             # https://github.com/pydata/xarray/issues/1307
             self.config.plots = repr(self.config.plots)
-
+ 
     def all_export_variables(self) -> list:
         """Output list of all possible export variables."""
 
