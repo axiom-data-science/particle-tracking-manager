@@ -9,14 +9,13 @@ import pytest
 import particle_tracking_manager as ptm
 
 
+@pytest.mark.slow
 def test_setup():
-    """Test CLI setup
+    """Test CLI setup with dryrun
 
-    No drifters are run due to oceanmodel=None
+    No drifters are run due to dryrun flag
     """
-    ret_value = os.system(
-        f"ptm ocean_model=test lon=-151 lat=59 use_auto_landmask=True start_time='2000-1-1' --dry-run"
-    )
+    ret_value = os.system(f"ptm steps=1 --dry-run")
     assert ret_value == 0
 
 
@@ -24,12 +23,6 @@ def test_setup_library():
     """Same test but with library"""
 
     m = ptm.OpenDriftModel(
-        ocean_model="test",
-        lon=-151,
-        lat=59,
-        use_auto_landmask=True,
-        # steps=3,
-        start_time=datetime(2000, 1, 1),
+        steps=3,
     )
-    with pytest.raises(AssertionError):
-        m.run_all()
+    m.config.model_dump()

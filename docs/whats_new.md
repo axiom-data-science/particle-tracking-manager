@@ -1,9 +1,31 @@
 # What's New
 
+## v0.12.0 (April 9, 2025)
+
+* Major refactoring:
+    * Removed `surface_only` flag.
+    * Changed default value for `vertical_mixing` to False to match `do3D` default of False.
+    * Moved some configuration parameters between configuration objects.
+    * Major improvements of log handling.
+    * `time_step` and `time_step_output` changed to minutes from seconds.
+    * ocean_model_registry for known and user-input models
+    * changed some logger statement from "info" to "debug"
+    * now pinned to `opendrift` v1.13.0 and `kerchunk` v0.2.7 because not ready for zarr v3
+    * can run plots from a parquet or netcdf output file now
+    * can't run idealized simulations using `OpenDrift` directly in PTM anymore but this could be added back in if needed
+    * updated docs
+    * property plot now requires keyword "variable" instead of "prop" (this change is from `OpenDrift`)
+    * most configuration parameters are under `m.config` now instead of just `m`, if `m` represents a Manager instance.
+    * a geojson dict can be input but it is not fully working at the moment
+    * `oil_type` can be input as the name or the id from the adios database.
+    * `.model_json_schema()` is overridden in `OpenDriftConfig` to include a bit of custom code to modify the `oil_type` output in the JSON schema "properties" area. This shouldn't affect anything other than it being available if people want that.
+
+
 ## v0.11.2 (February 6, 2025)
 
 * Suffix for parquet file format is now ".parquet" instead of ".parq".
 * Added a method to run plots from saved OpenDrift output file; also available in CLI. Updated docs.
+
 
 ## v0.11.1 (February 4, 2025)
 

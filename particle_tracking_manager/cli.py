@@ -1,17 +1,19 @@
 """Command line interface to get inputs from web application."""
 
+# Standard library imports
 import argparse
 import ast
-import logging
 
 from datetime import datetime
 
+# Third-party imports
 import pandas as pd
 
+# Local imports
 import particle_tracking_manager as ptm
 
 
-def is_int(s):
+def is_int(s: str) -> bool:
     """Check if string is actually int."""
     try:
         int(s)
@@ -20,7 +22,7 @@ def is_int(s):
         return False
 
 
-def is_float(s):
+def is_float(s: str) -> bool:
     """Check if string is actually float."""
     try:
         float(s)
@@ -29,7 +31,7 @@ def is_float(s):
         return False
 
 
-def is_None(s):
+def is_None(s: str) -> bool:
     """Check if string is actually None."""
     if s == "None":
         return True
@@ -37,7 +39,7 @@ def is_None(s):
         return False
 
 
-def is_datestr(s):
+def is_datestr(s: str) -> bool:
     """Check if string is actually a datestring."""
 
     try:
@@ -48,7 +50,7 @@ def is_datestr(s):
         return False
 
 
-def is_deltastr(s):
+def is_deltastr(s: str) -> bool:
     """Check if string is actually a Timedelta."""
 
     try:
@@ -63,7 +65,7 @@ def is_deltastr(s):
 class ParseKwargs(argparse.Action):
     """With can user can input dicts on CLI."""
 
-    def __call__(self, parser, namespace, values, option_string=None):
+    def __call__(self, parser, namespace, values, option_string=None) -> None:
         """With can user can input dicts on CLI."""
         setattr(namespace, self.dest, dict())
         for value in values:
@@ -81,7 +83,7 @@ class ParseKwargs(argparse.Action):
             elif is_None(value):
                 value = None
             elif is_deltastr(value):
-                value = pd.Timedelta(value)
+                value = pd.Timedelta(value).isoformat()
             elif is_datestr(value):
                 value = pd.Timestamp(value)
             getattr(namespace, self.dest)[key] = value
@@ -129,8 +131,6 @@ def main():
             "output_file"
         ] = f"output-results_{datetime.utcnow():%Y-%m-%dT%H%M:%SZ}.nc"
 
-    # log_file = args.kwargs["output_file"].replace(".nc", ".log")
-
     # this is for running plots at the same time as a simulation
     # Convert the string representation of the dictionary to an actual dictionary
     if "plots" in args.kwargs:
@@ -152,41 +152,22 @@ def main():
         print(plots_dict)
         return
 
-    # # Create a file handler
-    # file_handler = logging.FileHandler(log_file)
-
-    # # Create a formatter and add it to the handler
-    # formatter = logging.Formatter(
-    #     "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    # )
-    # file_handler.setFormatter(formatter)
-
     m = ptm.OpenDriftModel(**args.kwargs)  # , plots=plots)
 
     if args.dry_run:
 
         # run this to make sure everything is updated fully
         m.add_reader()
-        print(m.drift_model_config())
+        print(m.config.model_dump())
 
     else:
 
-        # # Add the handler to the logger
-        # m.logger.addHandler(file_handler)
-
-        # m.logger.info(f"filename: {args.kwargs['output_file']}")
-
         m.add_reader()
-        print(m.drift_model_config())
 
         m.seed()
         m.run()
 
-        print(m.outfile_name)
-
-    # # Remove the handler at the end of the loop
-    # m.logger.removeHandler(file_handler)
-    # file_handler.close()
+        print(m.files.output_file)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,25 @@
+standard_name_mapping_CIOFS:
+  mask_rho: "land_binary_mask"
+  wetdry_mask_rho: "land_binary_mask"
+  u_eastward: "x_sea_water_velocity"
+  v_northward: "y_sea_water_velocity"
+
+CIOFSOP:
+  name: "CIOFSOP"
+  loc_remote: "https://thredds.aoos.org/thredds/dodsC/AWS_CIOFS.nc"
+  temporal_resolution_str: "PT1H"
+  lon_min: -156.485291
+  lon_max: -148.925125
+  lat_min: 56.7004919
+  lat_max: 61.5247774
+  start_time_model: "2021-08-31T19:00:00"
+  oceanmodel_lon0_360: false
+  standard_name_mapping:
+    mask_rho: "land_binary_mask"
+    wetdry_mask_rho: "land_binary_mask"
+    u_eastward: "x_sea_water_velocity"
+    v_northward: "y_sea_water_velocity"
+  model_drop_vars:
+    - "wetdry_mask_psi"
+  dx: 100
+  kerchunk_func_str: "make_ciofs_kerchunk"

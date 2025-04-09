@@ -1,0 +1,789 @@
+"""Defines classes OpenDriftConfig, LeewayModelConfig, OceanDriftModelConfig, OpenOilModelConfig, and LarvalFishModelConfig."""
+
+# Standard library imports
+import logging
+
+from os import PathLike
+from pathlib import Path
+
+# Third-party imports
+from pydantic import Field, field_validator, model_validator
+from pydantic.fields import FieldInfo
+from typing_extensions import Self
+
+# Local imports
+from ...config_the_manager import TheManagerConfig
+from .enums import (
+    CoastlineActionEnum,
+    DiffusivityModelEnum,
+    DriftModelEnum,
+    DropletSizeDistributionEnum,
+    ModifyOilTypeJsonSchema,
+    ObjectTypeEnum,
+    OilTypeEnum,
+    PlotTypeEnum,
+    RadiusTypeEnum,
+    SeafloorActionEnum,
+)
+
+
+logger = logging.getLogger()
+
+# class OpenDriftConfig(BaseModel):
+class OpenDriftConfig(TheManagerConfig):
+    """Some of the parameters in this mirror OpenDriftSimulation clss in OpenDrift"""
+
+    drift_model: DriftModelEnum = Field(
+        default=DriftModelEnum.OceanDrift,  # .value,
+        description="Drift model to use for simulation.",
+    )
+
+    save_interpolator: bool = Field(
+        default=False, description="Whether to save the interpolator."
+    )
+
+    interpolator_filename: PathLike[str] | None = Field(
+        None,
+        description="Filename to save interpolator to or read interpolator from. Exclude suffix (which should be .pickle).",
+        json_schema_extra=dict(ptm_level=3),
+    )
+
+    export_variables: list[str] | None = Field(
+        default=None,
+        description="List of variables to export. Options available with `m.all_export_variables` for a given `drift_model`. "
+        "['lon', 'lat', 'ID', 'status', 'z'] will always be exported. Default of None means all possible variables are exported.",
+        json_schema_extra=dict(ptm_level=3),
+    )
+
+    plots: dict[str, dict] | str | None = Field(
+        default=None,
+        json_schema_extra=dict(ptm_level=1),
+        description="Dictionary of plots to generate using OpenDrift.",
+    )
+
+    radius: float = Field(
+        default=1000.0,
+        ge=0.0,
+        le=1000000,
+        description="Radius around each lon-lat pair, within which particles will be randomly seeded.",
+        json_schema_extra=dict(
+            ptm_level=2,
+            units="m",
+        ),
+    )
+
+    radius_type: RadiusTypeEnum = Field(
+        default=RadiusTypeEnum.gaussian,  # .value,
+        description="Radius type. Options: 'gaussian' or 'uniform'.",
+        json_schema_extra=dict(
+            ptm_level=3,
+        ),
+    )
+
+    # OpenDriftSimulation parameters
+
+    max_speed: float = Field(
+        default=5.0,
+        description="Typical maximum speed of elements, used to estimate reader buffer size",
+        gt=0,
+        title="Maximum speed",
+        json_schema_extra={
+            "units": "m/s",
+            "od_mapping": "drift:max_speed",
+            "ptm_level": 1,
+        },
+    )
+
+    use_auto_landmask: bool = Field(
+        default=True,
+        description="A built-in GSHHG global landmask is used if True, otherwise landmask is taken from reader or fallback value.",
+        title="Use Auto Landmask",
+        json_schema_extra={"od_mapping": "general:use_auto_landmask", "ptm_level": 3},
+    )
+
+    coastline_action: CoastlineActionEnum = Field(
+        default=CoastlineActionEnum.stranding,  # .value,
+        description="None means that objects may also move over land. stranding means that objects are deactivated if they hit land. previous means that objects will move back to the previous location if they hit land",
+        title="Coastline Action",
+        json_schema_extra={"od_mapping": "general:coastline_action", "ptm_level": 2},
+    )
+
+    current_uncertainty: float = Field(
+        default=0,
+        description="Add gaussian perturbation with this standard deviation to current components at each time step",
+        title="Current Uncertainty",
+        ge=0,
+        le=5,
+        json_schema_extra={
+            "units": "m/s",
+            "od_mapping": "drift:current_uncertainty",
+            "ptm_level": 2,
+        },
+    )
+
+    wind_uncertainty: float = Field(
+        default=0,
+        description="Add gaussian perturbation with this standard deviation to wind components at each time step.",
+        title="Wind Uncertainty",
+        ge=0,
+        le=5,
+        json_schema_extra={
+            "units": "m/s",
+            "od_mapping": "drift:wind_uncertainty",
+            "ptm_level": 2,
+        },
+    )
+
+    # add od_mapping to what should otherwise be in TheManagerConfig
+    horizontal_diffusivity: float | None = FieldInfo.merge_field_infos(
+        TheManagerConfig.model_fields["horizontal_diffusivity"],
+        Field(json_schema_extra=dict(od_mapping="drift:horizontal_diffusivity")),
+    )
+    stokes_drift: bool = FieldInfo.merge_field_infos(
+        TheManagerConfig.model_fields["stokes_drift"],
+        Field(json_schema_extra=dict(od_mapping="drift:stokes_drift")),
+    )
+    z: float | None = FieldInfo.merge_field_infos(
+        TheManagerConfig.model_fields["z"],
+        Field(json_schema_extra=dict(od_mapping="seed:z")),
+    )
+    number: int = FieldInfo.merge_field_infos(
+        TheManagerConfig.model_fields["number"],
+        Field(json_schema_extra=dict(od_mapping="seed:number")),
+    )
+    time_step: float = FieldInfo.merge_field_infos(
+        TheManagerConfig.model_fields["time_step"],
+        Field(json_schema_extra=dict(od_mapping="general:time_step_minutes")),
+    )
+    time_step_output: float = FieldInfo.merge_field_infos(
+        TheManagerConfig.model_fields["time_step_output"],
+        Field(json_schema_extra=dict(od_mapping="general:time_step_output_minutes")),
+    )
+
+    model_config = {
+        "validate_defaults": True,
+        "use_enum_values": True,
+        "extra": "forbid",
+    }
+
+    @classmethod
+    def model_json_schema(cls, **kwargs) -> dict:
+        """Override the method to customize the JSON schema to include customization of oil_type."""
+        return super().model_json_schema(
+            schema_generator=ModifyOilTypeJsonSchema, **kwargs
+        )
+
+    @model_validator(mode="after")
+    def check_interpolator_filename(self) -> Self:
+        """Check if interpolator_filename is set correctly."""
+        if self.interpolator_filename is not None and not self.use_cache:
+            raise ValueError(
+                "If interpolator_filename is input, use_cache must be True."
+            )
+        return self
+
+    @model_validator(mode="after")
+    def check_config_z_value(self) -> Self:
+        """Check if z is set correctly."""
+        if hasattr(self, "seed_seafloor"):
+            if not self.seed_seafloor and self.z is None:
+                raise ValueError("z needs a non-None value if seed_seafloor is False.")
+            if self.seed_seafloor and self.z is not None:
+                raise ValueError("z needs to be None if seed_seafloor is True.")
+        return self
+
+    @model_validator(mode="after")
+    def check_config_do3D(self) -> Self:
+        """Check if do3D is set correctly."""
+        if hasattr(self, "vertical_mixing"):
+            if not self.do3D and self.vertical_mixing:
+                raise ValueError(
+                    "If do3D is False, vertical_mixing must also be False."
+                )
+        return self
+
+    @model_validator(mode="after")
+    def setup_interpolator(self) -> Self:
+        """Setup interpolator."""
+
+        if self.use_cache:
+            if self.interpolator_filename is None:
+                import appdirs
+
+                cache_dir = Path(
+                    appdirs.user_cache_dir(
+                        appname="particle-tracking-manager",
+                        appauthor="axiom-data-science",
+                    )
+                )
+                cache_dir.mkdir(parents=True, exist_ok=True)
+                self.interpolator_filename = cache_dir / Path(
+                    f"{self.ocean_model}_interpolator"
+                ).with_suffix(".pickle")
+            else:
+                self.interpolator_filename = Path(
+                    self.interpolator_filename
+                ).with_suffix(".pickle")
+            self.save_interpolator = True
+
+            # # change interpolator_filename to string
+            # self.interpolator_filename = str(self.interpolator_filename)
+
+            logger.debug(f"Interpolator filename: {self.interpolator_filename}")
+
+        else:
+            self.save_interpolator = False
+            logger.debug("Interpolator will not be saved.")
+
+        return self
+
+    @property
+    def drop_vars(self) -> list[str]:
+        """Gather variables to drop based on PTMConfig and OpenDriftConfig."""
+
+        # set drop_vars initial values based on the PTM settings, then add to them for the specific model
+        drop_vars = (
+            self.ocean_model_config.model_drop_vars.copy()
+        )  # without copy this remembers drop_vars from other instances
+
+        # don't need w if not 3D movement
+        if not self.do3D:
+            drop_vars += ["w"]
+            logger.debug("Dropping vertical velocity (w) because do3D is False")
+        else:
+            logger.debug("Retaining vertical velocity (w) because do3D is True")
+
+        # don't need winds if stokes drift, wind drift, added wind_uncertainty, and vertical_mixing are off
+        # It's possible that winds aren't required for every OpenOil simulation but seems like
+        # they would usually be required and the cases are tricky to navigate so also skipping for that case.
+        if (
+            not self.stokes_drift
+            and (hasattr(self, "wind_drift_factor") and self.wind_drift_factor == 0)
+            and self.wind_uncertainty == 0
+            and self.drift_model != "OpenOil"
+            and not self.vertical_mixing
+        ):
+            drop_vars += ["Uwind", "Vwind", "Uwind_eastward", "Vwind_northward"]
+            logger.debug(
+                "Dropping wind variables because stokes_drift, wind_drift_factor, wind_uncertainty, and vertical_mixing are all off and drift_model is not 'OpenOil'"
+            )
+        else:
+            logger.debug(
+                "Retaining wind variables because stokes_drift, wind_drift_factor, wind_uncertainty, or vertical_mixing are on or drift_model is 'OpenOil'"
+            )
+
+        # only keep salt and temp for LarvalFish or OpenOil
+        if self.drift_model not in ["LarvalFish", "OpenOil"]:
+            drop_vars += ["salt", "temp"]
+            logger.debug(
+                "Dropping salt and temp variables because drift_model is not LarvalFish nor OpenOil"
+            )
+        else:
+            logger.debug(
+                "Retaining salt and temp variables because drift_model is LarvalFish or OpenOil"
+            )
+
+        # keep some ice variables for OpenOil (though later see if these are used)
+        if self.drift_model != "OpenOil":
+            drop_vars += ["aice", "uice_eastward", "vice_northward"]
+            logger.debug("Dropping ice variables because drift_model is not OpenOil")
+        else:
+            logger.debug("Retaining ice variables because drift_model is OpenOil")
+
+        # if using static masks, drop wetdry masks.
+        # if using wetdry masks, drop static masks.
+        # TODO: is standard_name_mapping working correctly?
+        if self.use_static_masks:
+            # TODO: Can the mapping include all possible mappings or does it need to be exact?
+            # standard_name_mapping.update({"mask_rho": "land_binary_mask"})
+            drop_vars += ["wetdry_mask_rho", "wetdry_mask_u", "wetdry_mask_v"]
+            logger.debug("Dropping wetdry masks because using static masks instead.")
+        else:
+            # standard_name_mapping.update({"wetdry_mask_rho": "land_binary_mask"})
+            drop_vars += ["mask_rho", "mask_u", "mask_v", "mask_psi"]
+            logger.debug(
+                "Dropping mask_rho, mask_u, mask_v, mask_psi because using wetdry masks instead."
+            )
+        return drop_vars
+
+    @model_validator(mode="after")
+    def check_plot_oil(self) -> Self:
+        """Check if oil budget plot is requested and drift model is OpenOil."""
+        if (
+            self.plots is not None
+            and isinstance(self.plots, dict)
+            and "oil" in self.plots.keys()
+        ):
+            if self.drift_model != "OpenOil":
+                raise ValueError(
+                    "Oil budget plot only available for OpenOil drift model"
+                )
+        return self
+
+    @model_validator(mode="after")
+    def check_plot_all(self) -> Self:
+        """Check if all plots are requested."""
+        if (
+            self.plots is not None
+            and isinstance(self.plots, dict)
+            and "all" in self.plots.keys()
+            and len(self.plots) > 1
+        ):
+            raise ValueError(
+                "If 'all' is specified for plots, it must be the only plot option."
+            )
+        return self
+
+    @model_validator(mode="after")
+    def check_plot_prefix_enum(self) -> Self:
+        """Check if plot keys start with a PlotTypeEnum."""
+        if self.plots is not None:
+            assert isinstance(self.plots, dict)
+            present_keys = [
+                key
+                for key in self.plots.keys()
+                for PlotType in PlotTypeEnum
+                if key.startswith(PlotType.value)
+            ]
+            random_keys = set(self.plots.keys()) - set(present_keys)
+            if len(random_keys) > 0:
+                raise ValueError(
+                    f"Plot keys must start with a PlotTypeEnum. The following keys do not: {random_keys}"
+                )
+        return self
+
+
+class LeewayModelConfig(OpenDriftConfig):
+    """Leeway model configuration for OpenDrift."""
+
+    drift_model: DriftModelEnum = DriftModelEnum.Leeway  # .value
+
+    object_type: ObjectTypeEnum = Field(
+        default=ObjectTypeEnum.PERSON_IN_WATER_UNKNOWN,  # .value,
+        description="Leeway object category for this simulation",
+        title="Object Type",
+        json_schema_extra={"od_mapping": "seed:object_type", "ptm_level": 1},
+    )
+
+    # modify default values
+    stokes_drift: bool = FieldInfo.merge_field_infos(
+        OpenDriftConfig.model_fields["stokes_drift"], Field(default=False)
+    )
+
+    @model_validator(mode="after")
+    def check_stokes_drift(self) -> Self:
+        """Check if stokes_drift is set to False for Leeway model."""
+        if self.stokes_drift:
+            raise ValueError("stokes_drift must be False with the Leeway drift model.")
+
+        return self
+
+    @model_validator(mode="after")
+    def check_do3D(self) -> Self:
+        """Check if do3D is set to False for Leeway model."""
+        if self.do3D:
+            raise ValueError("do3D must be False with the Leeway drift model.")
+
+        return self
+
+
+class OceanDriftModelConfig(OpenDriftConfig):
+    """Ocean drift model configuration for OpenDrift."""
+
+    drift_model: DriftModelEnum = DriftModelEnum.OceanDrift  # .value
+
+    seed_seafloor: bool = Field(
+        default=False,
+        description="Elements are seeded at seafloor, and seeding depth (z) is neglected.",
+        title="Seed Seafloor",
+        json_schema_extra={"od_mapping": "seed:seafloor", "ptm_level": 2},
+    )
+
+    diffusivitymodel: DiffusivityModelEnum = Field(
+        default=DiffusivityModelEnum.environment,  # .value,
+        description="Algorithm/source used for profile of vertical diffusivity. Environment means that diffusivity is acquired from readers or environment constants/fallback.",
+        title="Diffusivity model",
+        json_schema_extra={
+            "units": "seconds",
+            "od_mapping": "vertical_mixing:diffusivitymodel",
+            "ptm_level": 3,
+        },
+    )
+
+    mixed_layer_depth: float = Field(
+        default=50,
+        description="Fallback value for ocean_mixed_layer_thickness if not available from any reader",
+        title="Mixed Layer Depth",
+        ge=0.0,
+        json_schema_extra={
+            "units": "m",
+            "od_mapping": "environment:mixed_layer_depth",
+            "ptm_level": 3,
+        },
+    )
+
+    seafloor_action: SeafloorActionEnum = Field(
+        default=SeafloorActionEnum.lift_to_seafloor,  # .value,
+        description="deactivate: elements are deactivated; lift_to_seafloor: elements are lifted to seafloor level; previous: elements are moved back to previous position; none; seafloor is ignored.",
+        title="Seafloor Action",
+        json_schema_extra={
+            "od_mapping": "general:seafloor_action",
+            "ptm_level": 2,
+        },
+    )
+
+    wind_drift_depth: float | None = Field(
+        default=0.1,
+        description="The direct wind drift (windage) is linearly decreasing from the surface value (wind_drift_factor) until 0 at this depth.",
+        title="Wind Drift Depth",
+        ge=0,
+        le=10,
+        json_schema_extra={
+            "units": "meters",
+            "od_mapping": "drift:wind_drift_depth",
+            "ptm_level": 3,
+        },
+    )
+
+    vertical_mixing_timestep: float = Field(
+        default=60,
+        description="Time step used for inner loop of vertical mixing.",
+        title="Vertical Mixing Timestep",
+        ge=0.1,
+        le=3600,
+        json_schema_extra={
+            "units": "seconds",
+            "od_mapping": "vertical_mixing:timestep",
+            "ptm_level": 3,
+        },
+    )
+
+    wind_drift_factor: float = Field(
+        default=0.02,
+        description="Elements at surface are moved with this fraction of the wind vector, in addition to currents and Stokes drift",
+        title="Wind Drift Factor",
+        ge=0,
+        json_schema_extra={
+            "units": "1",
+            "od_mapping": "seed:wind_drift_factor",
+            "ptm_level": 2,
+        },
+    )
+
+    vertical_mixing: bool = Field(
+        default=False,
+        description="Activate vertical mixing scheme with inner loop",
+        title="Vertical Mixing",
+        json_schema_extra={
+            "od_mapping": "vertical_mixing:vertical_mixing",
+            "ptm_level": 2,
+        },
+    )
+
+
+class OpenOilModelConfig(OceanDriftModelConfig):
+    """OpenOil model configuration for OpenDrift."""
+
+    drift_model: DriftModelEnum = DriftModelEnum.OpenOil  # .value
+
+    oil_type: OilTypeEnum = Field(
+        default=OilTypeEnum("GENERIC BUNKER C"),  # .value,
+        description="Oil type to be used for the simulation, from the NOAA ADIOS database.",
+        title="Oil Type",
+        json_schema_extra={"od_mapping": "seed:oil_type", "ptm_level": 1},
+    )
+
+    m3_per_hour: float = Field(
+        default=1,
+        description="The amount (volume) of oil released per hour (or total amount if release is instantaneous)",
+        title="M3 Per Hour",
+        gt=0,
+        json_schema_extra={
+            "units": "m3 per hour",
+            "od_mapping": "seed:m3_per_hour",
+            "ptm_level": 1,
+        },
+    )
+
+    oil_film_thickness: float = Field(
+        default=0.001,
+        description="Seeding value of oil_film_thickness",
+        title="Oil Film Thickness",
+        json_schema_extra={
+            "units": "m",
+            "od_mapping": "seed:oil_film_thickness",
+            "ptm_level": 3,
+        },
+    )
+
+    droplet_size_distribution: DropletSizeDistributionEnum = Field(
+        default=DropletSizeDistributionEnum.uniform,  # .value,
+        description="Droplet size distribution used for subsea release.",
+        title="Droplet Size Distribution",
+        json_schema_extra={
+            "od_mapping": "seed:droplet_size_distribution",
+            "ptm_level": 3,
+        },
+    )
+
+    droplet_diameter_mu: float = Field(
+        default=0.001,
+        description="The mean diameter of oil droplet for a subsea release, used in normal/lognormal distributions.",
+        title="Droplet Diameter Mu",
+        ge=1e-08,
+        le=1,
+        json_schema_extra={
+            "units": "meters",
+            "od_mapping": "seed:droplet_diameter_mu",
+            "ptm_level": 3,
+        },
+    )
+
+    droplet_diameter_sigma: float = Field(
+        default=0.0005,
+        description="The standard deviation in diameter of oil droplet for a subsea release, used in normal/lognormal distributions.",
+        title="Droplet Diameter Sigma",
+        ge=1e-08,
+        le=1,
+        json_schema_extra={
+            "units": "meters",
+            "od_mapping": "seed:droplet_diameter_sigma",
+            "ptm_level": 3,
+        },
+    )
+
+    droplet_diameter_min_subsea: float = Field(
+        default=0.0005,
+        description="The minimum diameter of oil droplet for a subsea release, used in uniform distribution.",
+        title="Droplet Diameter Min Subsea",
+        ge=1e-08,
+        le=1,
+        json_schema_extra={
+            "units": "meters",
+            "od_mapping": "seed:droplet_diameter_min_subsea",
+            "ptm_level": 3,
+        },
+    )
+
+    droplet_diameter_max_subsea: float = Field(
+        default=0.005,
+        description="The maximum diameter of oil droplet for a subsea release, used in uniform distribution.",
+        title="Droplet Diameter Max Subsea",
+        ge=1e-08,
+        le=1,
+        json_schema_extra={
+            "units": "meters",
+            "od_mapping": "seed:droplet_diameter_max_subsea",
+            "ptm_level": 3,
+        },
+    )
+
+    emulsification: bool = Field(
+        default=True,
+        description="Surface oil is emulsified, i.e. water droplets are mixed into oil due to wave mixing, with resulting increase of viscosity.",
+        title="Emulsification",
+        json_schema_extra={
+            "od_mapping": "processes:emulsification",
+            "ptm_level": 2,
+        },
+    )
+
+    dispersion: bool = Field(
+        default=True,
+        description="Oil is removed from simulation (dispersed), if entrained as very small droplets.",
+        title="Dispersion",
+        json_schema_extra={
+            "od_mapping": "processes:dispersion",
+            "ptm_level": 2,
+        },
+    )
+
+    evaporation: bool = Field(
+        default=True,
+        description="Surface oil is evaporated.",
+        title="Evaporation",
+        json_schema_extra={
+            "od_mapping": "processes:evaporation",
+            "ptm_level": 2,
+        },
+    )
+
+    update_oilfilm_thickness: bool = Field(
+        default=False,
+        description="Oil film thickness is calculated at each time step. The alternative is that oil film thickness is kept constant with value provided at seeding.",
+        title="Update Oilfilm Thickness",
+        json_schema_extra={
+            "od_mapping": "processes:update_oilfilm_thickness",
+            "ptm_level": 2,
+        },
+    )
+
+    biodegradation: bool = Field(
+        default=False,
+        description="Oil mass is biodegraded (eaten by bacteria).",
+        title="Biodegradation",
+        json_schema_extra={
+            "od_mapping": "processes:biodegradation",
+            "ptm_level": 2,
+        },
+    )
+
+    # overwrite the defaults from OceanDriftModelConfig for a few inherited parameters,
+    # but don't want to have to repeat the full definition
+    current_uncertainty: float = FieldInfo.merge_field_infos(
+        OceanDriftModelConfig.model_fields["current_uncertainty"], Field(default=0.05)
+    )
+    wind_uncertainty: float = FieldInfo.merge_field_infos(
+        OceanDriftModelConfig.model_fields["wind_uncertainty"], Field(default=0.5)
+    )
+    wind_drift_factor: float = FieldInfo.merge_field_infos(
+        OceanDriftModelConfig.model_fields["wind_drift_factor"], Field(default=0.03)
+    )
+    # OpenDrift's default is for vertical_mixing to be True but that conflicts with do3D default of False
+    # vertical_mixing: bool = FieldInfo.merge_field_infos(OceanDriftModelConfig.model_fields['vertical_mixing'],
+    #                                                     Field(default=True))
+
+    # @property
+    # def oil_type_input(self) -> str | None:
+    #     """Save oil type input with both name and id"""
+    #     if self.drift_model == "OpenOil":
+    #         return self.oil_type
+    #     return None
+
+    # @model_validator(mode="after")
+    # def clean_oil_type_string(self) -> Self:
+    #     """remove id from oil_type string if needed"""
+    #     if self.drift_model == "OpenOil":
+    #         # only keep first part of string, which is the name of the oil
+    #         self.oil_type = self.oil_type_input.split(" (")[0]
+    #     return self
+
+    # @model_validator(mode="before")
+    # def validate_oil_type_by_id_from_name(cls, values):
+    #     """Validate oil type by id from name."""
+    #     name_id = values.get('oil_type')
+    #     if name_id not in OceanModelEnum.__members__:
+    #         raise ValueError(f"Invalid ocean model name_id: {name_id}")
+    #     return values
+
+    @field_validator("oil_type", mode="before")
+    def map_oil_type_to_id(cls, v):
+        """Map oil type to enum name (which is the oil type id)."""
+        if v in OilTypeEnum.__members__:  # Check if it matches a name
+            return OilTypeEnum[v]
+        for enum_member in OilTypeEnum:  # Check if it matches a value
+            if enum_member.value == v:
+                return enum_member
+        raise ValueError(f"Invalid value or name '{v}' for OilTypeEnum")
+
+
+class LarvalFishModelConfig(OceanDriftModelConfig):
+    """Larval fish model configuration for OpenDrift."""
+
+    drift_model: DriftModelEnum = DriftModelEnum.LarvalFish  # .value
+
+    diameter: float = Field(
+        default=0.0014,
+        description="Seeding value of diameter",
+        title="Diameter",
+        gt=0,
+        json_schema_extra={
+            "units": "m",
+            "od_mapping": "seed:diameter",
+            "ptm_level": 2,
+        },
+    )
+
+    neutral_buoyancy_salinity: float = Field(
+        default=31.25,
+        description="Seeding value of neutral_buoyancy_salinity",
+        title="Neutral Buoyancy Salinity",
+        gt=0,
+        json_schema_extra={
+            "units": "PSU",
+            "od_mapping": "seed:neutral_buoyancy_salinity",
+            "ptm_level": 2,
+        },
+    )
+
+    stage_fraction: float = Field(
+        default=0.0,
+        description="Seeding value of stage_fraction",
+        title="Stage Fraction",
+        json_schema_extra={
+            "units": "",
+            "od_mapping": "seed:stage_fraction",
+            "ptm_level": 2,
+        },
+    )
+
+    hatched: int = Field(
+        default=0,
+        description="Seeding value of hatched",
+        title="Hatched",
+        ge=0,
+        le=1,
+        json_schema_extra={
+            "units": "",
+            "od_mapping": "seed:hatched",
+            "ptm_level": 2,
+        },
+    )
+
+    length: float = Field(
+        default=0,
+        description="Seeding value of length",
+        title="Length",
+        gt=0,
+        json_schema_extra={
+            "units": "mm",
+            "od_mapping": "seed:length",
+            "ptm_level": 2,
+        },
+    )
+
+    weight: float = Field(
+        default=0.08,
+        description="Seeding value of weight",
+        title="Weight",
+        gt=0,
+        json_schema_extra={
+            "units": "mg",
+            "od_mapping": "seed:weight",
+            "ptm_level": 2,
+        },
+    )
+
+    # override inherited parameter defaults
+    vertical_mixing: bool = FieldInfo.merge_field_infos(
+        OceanDriftModelConfig.model_fields["vertical_mixing"], Field(default=True)
+    )
+    do3D: bool = FieldInfo.merge_field_infos(
+        TheManagerConfig.model_fields["do3D"], Field(default=True)
+    )
+
+    @model_validator(mode="after")
+    def check_do3D(self) -> Self:
+        """Check if do3D is set to True for LarvalFish model."""
+        if not self.do3D:
+            raise ValueError("do3D must be True with the LarvalFish drift model.")
+
+        return self
+
+    @model_validator(mode="after")
+    def check_vertical_mixing(self) -> Self:
+        """Check if vertical_mixing is set to True for LarvalFish model."""
+        if not self.vertical_mixing:
+            raise ValueError(
+                "vertical_mixing must be True with the LarvalFish drift model."
+            )
+
+        return self
+
+
+open_drift_mapper: dict[str, type[OpenDriftConfig]] = {
+    "OceanDrift": OceanDriftModelConfig,
+    "OpenOil": OpenOilModelConfig,
+    "LarvalFish": LarvalFishModelConfig,
+    "Leeway": LeewayModelConfig,
+}

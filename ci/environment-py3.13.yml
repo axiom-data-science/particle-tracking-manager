@@ -2,7 +2,7 @@ name: test_env_particle-tracking-manager
 channels:
   - conda-forge
 dependencies:
-  - python=3.11
+  - python=3.13
   ############## These will have to be adjusted to your specific project
   - adios_db
   - aiohttp

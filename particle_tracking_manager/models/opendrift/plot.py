@@ -59,7 +59,7 @@ def check_plots(which_plots, export_variables, drift_model):
             "linecolor",
             "color",
             "background",
-            "prop",
+            "variable",
             "markersize",
         ]
         missing_variables = []
@@ -159,8 +159,6 @@ def plot(plot_name, input_kwargs, o, filename, drift_model):
 
         o.plot(filename=filename, **kwargs)
 
-        logger.info(f"Saved spaghetti plot to {filename}")
-
     elif (
         "animation" in plot_name and "profile" not in plot_name
     ) or plot_name == "all":
@@ -195,7 +193,7 @@ def plot(plot_name, input_kwargs, o, filename, drift_model):
         # add input plot kwargs to the default kwargs
         kwargs = {}
         kwargs = {
-            "show_wind_and_current": False,
+            "show_wind_and_current": True,
             "show_watercontent_and_viscosity": True,
         }
         kwargs.update(input_kwargs)
@@ -210,9 +208,9 @@ def plot(plot_name, input_kwargs, o, filename, drift_model):
 
     elif "property" in plot_name:  # or plot_name == "all":
 
-        if not "prop" in input_kwargs:
+        if not "variable" in input_kwargs:
             raise ValueError(
-                "Property plot must be specified as 'prop' in the plots dictionary."
+                "Property plot must be specified as 'variable' in the plots dictionary."
             )
 
         filename += "_property"
@@ -226,6 +224,8 @@ def plot(plot_name, input_kwargs, o, filename, drift_model):
         filename = make_filename_string(plot_name, filename, kwargs)
 
         o.plot_property(filename=filename, **kwargs)
+
+    logger.info(f"Saved plot to {filename}")
 
     return filename
 
@@ -274,11 +274,14 @@ def make_plots_after_simulation(output_filepath, plots="all"):
     import opendrift as od
 
     # load output file
-    o = od.open(output_filepath)
+    o = od.open(str(output_filepath))
 
     # want output_file to not include any suffix
     output_filepath = (
-        output_filepath.replace(".nc", "").replace(".parquet", "").replace(".parq", "")
+        str(output_filepath)
+        .replace(".nc", "")
+        .replace(".parquet", "")
+        .replace(".parq", "")
     )
 
     # figure out drift_model

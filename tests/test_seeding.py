@@ -8,16 +8,7 @@ import pytest
 import particle_tracking_manager as ptm
 
 
-# def test_seeding_from_wkt():
-#     """Seed from WKT."""
-
-#     wkt = "POLYGON((-151.0 58.0, -150.0 58.0, -150.0 59.0, -151.0 59.0, -151.0 58.0))"
-
-#     m = ptm.OpenDriftModel(seed_flag="wkt", wkt=wkt, use_auto_landmask=True)
-#     m.seed()
-#     import pdb; pdb.set_trace()
-
-
+@pytest.mark.slow
 def test_seeding_from_geojson():
     """Seed from GeoJSON."""
 
@@ -28,26 +19,32 @@ def test_seeding_from_geojson():
             "type": "Polygon",
             "coordinates": [
                 [
-                    [-151.0, 58.0],
-                    [-150.0, 58.0],
-                    [-150.0, 59.0],
-                    [-151.0, 59.0],
-                    [-151.0, 58.0],
+                    [-90, 28.7],
+                    [-90, 28.8],
+                    [-90.1, 28.8],
+                    [-90.1, 28.7],
+                    [-90, 28.7],
                 ]
             ],
         },
     }
     m = ptm.OpenDriftModel(
         seed_flag="geojson",
-        start_time="2000-01-01",
         geojson=geo,
         use_auto_landmask=True,
         number=2,
+        steps=1,
+        lon=None,
+        lat=None,
+        ocean_model="TXLA",
+        ocean_model_local=False,
+        start_time=datetime(2009, 11, 19, 12, 0),
     )
+    m.add_reader()
     m.seed()
 
-    expected_lon = [-150.51787, -150.51787]
-    expected_lat = [58.25654, 58.25654]
+    expected_lon = [-90.06226, -90.06226]
+    expected_lat = [28.733112, 28.733112]
 
     assert np.allclose(m.initial_drifters.lon, expected_lon)
     assert np.allclose(m.initial_drifters.lat, expected_lat)

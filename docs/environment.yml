@@ -3,20 +3,21 @@ channels:
   - conda-forge
   - nodefaults
 dependencies:
-   - python=3.10
+   - python>=3.11
    # If your docs code examples depend on other packages add them here
    - adios_db
    - aiohttp
    - appdirs
    - cmocean
+   - fastparquet
    - numpy
    - xarray
+   - kerchunk==0.2.7
+   - numpydoc
+   - opendrift==1.13.0
    # These are needed for the docs themselves
    - furo
    - jupytext
-   - kerchunk
-   - numpydoc
-   - opendrift>=1.11.13
    - sphinx
    - sphinx_rtd_theme
    - ipython

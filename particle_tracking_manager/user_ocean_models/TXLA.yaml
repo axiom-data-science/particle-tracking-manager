@@ -1,0 +1,15 @@
+TXLA:
+  name: "TXLA"
+  loc_remote: null  # local address once downloaded using pooch has to be filled in
+  temporal_resolution_str: "PT1H"
+  lon_min: -93.04208536
+  lon_max: -88.0137713
+  lat_min: 27.48800453
+  lat_max: 30.62933797
+  start_time_model: "2009-11-19T12:00:00"
+  end_time_fixed: "2009-11-19T16:00:00"
+  oceanmodel_lon0_360: false
+  standard_name_mapping: {}
+  model_drop_vars: []
+  dx: 1000
+  kerchunk_func_str: null

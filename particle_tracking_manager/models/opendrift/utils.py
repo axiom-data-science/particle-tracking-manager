@@ -3,14 +3,100 @@
 # also installed ipython, h5py, cf_xarray, pynco
 # copied to /mnt/vault/ciofs/HINDCAST/ciofs_kerchunk_to2012.json
 
+# Standard library imports
+from datetime import datetime
 from pathlib import Path
 
+# Third-party imports
 import fsspec
+import pandas as pd
+import xarray as xr
 
 from kerchunk.combine import MultiZarrToZarr
 
 
-def make_ciofs_kerchunk(start, end, name):
+def narrow_dataset_to_simulation_time(
+    ds: xr.Dataset, start_time: datetime, end_time: datetime
+) -> xr.Dataset:
+    """Narrow the dataset to the simulation time."""
+    try:
+        units = ds.ocean_time.attrs["units"]
+    except KeyError:
+        units = ds.ocean_time.encoding["units"]
+    datestr = units.split("since ")[1]
+    units_date = pd.Timestamp(datestr)
+
+    # narrow model output to simulation time if possible before sending to Reader
+    if start_time is not None and end_time is not None:
+        dt_model = float(
+            ds.ocean_time[1] - ds.ocean_time[0]
+        )  # time step of the model output in seconds
+        # want to include the next ocean model output before the first drifter simulation time
+        # in case it starts before model times
+        start_time_num = (start_time - units_date).total_seconds()
+        if start_time_num > dt_model:
+            start_time_num -= dt_model
+        # want to include the next ocean model output after the last drifter simulation time
+        end_time_num = (end_time - units_date).total_seconds() + dt_model
+        ds = ds.sel(ocean_time=slice(start_time_num, end_time_num))
+
+        if len(ds.ocean_time) == 0:
+            raise ValueError(
+                "No model output left for simulation time. Check start_time and end_time."
+            )
+        if len(ds.ocean_time) == 1:
+            raise ValueError(
+                "Only 1 model output left for simulation time. Check start_time and end_time."
+            )
+    else:
+        raise ValueError(
+            "start_time and end_time must be set to narrow model output to simulation time"
+        )
+    return ds
+
+
+def apply_known_ocean_model_specific_changes(
+    ds: xr.Dataset, ocean_model: str, use_static_masks: bool
+) -> xr.Dataset:
+    """Apply ocean model specific changes to the dataset.
+
+    This includes renaming variables, adding variables, etc.
+    """
+    # For NWGOA, need to calculate wetdry mask from a variable
+    if ocean_model == "NWGOA" and not use_static_masks:
+        ds["wetdry_mask_rho"] = (~ds.zeta.isnull()).astype(int)
+
+    # For CIOFSOP need to rename u/v to have "East" and "North" in the variable names
+    # so they aren't rotated in the ROMS reader (the standard names have to be x/y not east/north)
+    elif ocean_model == "CIOFSOP":
+        ds = ds.rename_vars({"urot": "u_eastward", "vrot": "v_northward"})
+    return ds
+
+
+def apply_user_input_ocean_model_specific_changes(
+    ds: xr.Dataset, use_static_masks: bool
+) -> xr.Dataset:
+    """Apply user input ocean model specific changes to the dataset.
+
+    This includes renaming variables, adding variables, etc.
+
+    For now, assume user has dropped variables ahead of time.
+    """
+
+    # check for case that self.config.use_static_masks False (which is the default)
+    # but user input doesn't have wetdry masks
+    # then raise exception and tell user to set use_static_masks True
+    if "wetdry_mask_rho" not in ds.data_vars and not use_static_masks:
+        raise ValueError(
+            "User input does not have wetdry_mask_rho variable. Set use_static_masks True to use static masks instead."
+        )
+
+    # ds = ds.drop_vars(self.config.drop_vars, errors="ignore")
+
+    return ds
+
+
+def make_ciofs_kerchunk(start: str, end: str, name: str) -> dict:
     """_summary_
 
     Parameters
@@ -26,40 +112,56 @@ def make_ciofs_kerchunk(start, end, name):
         _description_
     """
 
-    if name == "ciofs":
+    if name == "CIOFS":
         output_dir_single_files = "/mnt/vault/ciofs/HINDCAST/.kerchunk_json"
-    elif name == "ciofs_fresh":
+    elif name == "CIOFSFRESH":
         output_dir_single_files = "/mnt/vault/ciofs/HINDCAST_FRESHWATER/.kerchunk_json"
-    elif name == "aws_ciofs_with_angle":
+    elif name == "CIOFSOP":
         output_dir_single_files = "/mnt/depot/data/packrat/prod/noaa/coops/ofs/aws_ciofs/processed/.kerchunk_json"
     else:
         raise ValueError(f"Name {name} not recognized")
 
     fs2 = fsspec.filesystem("")  # local file system to save final jsons to
 
-    # select the single file Jsons to combine
-    json_list = sorted(
-        fs2.glob(f"{output_dir_single_files}/*.json")
-    )  # combine single json files
+    if name in ["CIOFS", "CIOFSFRESH"]:
 
-    if name in ["ciofs", "ciofs_fresh"]:
-        json_list = sorted(
-            fs2.glob(f"{output_dir_single_files}/*.json")
-        )  # combine single json files
-        json_list = [
-            j for j in json_list if Path(j).stem >= start and Path(j).stem <= end
-        ]
-    elif name == "aws_ciofs_with_angle":
-        json_list = sorted(
-            fs2.glob(f"{output_dir_single_files}/ciofs_*.json")
-        )  # combine single json files
+        # base for matching
+        def base_str(a_time: str) -> str:
+            return f"{output_dir_single_files}/{a_time}_*.json"
+
+        date_format = "%Y_0%j"
+
+    elif name == "CIOFSOP":
+
+        # base for matching
+        def base_str(a_time: str) -> str:
+            return f"{output_dir_single_files}/ciofs_{a_time}-*.json"
+
+        date_format = "ciofs_%Y-%m-%d"
+    else:
+        raise ValueError(f"Name {name} not recognized")
+
+    # only glob start and end year files, order isn't important
+    json_list = fs2.glob(base_str(start[:4]))
+    if end[:4] != start[:4]:
+        json_list += fs2.glob(base_str(end[:4]))
+
+    # forward in time
+    if end > start:
         json_list = [
             j
             for j in json_list
-            if Path(j).stem.split("_")[1] >= start and Path(j).stem.split("_")[1] <= end
+            if datetime.strptime(Path(j).stem, date_format).isoformat() >= start
+            and datetime.strptime(Path(j).stem, date_format).isoformat() <= end
         ]
-    else:
-        raise ValueError(f"Name {name} not recognized")
+    # backward in time
+    elif end < start:
+        json_list = [
+            j
+            for j in json_list
+            if datetime.strptime(Path(j).stem, date_format).isoformat() <= start
+            and datetime.strptime(Path(j).stem, date_format).isoformat() >= end
+        ]
 
     if json_list == []:
         raise ValueError(
@@ -72,7 +174,7 @@ def make_ciofs_kerchunk(start, end, name):
     # `coo_map = {"ocean_time": "cf:ocean_time"}` is necessary so that both the time
     # values and units are read and interpreted instead of just the values.
 
-    def fix_fill_values(out):
+    def fix_fill_values(out: dict) -> dict:
         """Fix problem when fill_value and scara both equal 0.0.
 
         If the fill value and the scalar value are both 0, nan is filled instead. This fixes that.
@@ -83,7 +185,7 @@ def make_ciofs_kerchunk(start, end, name):
                 out[k] = out[k].replace('"fill_value":0.0', '"fill_value":"NaN"')
         return out
 
-    def postprocess(out):
+    def postprocess(out: dict) -> dict:
         """postprocess function to fix fill values"""
         out = fix_fill_values(out)
         return out
@@ -178,7 +280,7 @@ def make_ciofs_kerchunk(start, end, name):
     return out
 
 
-def make_nwgoa_kerchunk(start, end):
+def make_nwgoa_kerchunk(start: str, end: str, name: str = "NWGOA") -> dict:
     """_summary_
 
     Parameters
@@ -199,16 +301,35 @@ def make_nwgoa_kerchunk(start, end):
 
     fs2 = fsspec.filesystem("")  # local file system to save final jsons to
 
-    # select the single file Jsons to combine
-    json_list = sorted(
-        fs2.glob(f"{output_dir_single_files}/nwgoa*.json")
-    )  # combine single json files
-    json_list = [
-        j
-        for j in json_list
-        if Path(j).stem.split("nwgoa_")[1] >= start
-        and Path(j).stem.split("nwgoa_")[1] <= end
-    ]
+    # base for matching
+    def base_str(a_time: str) -> str:
+        # this is the base string for the json files
+        return f"{output_dir_single_files}/nwgoa_{a_time}-*.json"
+
+    date_format = "nwgoa_%Y-%m-%d"
+
+    # only glob start and end year files, order isn't important
+    json_list = fs2.glob(base_str(start[:4]))
+
+    if end[:4] != start[:4]:
+        json_list += fs2.glob(base_str(end[:4]))
+
+    # forward in time
+    if end > start:
+        json_list = [
+            j
+            for j in json_list
+            if datetime.strptime(Path(j).stem, date_format).isoformat() >= start
+            and datetime.strptime(Path(j).stem, date_format).isoformat() <= end
+        ]
+    # backward in time
+    elif end < start:
+        json_list = [
+            j
+            for j in json_list
+            if datetime.strptime(Path(j).stem, date_format).isoformat() <= start
+            and datetime.strptime(Path(j).stem, date_format).isoformat() >= end
+        ]
 
     if json_list == []:
         raise ValueError(
@@ -218,7 +339,7 @@ def make_nwgoa_kerchunk(start, end):
     # account for double compression
     # Look at individual variables in the files to see what needs to be changed with
     # h5dump -d ocean_time -p /mnt/depot/data/packrat/prod/aoos/nwgoa/processed/1999/nwgoa_1999-02-01.nc
-    def preprocess(refs):
+    def preprocess(refs: dict) -> dict:
         """preprocess function to fix fill values"""
         for k in list(refs):
             if k.endswith("/.zarray"):
@@ -234,13 +355,13 @@ def make_nwgoa_kerchunk(start, end):
 
     import zarr
 
-    def add_time_attr(out):
+    def add_time_attr(out: dict) -> dict:
         """add time attributes to the ocean_time variable"""
         out_ = zarr.open(out)
         out_.ocean_time.attrs["axis"] = "T"
         return out
 
-    def postprocess(out):
+    def postprocess(out: dict) -> dict:
         """postprocess function to fix fill values"""
         out = add_time_attr(out)
         return out

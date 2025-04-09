@@ -1,0 +1,32 @@
+standard_name_mapping:
+  mask_rho: "mask_rho"
+  wetdry_mask_rho: "wetdry_mask_rho"
+  u_eastward: "x_sea_water_velocity"
+  v_northward: "y_sea_water_velocity"
+  Uwind_eastward: "x_wind"
+  Vwind_northward: "y_wind"
+
+NWGOA:
+  name: "NWGOA"
+  loc_remote: "http://xpublish-nwgoa.srv.axds.co/datasets/nwgoa_all/zarr/"
+  temporal_resolution_str: "PT1H"
+  lon_min: -160.33053348
+  lon_max: -139.97812286
+  lat_min: 52.25975392
+  lat_max: 63.38656094
+  start_time_model: "1999-01-01T00:00:00"
+  end_time_fixed: "2009-01-01T00:00:00"
+  oceanmodel_lon0_360: true
+  standard_name_mapping:
+    mask_rho: "mask_rho"
+    wetdry_mask_rho: "wetdry_mask_rho"
+    u_eastward: "x_sea_water_velocity"
+    v_northward: "y_sea_water_velocity"
+    Uwind_eastward: "x_wind"
+    Vwind_northward: "y_wind"
+  model_drop_vars:
+    - "hice"
+    - "hraw"
+    - "snow_thick"
+  dx: 1500
+  kerchunk_func_str: "make_nwgoa_kerchunk"
