@@ -19,6 +19,7 @@ from opendrift.readers import reader_ROMS_native
 from ...ocean_model_registry import ocean_model_registry
 from ...the_manager import ParticleTrackingManager
 from .config_opendrift import OpenDriftConfig, open_drift_mapper
+from .enums import OilTypeEnum
 from .plot import make_plots
 from .utils import (
     apply_known_ocean_model_specific_changes,
@@ -253,6 +254,16 @@ class OpenDriftModel(ParticleTrackingManager):
         if self.config.do3D:
             self.o.set_config("drift:vertical_advection", True)
             logger.debug("do3D is True so turning on vertical advection.")
+
+        # # Assign oil_type for OpenOil simulation by id to be unique since oil names are not unique
+        # # WARHING! o.set_oiltype_by_id doesn't appear to actually set the oil type (only the name, not the config)
+        # if self.config.drift_model == "OpenOil":
+        #     oil_type_id = OilTypeEnum(self.config.oil_type).name
+        #     self.o.set_oiltype_by_id(oil_type_id)
+        #     logger.debug(f"Setting oil type {self.config.oil_type} by id {oil_type_id}.")
+
+        # TODO: what if I change the order of when config is updated with this method, then
+        # does it impact that i sed oil type by id?
 
     def _setup_for_simulation(self) -> None:
         """Set up the simulation.
