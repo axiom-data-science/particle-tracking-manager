@@ -2,7 +2,7 @@
 
 ## unreleased
 
-* fixed issue when setting `vertical_mixing` False for `OpenOil` wasn't passed through correctly
+* fixed issue when setting `vertical_mixing` False for `OpenOil` was not passed through correctly
 * now `do3d=False` and `vertical_mixing=True` can be set at the same time.
 * updated some config descriptions
 
