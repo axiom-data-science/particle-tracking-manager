@@ -192,15 +192,16 @@ class OpenDriftConfig(TheManagerConfig):
                 raise ValueError("z needs to be None if seed_seafloor is True.")
         return self
 
-    @model_validator(mode="after")
-    def check_config_do3D(self) -> Self:
-        """Check if do3D is set correctly."""
-        if hasattr(self, "vertical_mixing"):
-            if not self.do3D and self.vertical_mixing:
-                raise ValueError(
-                    "If do3D is False, vertical_mixing must also be False."
-                )
-        return self
+    # this is not true! For example, OpenOil has by default no vertical advection but yes vertical mixing
+    # @model_validator(mode="after")
+    # def check_config_do3D(self) -> Self:
+    #     """Check if do3D is set correctly."""
+    #     if hasattr(self, "vertical_mixing"):
+    #         if not self.do3D and self.vertical_mixing:
+    #             raise ValueError(
+    #                 "If do3D is False, vertical_mixing must also be False."
+    #             )
+    #     return self
 
     @model_validator(mode="after")
     def setup_interpolator(self) -> Self:
@@ -484,7 +485,7 @@ class OceanDriftModelConfig(OpenDriftConfig):
         description="Activate vertical mixing scheme with inner loop",
         title="Vertical Mixing",
         json_schema_extra={
-            "od_mapping": "vertical_mixing:vertical_mixing",
+            "od_mapping": "drift:vertical_mixing",
             "ptm_level": 2,
         },
     )
@@ -516,7 +517,7 @@ class OpenOilModelConfig(OceanDriftModelConfig):
 
     oil_film_thickness: float = Field(
         default=0.001,
-        description="Seeding value of oil_film_thickness",
+        description="Seeding value of oil_film_thickness. Values are calculated by OpenDrift starting from this initial value if `update_oilfilm_thickness==True`.",
         title="Oil Film Thickness",
         json_schema_extra={
             "units": "m",
@@ -619,7 +620,7 @@ class OpenOilModelConfig(OceanDriftModelConfig):
 
     update_oilfilm_thickness: bool = Field(
         default=False,
-        description="Oil film thickness is calculated at each time step. The alternative is that oil film thickness is kept constant with value provided at seeding.",
+        description="If True, Oil film thickness is calculated at each time step. If False, oil film thickness is kept constant with value provided at seeding.",
         title="Update Oilfilm Thickness",
         json_schema_extra={
             "od_mapping": "processes:update_oilfilm_thickness",
@@ -676,14 +677,30 @@ class OpenOilModelConfig(OceanDriftModelConfig):
     #     return values
 
     @field_validator("oil_type", mode="before")
-    def map_oil_type_to_id(cls, v):
-        """Map oil type to enum name (which is the oil type id)."""
-        if v in OilTypeEnum.__members__:  # Check if it matches a name
-            return OilTypeEnum[v]
-        for enum_member in OilTypeEnum:  # Check if it matches a value
+    def map_oil_type_to_name(cls, v):
+        """Map input oil type to enum value (which is the oil type name)."""
+        if (
+            v in OilTypeEnum.__members__
+        ):  # Check if it matches an Enum name (which is the oil type id)
+            return OilTypeEnum[v]  # then return name
+        for (
+            enum_member
+        ) in (
+            OilTypeEnum
+        ):  # Check if it matches an Enum value (which is the oil type name/title)
             if enum_member.value == v:
                 return enum_member
         raise ValueError(f"Invalid value or name '{v}' for OilTypeEnum")
+
+    # @field_validator("oil_type", mode="before")
+    # def map_oil_type_to_id(cls, v):
+    #     """Map input oil type to enum name (which is the oil type id)."""
+    #     if v in OilTypeEnum.__members__:  # Check if it matches an Enum name (which is the oil type id)
+    #         return v  # then return id
+    #     for enum_member in OilTypeEnum:  # Check if it matches an Enum value (which is the oil type name/title)
+    #         if enum_member.value == v:
+    #             return enum_member  # then return id
+    #     raise ValueError(f"Invalid value or name '{v}' for OilTypeEnum")
 
 
 class LarvalFishModelConfig(OceanDriftModelConfig):
@@ -693,7 +710,7 @@ class LarvalFishModelConfig(OceanDriftModelConfig):
 
     diameter: float = Field(
         default=0.0014,
-        description="Seeding value of diameter",
+        description="Seeding value of diameter. The diameter gives the egg diameter so must be used with `hatched=0`.",
         title="Diameter",
         gt=0,
         json_schema_extra={
@@ -705,7 +722,7 @@ class LarvalFishModelConfig(OceanDriftModelConfig):
 
     neutral_buoyancy_salinity: float = Field(
         default=31.25,
-        description="Seeding value of neutral_buoyancy_salinity",
+        description="Seeding value of neutral_buoyancy_salinity. This is a property of the egg so must be used with `hatched=0`.",
         title="Neutral Buoyancy Salinity",
         gt=0,
         json_schema_extra={
@@ -717,8 +734,10 @@ class LarvalFishModelConfig(OceanDriftModelConfig):
 
     stage_fraction: float = Field(
         default=0.0,
-        description="Seeding value of stage_fraction",
+        description="Seeding value of stage_fraction. stage_fraction tracks percentage of development time completed, from 0 to 1, where a value of 1 means the egg has hatched. If `hatched==1` then `stage_fraction` is ignored.",
         title="Stage Fraction",
+        ge=0,
+        le=1,
         json_schema_extra={
             "units": "",
             "od_mapping": "seed:stage_fraction",
@@ -728,7 +747,7 @@ class LarvalFishModelConfig(OceanDriftModelConfig):
 
     hatched: int = Field(
         default=0,
-        description="Seeding value of hatched",
+        description="Seeding value of hatched. 0 for eggs, 1 for larvae.",
         title="Hatched",
         ge=0,
         le=1,
@@ -741,7 +760,7 @@ class LarvalFishModelConfig(OceanDriftModelConfig):
 
     length: float = Field(
         default=0,
-        description="Seeding value of length",
+        description="Seeding value of length. This is not currently used.",
         title="Length",
         gt=0,
         json_schema_extra={
@@ -753,7 +772,7 @@ class LarvalFishModelConfig(OceanDriftModelConfig):
 
     weight: float = Field(
         default=0.08,
-        description="Seeding value of weight",
+        description="Seeding value of weight. This is the starting weight for larval fish, whenever they reach that stage.",
         title="Weight",
         gt=0,
         json_schema_extra={

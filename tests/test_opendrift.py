@@ -220,6 +220,19 @@ def test_OpenOil_oil_type_id():
     m = OpenDriftModel(drift_model="OpenOil", oil_type=oil_type, steps=1)
 
 
+@pytest.mark.slow
+def test_OpenOil_vertical_mixing():
+    m = ptm.OpenDriftModel(
+        drift_model="OpenOil",
+        steps=1,
+        oil_type="AD00010",
+        do3D=True,
+        vertical_mixing=False,
+    )
+    m.setup_for_simulation()
+    assert not m.o.get_config("drift:vertical_mixing")
+
+
 def test_wind_drift():
     """Make sure changed wind drift numbers comes through"""
 

@@ -1,5 +1,12 @@
 # What's New
 
+## unreleased
+
+* fixed issue when setting `vertical_mixing` False for `OpenOil` wasn't passed through correctly
+* now `do3d=False` and `vertical_mixing=True` can be set at the same time.
+* updated some config descriptions
+
+
 ## v0.12.1 (April 8, 2025)
 
 * Correction to `interpolator_filename` handling and improvement in testing.
