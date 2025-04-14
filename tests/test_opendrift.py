@@ -172,7 +172,7 @@ def test_LarvalFish_seeding():
 
 def test_OpenOil_seeding():
     """Make sure special seed parameters comes through"""
-    oil_type = "ABU SAFAH, ARAMCO"
+    oil_type = ("AD00010", "ABU SAFAH, ARAMCO")  # "AD00010"
     m = OpenDriftModel(
         drift_model="OpenOil",
         lon=-151,
@@ -210,7 +210,7 @@ def test_OpenOil_seeding():
     assert m.o._config["seed:droplet_diameter_sigma"]["value"] == 0.9
     # assert m.o.elements_scheduled.oil_film_thickness == 5
     assert (
-        m.o._config["seed:oil_type"]["value"] == oil_type
+        m.o._config["seed:oil_type"]["value"] == oil_type[1]
     )  # don't use ID because it is stripped off
 
 
@@ -231,6 +231,21 @@ def test_OpenOil_vertical_mixing():
     )
     m.setup_for_simulation()
     assert not m.o.get_config("drift:vertical_mixing")
+
+
+@pytest.mark.slow
+def test_OpenOil_all_oils_exact_match():
+    """Make sure that oils in PTM exactly match those in OpenDrift."""
+    import opendrift.models.openoil.adios.dirjs as dirjs
+
+    ptm_oils = {
+        oil["const"]: oil["title"]
+        for oil in ptm.OpenOilModelConfig.model_json_schema()["properties"]["oil_type"][
+            "oneOf"
+        ]
+    }
+    od_oils = {oil.id: oil.name for oil in dirjs.oils(limit=1300)}
+    assert ptm_oils == od_oils
 
 
 def test_wind_drift():

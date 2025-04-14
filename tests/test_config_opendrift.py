@@ -167,8 +167,7 @@ def test_OpenOil_json_schema():
     assert [
         True
         for item in schema["properties"]["oil_type"]["oneOf"]
-        if "{'const': 'AD00010', 'title': <OilTypeEnum.AD00010: 'ABU SAFAH, ARAMCO'>}"
-        == str(item)
+        if "{'const': 'AD00010', 'title': 'ABU SAFAH, ARAMCO'}" == str(item)
     ][0]
 
 
