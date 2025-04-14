@@ -219,14 +219,15 @@ class OpenDriftModel(ParticleTrackingManager):
                             "od_mapping"
                         ]
                         if od_key in self.o._config:  # and od_key is not None:
-                            # # want the string representation of only this one used
-                            # if od_key == "seed:oil_type":
-                            #     field_value = str(getattr(base_model, key))
-                            # # for others use value
-                            # else:
-                            field_value = getattr(base_model, key)
-                            if isinstance(field_value, Enum):
-                                field_value = field_value.value
+                            # want the string representation of only this one used
+                            if od_key == "seed:oil_type":
+                                # for oil_type, copy the oil name only into the OpenDrift config
+                                field_value = getattr(base_model, key)[1]
+                            # for others use value
+                            else:
+                                field_value = getattr(base_model, key)
+                                if isinstance(field_value, Enum):
+                                    field_value = field_value.value
                             self.o._config[od_key]["value"] = field_value
 
     def _modify_opendrift_model_object(self) -> None:

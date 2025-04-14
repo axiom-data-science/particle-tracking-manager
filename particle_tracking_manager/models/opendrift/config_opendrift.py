@@ -497,7 +497,7 @@ class OpenOilModelConfig(OceanDriftModelConfig):
     drift_model: DriftModelEnum = DriftModelEnum.OpenOil  # .value
 
     oil_type: OilTypeEnum = Field(
-        default=OilTypeEnum("GENERIC BUNKER C"),  # .value,
+        default=OilTypeEnum["AD04012"],  # .value,
         description="Oil type to be used for the simulation, from the NOAA ADIOS database.",
         title="Oil Type",
         json_schema_extra={"od_mapping": "seed:oil_type", "ptm_level": 1},
@@ -676,31 +676,36 @@ class OpenOilModelConfig(OceanDriftModelConfig):
     #         raise ValueError(f"Invalid ocean model name_id: {name_id}")
     #     return values
 
+    # @field_validator("oil_type", mode="before")
+    # def map_oil_type_to_name(cls, v):
+    #     """Map input oil type to enum value (which is the oil type name)."""
+    #     if (
+    #         v in OilTypeEnum.__members__
+    #     ):  # Check if it matches an Enum name (which is the oil type id)
+    #         import pdb; pdb.set_trace()
+    #         return OilTypeEnum.title  # then return title or label
+    #     for (
+    #         enum_member
+    #     ) in (
+    #         OilTypeEnum
+    #     ):  # Check if it matches an Enum value (which is the oil type (id, title) tuple)
+    #         if enum_member.value == v:
+    #             return enum_member.title # then return title or label
+    #     raise ValueError(f"Invalid value or name '{v}' for OilTypeEnum")
+
     @field_validator("oil_type", mode="before")
-    def map_oil_type_to_name(cls, v):
-        """Map input oil type to enum value (which is the oil type name)."""
+    def map_id_to_oil_type_tuple(cls, v):
+        """Map input oil type to enum name (which is the oil type id)."""
         if (
             v in OilTypeEnum.__members__
         ):  # Check if it matches an Enum name (which is the oil type id)
-            return OilTypeEnum[v]  # then return name
-        for (
-            enum_member
-        ) in (
-            OilTypeEnum
-        ):  # Check if it matches an Enum value (which is the oil type name/title)
-            if enum_member.value == v:
-                return enum_member
+            return OilTypeEnum[v]  # then return id
+        else:
+            return v  # return the original value
+        # for enum_member in OilTypeEnum:  # Check if it matches an Enum value (which is the oil type name/title)
+        #     if enum_member.value == v:
+        #         return enum_member  # then return id
         raise ValueError(f"Invalid value or name '{v}' for OilTypeEnum")
-
-    # @field_validator("oil_type", mode="before")
-    # def map_oil_type_to_id(cls, v):
-    #     """Map input oil type to enum name (which is the oil type id)."""
-    #     if v in OilTypeEnum.__members__:  # Check if it matches an Enum name (which is the oil type id)
-    #         return v  # then return id
-    #     for enum_member in OilTypeEnum:  # Check if it matches an Enum value (which is the oil type name/title)
-    #         if enum_member.value == v:
-    #             return enum_member  # then return id
-    #     raise ValueError(f"Invalid value or name '{v}' for OilTypeEnum")
 
 
 class LarvalFishModelConfig(OceanDriftModelConfig):

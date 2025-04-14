@@ -211,7 +211,7 @@ There are also specific seeding options for this model:
 
 ```{code-cell} ipython3
 m = ptm.OpenDriftModel(drift_model="OpenOil", lon=-89.85, lat=28.08, number=10, steps=45,
-                       z=-10, do3D=True, oil_type='Cook Inlet [2003]',
+                       z=-10, do3D=True, oil_type=('EC00561', 'Cook Inlet [2003]'),
                        start_time="2009-11-19T12:00", ocean_model="TXLA",
                        ocean_model_local=False,
                        )
@@ -226,7 +226,7 @@ List available oil types from NOAA's ADIOS database (or check the database onlin
 ptm.OpenOilModelConfig.model_json_schema()["$defs"]["OilTypeEnum"]["enum"]
 ```
 
-You can instead refer to the `oil_type` by its id, for example in this case `oil_tye='EC00561'` would work.
+Note that `oil_type` was input as a tuple containing the oil id and name, in order to disambiguate the oils in ADIOS. You can instead refer to the `oil_type` by its id, for example in this case `oil_tye='EC00561'` would work.
 
 The configuration parameters for this simulation are:
 
