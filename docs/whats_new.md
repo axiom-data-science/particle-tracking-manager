@@ -6,6 +6,8 @@
 * now `do3d=False` and `vertical_mixing=True` can be set at the same time.
 * updated some config descriptions
 * found error in `OilTypeEnum` leading to oil_types with duplicate labels not being separated out in the Enum. This is fixed. Now oil should be input with either the ID from ADIOS or with the syntax `(ID, label)`. Once in the configuration, it will be presented as only `label` since that is how `OpenDrift` accepts `oil_type`.
+* `OilTypeEnum` was reordered so the first 5 oils are most relevant to Alaska work.
+* Reverted `time_step` units back to seconds from minutes. It was being mapped unexpectedly in `OpenDrift` so using seconds is better.
 
 
 ## v0.12.1 (April 8, 2025)

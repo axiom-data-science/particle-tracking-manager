@@ -38,14 +38,14 @@ def test_time_calculations():
 
     # all times defined but consistently
     # duration is 1 time step
-    ts, duration = 5, "P0DT0H5M0S"
+    ts, duration = 5 * 60, "P0DT0H5M0S"
     start_time = "2022-01-01 12:00:00"
     m = TheManagerConfig(
         time_step=ts,
         steps=1,
         duration=duration,
         start_time=start_time,
-        end_time=pd.Timestamp(start_time) + pd.Timedelta(minutes=ts),
+        end_time=pd.Timestamp(start_time) + pd.Timedelta(seconds=ts),
     )
 
     m = TheManagerConfig(steps=1, end_time="2022-01-01 12:00:00", start_time=None)
@@ -177,13 +177,13 @@ def test_misc_parameters():
         start_time="2022-01-01",
         horizontal_diffusivity=1,
         number=100,
-        time_step=5,
+        time_step=50,
         stokes_drift=False,
     )
 
     assert m.horizontal_diffusivity == 1
     assert m.number == 100
-    assert m.time_step == 5
+    assert m.time_step == 50
     assert m.stokes_drift == False
 
 
