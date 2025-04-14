@@ -151,14 +151,16 @@ class OpenDriftConfig(TheManagerConfig):
         TheManagerConfig.model_fields["number"],
         Field(json_schema_extra=dict(od_mapping="seed:number")),
     )
-    time_step: float = FieldInfo.merge_field_infos(
-        TheManagerConfig.model_fields["time_step"],
-        Field(json_schema_extra=dict(od_mapping="general:time_step_minutes")),
-    )
-    time_step_output: float = FieldInfo.merge_field_infos(
-        TheManagerConfig.model_fields["time_step_output"],
-        Field(json_schema_extra=dict(od_mapping="general:time_step_output_minutes")),
-    )
+    # These don't properly map the way I expect in OpenDrift. It is better to leave time_step as not
+    # associated with an `od_mapping` to avoid confusion.
+    # time_step: float = FieldInfo.merge_field_infos(
+    #     TheManagerConfig.model_fields["time_step"],
+    #     Field(json_schema_extra=dict(od_mapping="general:time_step_minutes")),
+    # )
+    # time_step_output: float = FieldInfo.merge_field_infos(
+    #     TheManagerConfig.model_fields["time_step_output"],
+    #     Field(json_schema_extra=dict(od_mapping="general:time_step_output_minutes")),
+    # )
 
     model_config = {
         "validate_defaults": True,

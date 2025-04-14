@@ -66,7 +66,7 @@ def test_run_parquet():
         steps=2,
         output_format="parquet",
         ocean_model="TXLA",
-        ocean_model_local=False
+        ocean_model_local=False,
     )
     manager.run_all()
 
@@ -78,6 +78,8 @@ def test_run_netcdf_and_plot():
     """Set up and run."""
 
     import tempfile
+
+    ts = 6 * 60  # 6 minutes in seconds
 
     seeding_kwargs = dict(lon=-90, lat=28.7, number=1, start_time="2009-11-19T12:00:00")
     with tempfile.NamedTemporaryFile(delete=False) as temp_file:
@@ -92,7 +94,8 @@ def test_run_netcdf_and_plot():
             ocean_model_local=False,
             plots={
                 "all": {},
-            }
+            },
+            time_step=ts,
         )
         manager.run_all()
 
@@ -106,3 +109,12 @@ def test_run_netcdf_and_plot():
             data = pickle.load(file)
         assert "spl_x" in data
         assert "spl_y" in data
+
+    # check time_step across access points
+    assert (
+        # m.o._config["general:time_step_minutes"]["value"]  # this is not correct, don't know why
+        manager.o.time_step.total_seconds()
+        == ts
+        == manager.config.time_step
+        # == m.o.get_configspec()["general:time_step_minutes"]["value"]  # this is not correct, don't know why
+    )

@@ -122,18 +122,18 @@ class TheManagerConfig(BaseModel):
         True, description="Run forward in time.", json_schema_extra=dict(ptm_level=2)
     )
     time_step: float = Field(
-        5,
+        300,
         ge=0.01,
         le=1440,
-        description="Interval between particles updates, in minutes.",
-        json_schema_extra=dict(ptm_level=3, units="minutes"),
+        description="Interval between particles updates, in seconds.",
+        json_schema_extra=dict(ptm_level=3, units="seconds"),
     )
     time_step_output: float = Field(
-        60,
+        3600,
         ge=1,
-        le=1440,
+        le=86400,
         description="Time step at which element properties are stored and eventually written to file. This must be larger than the calculation time step, and be an integer multiple of this.",
-        json_schema_extra=dict(ptm_level=3, units="minutes"),
+        json_schema_extra=dict(ptm_level=3, units="seconds"),
     )
     steps: int | None = Field(
         None,
@@ -275,7 +275,7 @@ class TheManagerConfig(BaseModel):
             assert self.end_time is not None
             duration = pd.Timedelta(abs(self.end_time - self.start_time)).isoformat()
             steps = int(
-                abs(self.end_time - self.start_time) / timedelta(minutes=self.time_step)
+                abs(self.end_time - self.start_time) / timedelta(seconds=self.time_step)
             )
             if duration != self.duration:
                 raise ValueError(
@@ -310,13 +310,13 @@ class TheManagerConfig(BaseModel):
         if self.steps is None:
             if self.duration is not None:
                 self.steps = int(
-                    pd.Timedelta(self.duration) / pd.Timedelta(minutes=self.time_step)
+                    pd.Timedelta(self.duration) / pd.Timedelta(seconds=self.time_step)
                 )
                 logger.debug(f"Setting steps to {self.steps} based on duration.")
             elif self.end_time is not None and self.start_time is not None:
                 self.steps = int(
                     abs(self.end_time - self.start_time)
-                    / timedelta(minutes=self.time_step)
+                    / timedelta(seconds=self.time_step)
                 )
                 logger.debug(
                     f"Setting steps to {self.steps} based on end_time and start_time."
@@ -336,10 +336,10 @@ class TheManagerConfig(BaseModel):
                 )
             elif self.steps is not None:
                 self.duration = pd.Timedelta(
-                    self.steps * timedelta(minutes=self.time_step)
+                    self.steps * timedelta(seconds=self.time_step)
                 ).isoformat()
                 # # convert to ISO 8601 string
-                # self.duration = (self.steps * pd.Timedelta(minutes=self.time_step)).isoformat()
+                # self.duration = (self.steps * pd.Timedelta(seconds=self.time_step)).isoformat()
                 logger.debug(f"Setting duration to {self.duration} based on steps.")
             else:
                 raise ValueError("duration has not been calculated")
@@ -347,7 +347,7 @@ class TheManagerConfig(BaseModel):
         if self.end_time is None:
             if self.steps is not None and self.start_time is not None:
                 self.end_time = self.start_time + self.timedir * self.steps * timedelta(
-                    minutes=self.time_step
+                    seconds=self.time_step
                 )
                 logger.debug(
                     f"Setting end_time to {self.end_time} based on start_time and steps."
@@ -363,7 +363,7 @@ class TheManagerConfig(BaseModel):
         if self.start_time is None:
             if self.end_time is not None and self.steps is not None:
                 self.start_time = self.end_time - self.timedir * self.steps * timedelta(
-                    minutes=self.time_step
+                    seconds=self.time_step
                 )
                 logger.debug(
                     f"Setting start_time to {self.start_time} based on end_time and steps."
