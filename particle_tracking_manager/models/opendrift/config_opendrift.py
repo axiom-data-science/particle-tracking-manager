@@ -35,7 +35,7 @@ class OpenDriftConfig(TheManagerConfig):
 
     drift_model: DriftModelEnum = Field(
         default=DriftModelEnum.OceanDrift,  # .value,
-        description="Drift model to use for simulation.",
+        description="Scenario to use for simulation.",
     )
 
     save_interpolator: bool = Field(
@@ -65,7 +65,7 @@ class OpenDriftConfig(TheManagerConfig):
         default=1000.0,
         ge=0.0,
         le=1000000,
-        description="Radius around each lon-lat pair, within which particles will be randomly seeded.",
+        description="Radius around each lon-lat pair, within which particles will be seeded according to `radius_type`.",
         json_schema_extra=dict(
             ptm_level=2,
             units="m",
@@ -74,7 +74,7 @@ class OpenDriftConfig(TheManagerConfig):
 
     radius_type: RadiusTypeEnum = Field(
         default=RadiusTypeEnum.gaussian,  # .value,
-        description="Radius type. Options: 'gaussian' or 'uniform'.",
+        description="Distribution for seeding particles around location. Options: 'gaussian' or 'uniform'.",
         json_schema_extra=dict(
             ptm_level=3,
         ),
@@ -96,14 +96,14 @@ class OpenDriftConfig(TheManagerConfig):
 
     use_auto_landmask: bool = Field(
         default=True,
-        description="A built-in GSHHG global landmask is used if True, otherwise landmask is taken from reader or fallback value.",
+        description="If True, use a global-scale land mask from https://www.generic-mapping-tools.org/remote-datasets/earth-mask.html. Dataset scale selected is `auto`. If False, use the land mask from the ocean model.",
         title="Use Auto Landmask",
         json_schema_extra={"od_mapping": "general:use_auto_landmask", "ptm_level": 3},
     )
 
     coastline_action: CoastlineActionEnum = Field(
         default=CoastlineActionEnum.stranding,  # .value,
-        description="None means that objects may also move over land. stranding means that objects are deactivated if they hit land. previous means that objects will move back to the previous location if they hit land",
+        description="This controls particle behavior at the coastline. Use `previous` for a particle to move back to its previous location if it hits land. Use `stranding` to have a particle stick (that is, become deactivated) where it interacts with land. With None, objects may also move over land.",
         title="Coastline Action",
         json_schema_extra={"od_mapping": "general:coastline_action", "ptm_level": 2},
     )
@@ -372,7 +372,7 @@ class LeewayModelConfig(OpenDriftConfig):
 
     object_type: ObjectTypeEnum = Field(
         default=ObjectTypeEnum("Person-in-water (PIW), unknown state (mean values)"),
-        description="Leeway object category for this simulation",
+        description="Leeway object category for this simulation. List is originally from USCG technical reports. More details here: https://github.com/OpenDrift/opendrift/blob/master/opendrift/models/OBJECTPROP.DAT.",
         title="Object Type",
         json_schema_extra={"od_mapping": "seed:object_type", "ptm_level": 1},
     )
@@ -406,7 +406,7 @@ class OceanDriftModelConfig(OpenDriftConfig):
 
     seed_seafloor: bool = Field(
         default=False,
-        description="Elements are seeded at seafloor, and seeding depth (z) is neglected.",
+        description="Elements are seeded at seafloor, and seeding depth (z) is neglected and must be None.",
         title="Seed Seafloor",
         json_schema_extra={"od_mapping": "seed:seafloor", "ptm_level": 2},
     )
@@ -424,7 +424,7 @@ class OceanDriftModelConfig(OpenDriftConfig):
 
     mixed_layer_depth: float = Field(
         default=50,
-        description="Fallback value for ocean_mixed_layer_thickness if not available from any reader",
+        description="mixed_layer_depth controls how deep the vertical diffusivity profile reaches. This sets the fallback value for ocean_mixed_layer_thickness if not available from any reader.",
         title="Mixed Layer Depth",
         ge=0.0,
         json_schema_extra={
@@ -436,7 +436,7 @@ class OceanDriftModelConfig(OpenDriftConfig):
 
     seafloor_action: SeafloorActionEnum = Field(
         default=SeafloorActionEnum.lift_to_seafloor,  # .value,
-        description="deactivate: elements are deactivated; lift_to_seafloor: elements are lifted to seafloor level; previous: elements are moved back to previous position; none; seafloor is ignored.",
+        description="This controls particle behavior at the seafloor. Use `deactivate` to stick particles to the seafloor at the point of interaction. Use `lift_to_seafloor` to elevate particles up to seabed if below. User `previous` to move elements back to previous position. Use None to ignore seafloor.",
         title="Seafloor Action",
         json_schema_extra={
             "od_mapping": "general:seafloor_action",
@@ -459,7 +459,7 @@ class OceanDriftModelConfig(OpenDriftConfig):
 
     vertical_mixing_timestep: float = Field(
         default=60,
-        description="Time step used for inner loop of vertical mixing.",
+        description="Time step used for inner (fast) loop of the vertical mixing model. Set this smaller to increase frequency of vertical mixing calculation; number of loops is calculated as int(self.time_step/vertical_mixing_timestep) so vertical_mixing_timestep must be smaller than time_step.",
         title="Vertical Mixing Timestep",
         ge=0.1,
         le=3600,
@@ -472,7 +472,7 @@ class OceanDriftModelConfig(OpenDriftConfig):
 
     wind_drift_factor: float = Field(
         default=0.02,
-        description="Elements at surface are moved with this fraction of the wind vector, in addition to currents and Stokes drift",
+        description="Elements at surface are moved with this fraction of the wind vector, in addition to currents and Stokes drift.",
         title="Wind Drift Factor",
         ge=0,
         json_schema_extra={
@@ -484,7 +484,7 @@ class OceanDriftModelConfig(OpenDriftConfig):
 
     vertical_mixing: bool = Field(
         default=False,
-        description="Activate vertical mixing scheme with inner loop",
+        description="Activate vertical mixing scheme. Vertical mixing includes movement due to buoyancy and turbulent mixing.",
         title="Vertical Mixing",
         json_schema_extra={
             "od_mapping": "drift:vertical_mixing",
@@ -507,7 +507,7 @@ class OpenOilModelConfig(OceanDriftModelConfig):
 
     m3_per_hour: float = Field(
         default=1,
-        description="The amount (volume) of oil released per hour (or total amount if release is instantaneous)",
+        description="The amount (volume) of oil released per hour (or total amount if release is instantaneous).",
         title="M3 Per Hour",
         gt=0,
         json_schema_extra={
@@ -592,7 +592,7 @@ class OpenOilModelConfig(OceanDriftModelConfig):
 
     emulsification: bool = Field(
         default=True,
-        description="Surface oil is emulsified, i.e. water droplets are mixed into oil due to wave mixing, with resulting increase of viscosity.",
+        description="If True, surface oil is emulsified, i.e. water droplets are mixed into oil due to wave mixing, with resulting increase of viscosity.",
         title="Emulsification",
         json_schema_extra={
             "od_mapping": "processes:emulsification",
@@ -602,7 +602,7 @@ class OpenOilModelConfig(OceanDriftModelConfig):
 
     dispersion: bool = Field(
         default=True,
-        description="Oil is removed from simulation (dispersed), if entrained as very small droplets.",
+        description="If True, oil is removed from simulation (dispersed), if entrained as very small droplets.",
         title="Dispersion",
         json_schema_extra={
             "od_mapping": "processes:dispersion",
@@ -612,7 +612,7 @@ class OpenOilModelConfig(OceanDriftModelConfig):
 
     evaporation: bool = Field(
         default=True,
-        description="Surface oil is evaporated.",
+        description="If True, surface oil is evaporated.",
         title="Evaporation",
         json_schema_extra={
             "od_mapping": "processes:evaporation",
@@ -632,7 +632,7 @@ class OpenOilModelConfig(OceanDriftModelConfig):
 
     biodegradation: bool = Field(
         default=False,
-        description="Oil mass is biodegraded (eaten by bacteria).",
+        description="If True, oil mass is biodegraded (eaten by bacteria).",
         title="Biodegradation",
         json_schema_extra={
             "od_mapping": "processes:biodegradation",
