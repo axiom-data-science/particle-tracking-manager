@@ -1,6 +1,6 @@
 # What's New
 
-## unreleased
+## v0.12.2 (April 15, 2025)
 
 * fixed issue when setting `vertical_mixing` False for `OpenOil` was not passed through correctly
 * now `do3d=False` and `vertical_mixing=True` can be set at the same time.
