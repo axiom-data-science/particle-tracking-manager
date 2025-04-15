@@ -58,13 +58,30 @@ def test_LarvalFish_disallowed_settings():
     LarvalFish has to always be 3D with vertical_mixing on.
     """
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValidationError):
         m = LarvalFishModelConfig(
             drift_model="LarvalFish", vertical_mixing=False, steps=1
         )
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValidationError):
         m = LarvalFishModelConfig(drift_model="LarvalFish", do3D=False, steps=1)
+
+
+def test_LarvalFish_hatched_stage_fraction():
+    """If hatched==1, stage_fraction must be None."""
+
+    with pytest.raises(ValidationError):
+        m = LarvalFishModelConfig(
+            drift_model="LarvalFish", steps=1, hatched=1, stage_fraction=0.5
+        )
+
+    m = LarvalFishModelConfig(
+        drift_model="LarvalFish", steps=1, hatched=1, stage_fraction=None
+    )
+
+    m = LarvalFishModelConfig(
+        drift_model="LarvalFish", steps=1, hatched=0, stage_fraction=0.5
+    )
 
 
 ## Leeway ##
