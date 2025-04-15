@@ -1,6 +1,6 @@
 # What's New
 
-## unreleased
+## v0.12.2 (April 15, 2025)
 
 * fixed issue when setting `vertical_mixing` False for `OpenOil` was not passed through correctly
 * now `do3d=False` and `vertical_mixing=True` can be set at the same time.
@@ -9,6 +9,9 @@
 * `OilTypeEnum` was reordered so the first 5 oils are most relevant to Alaska work.
 * Reverted `time_step` units back to seconds from minutes. It was being mapped unexpectedly in `OpenDrift` so using seconds is better.
 * Updated list of options for `object_type` and it is now fully consistent with that in `OpenDrift`.
+* Now enforce that for Leeway model if `hatched==1` then `stage_fraction=None`, for seeding.
+* Updated descriptions in a lot of parameters in `config_the_manager.py` and `config_opendrift.py`.
+* Updated defaults in config classes.
 
 
 ## v0.12.1 (April 8, 2025)

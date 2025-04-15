@@ -110,7 +110,7 @@ class TheManagerConfig(BaseModel):
     )
     start_time: datetime | None = Field(
         datetime(2022, 1, 1),
-        description="Start time for drifter simulation.",
+        description="Start time for drifter simulation. start_time or end_time must be input.",
         json_schema_extra=dict(ptm_level=1),
     )
     start_time_end: datetime | None = Field(
@@ -149,7 +149,7 @@ class TheManagerConfig(BaseModel):
     )
     end_time: datetime | None = Field(
         None,
-        description="The end of the simulation. steps, end_time, or duration must be input by user.",
+        description="The end of the simulation. steps, end_time, or duration must be input by user. start_time or end_time must be input.",
         json_schema_extra=dict(ptm_level=1),
     )
     # OceanModelEnum was created dynamically and will trigger an issue with mypy, so we suppress it
@@ -170,7 +170,7 @@ class TheManagerConfig(BaseModel):
     )
     use_static_masks: bool = Field(
         True,
-        description="Set to True to use static masks for known models instead of wetdry masks.",
+        description="If False, use static ocean model land masks. This saves some computation time but since the available ocean models run in wet/dry mode, it is inconsistent with the ROMS output files in some places since the drifters may be allowed (due to the static mask) to enter a cell they wouldn't otherwise. However, it doesn't make much of a difference for simulations that aren't in the tidal flats. Use the time-varying wet/dry masks (set to True) if drifters are expected to run in the tidal flats. This costs some more computational time but is fully consistent with the ROMS output files.",
         json_schema_extra=dict(ptm_level=3),
     )
     output_file: PathLike[str] | None = Field(
@@ -197,7 +197,7 @@ class TheManagerConfig(BaseModel):
 
     horizontal_diffusivity: float | None = Field(
         default=None,
-        description="Add horizontal diffusivity (random walk)",
+        description="Add horizontal diffusivity (random walk). For known ocean models, the value is calculated as the approximate horizontal grid resolution for the selected ocean model times an estimate of the scale of sub-gridscale velocity of 0.1 m/s.",
         title="Horizontal Diffusivity",
         ge=0,
         le=100000,
@@ -379,13 +379,11 @@ class TheManagerConfig(BaseModel):
         return self
 
     @computed_field
-    # @property
     def ocean_model_config(self) -> OceanModelConfig:
         """Select ocean model config based on ocean_model."""
         return ocean_model_registry.get(self.ocean_model)
 
     @computed_field
-    # @property
     def ocean_model_simulation(self) -> OceanModelSimulation:
         """Select ocean model simulation based on ocean_model."""
         inputs = {

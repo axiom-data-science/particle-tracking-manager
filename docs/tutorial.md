@@ -164,7 +164,7 @@ m.o.elements
 
 ```{code-cell} ipython3
 m = ptm.OpenDriftModel(drift_model="LarvalFish", lon=-89.85, lat=28.8, number=10, steps=45,
-                       do3D=True, seed_seafloor=True, hatched=1,
+                       do3D=True, seed_seafloor=True, hatched=1, stage_fraction=None,
                        z=None,
                        ocean_model="TXLA",
                        start_time="2009-11-19T12:00",

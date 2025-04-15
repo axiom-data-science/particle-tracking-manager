@@ -2,7 +2,9 @@ import importlib
 import os
 import tempfile
 
+from datetime import datetime
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 import yaml
@@ -249,3 +251,23 @@ def test_onthefly_registry():
 
     # now new config is in the registry
     assert ocean_model_registry.get("ONTHEFLY").lon_min == 1
+
+
+@patch("particle_tracking_manager.ocean_model_registry.calculate_CIOFSOP_max")
+def test_CIOFSOP_max_update(model_CIOFSOP_max):
+    """Make sure that CIOFSOP end_time_model is updated
+
+    ...when the model is updated. Mock input from calculate_CIOFSOP_max.
+    """
+
+    # check the value once
+    return_value1 = datetime(2025, 1, 16, 23, 0)
+    model_CIOFSOP_max.return_value = return_value1
+    m = particle_tracking_manager.OpenDriftModel(drift_model="Leeway", steps=1)
+    assert m.config.ocean_model_config.end_time_model == return_value1
+
+    # check the value again to see if it is updated, like it would be in real life
+    return_value2 = datetime(2025, 2, 16, 23, 0)
+    model_CIOFSOP_max.return_value = return_value2
+    m = particle_tracking_manager.OpenDriftModel(drift_model="Leeway", steps=1)
+    assert m.config.ocean_model_config.end_time_model == return_value2
