@@ -371,7 +371,7 @@ class LeewayModelConfig(OpenDriftConfig):
     drift_model: DriftModelEnum = DriftModelEnum.Leeway  # .value
 
     object_type: ObjectTypeEnum = Field(
-        default=ObjectTypeEnum.PERSON_IN_WATER_UNKNOWN,  # .value,
+        default=ObjectTypeEnum("Person-in-water (PIW), unknown state (mean values)"),
         description="Leeway object category for this simulation",
         title="Object Type",
         json_schema_extra={"od_mapping": "seed:object_type", "ptm_level": 1},

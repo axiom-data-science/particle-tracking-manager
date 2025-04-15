@@ -11,6 +11,8 @@ from particle_tracking_manager.models.opendrift.config_opendrift import (
     OpenDriftConfig,
     OpenOilModelConfig,
 )
+from particle_tracking_manager.models.opendrift.opendrift import OpenDriftModel
+from particle_tracking_manager.models.opendrift.enums import ObjectTypeEnum
 
 
 def test_drift_model():
@@ -100,6 +102,18 @@ def test_Leeway_disallowed_settings():
 
     with pytest.raises(ValidationError):
         m = LeewayModelConfig(drift_model="Leeway", do3D=True, steps=1)
+
+
+def test_object_type_list():
+    """Make sure options are exactly the same as in OpenDrift."""
+
+    m = OpenDriftModel(drift_model="Leeway", steps=1)
+    m.setup_for_simulation()
+    od_objects = m.o.get_configspec("seed:object_type")["seed:object_type"]["enum"]
+    
+    ptm_objects =  [v.value for v in ObjectTypeEnum.__members__.values()]
+    
+    assert od_objects == ptm_objects
 
 
 ## OceanDrift ##
