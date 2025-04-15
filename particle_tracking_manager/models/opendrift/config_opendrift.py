@@ -83,7 +83,7 @@ class OpenDriftConfig(TheManagerConfig):
     # OpenDriftSimulation parameters
 
     max_speed: float = Field(
-        default=5.0,
+        default=7.0,
         description="Typical maximum speed of elements, used to estimate reader buffer size",
         gt=0,
         title="Maximum speed",
@@ -95,7 +95,7 @@ class OpenDriftConfig(TheManagerConfig):
     )
 
     use_auto_landmask: bool = Field(
-        default=True,
+        default=False,
         description="If True, use a global-scale land mask from https://www.generic-mapping-tools.org/remote-datasets/earth-mask.html. Dataset scale selected is `auto`. If False, use the land mask from the ocean model.",
         title="Use Auto Landmask",
         json_schema_extra={"od_mapping": "general:use_auto_landmask", "ptm_level": 3},
@@ -151,16 +151,6 @@ class OpenDriftConfig(TheManagerConfig):
         TheManagerConfig.model_fields["number"],
         Field(json_schema_extra=dict(od_mapping="seed:number")),
     )
-    # These don't properly map the way I expect in OpenDrift. It is better to leave time_step as not
-    # associated with an `od_mapping` to avoid confusion.
-    # time_step: float = FieldInfo.merge_field_infos(
-    #     TheManagerConfig.model_fields["time_step"],
-    #     Field(json_schema_extra=dict(od_mapping="general:time_step_minutes")),
-    # )
-    # time_step_output: float = FieldInfo.merge_field_infos(
-    #     TheManagerConfig.model_fields["time_step_output"],
-    #     Field(json_schema_extra=dict(od_mapping="general:time_step_output_minutes")),
-    # )
 
     model_config = {
         "validate_defaults": True,
@@ -368,7 +358,7 @@ class OpenDriftConfig(TheManagerConfig):
 class LeewayModelConfig(OpenDriftConfig):
     """Leeway model configuration for OpenDrift."""
 
-    drift_model: DriftModelEnum = DriftModelEnum.Leeway  # .value
+    drift_model: DriftModelEnum = DriftModelEnum.Leeway
 
     object_type: ObjectTypeEnum = Field(
         default=ObjectTypeEnum("Person-in-water (PIW), unknown state (mean values)"),
@@ -412,8 +402,8 @@ class OceanDriftModelConfig(OpenDriftConfig):
     )
 
     diffusivitymodel: DiffusivityModelEnum = Field(
-        default=DiffusivityModelEnum.environment,  # .value,
-        description="Algorithm/source used for profile of vertical diffusivity. Environment means that diffusivity is acquired from readers or environment constants/fallback.",
+        default="windspeed_Large1994",
+        description="Algorithm/source used for profile of vertical diffusivity. Environment means that diffusivity is acquired from readers or environment constants/fallback. Parameterizations based on wind speed are also available.",
         title="Diffusivity model",
         json_schema_extra={
             "units": "seconds",
@@ -423,7 +413,7 @@ class OceanDriftModelConfig(OpenDriftConfig):
     )
 
     mixed_layer_depth: float = Field(
-        default=50,
+        default=10,
         description="mixed_layer_depth controls how deep the vertical diffusivity profile reaches. This sets the fallback value for ocean_mixed_layer_thickness if not available from any reader.",
         title="Mixed Layer Depth",
         ge=0.0,
@@ -621,7 +611,7 @@ class OpenOilModelConfig(OceanDriftModelConfig):
     )
 
     update_oilfilm_thickness: bool = Field(
-        default=False,
+        default=True,
         description="If True, Oil film thickness is calculated at each time step. If False, oil film thickness is kept constant with value provided at seeding.",
         title="Update Oilfilm Thickness",
         json_schema_extra={
@@ -631,7 +621,7 @@ class OpenOilModelConfig(OceanDriftModelConfig):
     )
 
     biodegradation: bool = Field(
-        default=False,
+        default=True,
         description="If True, oil mass is biodegraded (eaten by bacteria).",
         title="Biodegradation",
         json_schema_extra={
@@ -643,57 +633,17 @@ class OpenOilModelConfig(OceanDriftModelConfig):
     # overwrite the defaults from OceanDriftModelConfig for a few inherited parameters,
     # but don't want to have to repeat the full definition
     current_uncertainty: float = FieldInfo.merge_field_infos(
-        OceanDriftModelConfig.model_fields["current_uncertainty"], Field(default=0.05)
+        OceanDriftModelConfig.model_fields["current_uncertainty"], Field(default=0.0)
     )
     wind_uncertainty: float = FieldInfo.merge_field_infos(
-        OceanDriftModelConfig.model_fields["wind_uncertainty"], Field(default=0.5)
+        OceanDriftModelConfig.model_fields["wind_uncertainty"], Field(default=0.0)
     )
     wind_drift_factor: float = FieldInfo.merge_field_infos(
         OceanDriftModelConfig.model_fields["wind_drift_factor"], Field(default=0.03)
     )
-    # OpenDrift's default is for vertical_mixing to be True but that conflicts with do3D default of False
-    # vertical_mixing: bool = FieldInfo.merge_field_infos(OceanDriftModelConfig.model_fields['vertical_mixing'],
-    #                                                     Field(default=True))
-
-    # @property
-    # def oil_type_input(self) -> str | None:
-    #     """Save oil type input with both name and id"""
-    #     if self.drift_model == "OpenOil":
-    #         return self.oil_type
-    #     return None
-
-    # @model_validator(mode="after")
-    # def clean_oil_type_string(self) -> Self:
-    #     """remove id from oil_type string if needed"""
-    #     if self.drift_model == "OpenOil":
-    #         # only keep first part of string, which is the name of the oil
-    #         self.oil_type = self.oil_type_input.split(" (")[0]
-    #     return self
-
-    # @model_validator(mode="before")
-    # def validate_oil_type_by_id_from_name(cls, values):
-    #     """Validate oil type by id from name."""
-    #     name_id = values.get('oil_type')
-    #     if name_id not in OceanModelEnum.__members__:
-    #         raise ValueError(f"Invalid ocean model name_id: {name_id}")
-    #     return values
-
-    # @field_validator("oil_type", mode="before")
-    # def map_oil_type_to_name(cls, v):
-    #     """Map input oil type to enum value (which is the oil type name)."""
-    #     if (
-    #         v in OilTypeEnum.__members__
-    #     ):  # Check if it matches an Enum name (which is the oil type id)
-    #         import pdb; pdb.set_trace()
-    #         return OilTypeEnum.title  # then return title or label
-    #     for (
-    #         enum_member
-    #     ) in (
-    #         OilTypeEnum
-    #     ):  # Check if it matches an Enum value (which is the oil type (id, title) tuple)
-    #         if enum_member.value == v:
-    #             return enum_member.title # then return title or label
-    #     raise ValueError(f"Invalid value or name '{v}' for OilTypeEnum")
+    vertical_mixing: bool = FieldInfo.merge_field_infos(
+        OceanDriftModelConfig.model_fields["vertical_mixing"], Field(default=True)
+    )
 
     @field_validator("oil_type", mode="before")
     def map_id_to_oil_type_tuple(cls, v):

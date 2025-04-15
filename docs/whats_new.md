@@ -11,6 +11,7 @@
 * Updated list of options for `object_type` and it is now fully consistent with that in `OpenDrift`.
 * Now enforce that for Leeway model if `hatched==1` then `stage_fraction=None`, for seeding.
 * Updated descriptions in a lot of parameters in `config_the_manager.py` and `config_opendrift.py`.
+* Updated defaults in config classes.
 
 
 ## v0.12.1 (April 8, 2025)

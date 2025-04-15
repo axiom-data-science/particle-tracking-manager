@@ -379,13 +379,11 @@ class TheManagerConfig(BaseModel):
         return self
 
     @computed_field
-    # @property
     def ocean_model_config(self) -> OceanModelConfig:
         """Select ocean model config based on ocean_model."""
         return ocean_model_registry.get(self.ocean_model)
 
     @computed_field
-    # @property
     def ocean_model_simulation(self) -> OceanModelSimulation:
         """Select ocean model simulation based on ocean_model."""
         inputs = {
