@@ -183,23 +183,9 @@ for ocean_model in ocean_model_registry.all_models():
     )
 
 
-def get_file_date_string(name: str, date: datetime) -> str:
-    """Get the file date string for the given ocean model name and date."""
-    if name == "NWGOA":
-        return f"{date.year}-{str(date.month).zfill(2)}-{str(date.day).zfill(2)}"
-    elif name == "CIOFSOP":
-        return f"{date.year}-{str(date.month).zfill(2)}-{str(date.day).zfill(2)}"
-    elif name == "CIOFS":
-        return f"{date.year}_{str(date.timetuple().tm_yday - 1).zfill(4)}"
-    elif name == "CIOFSFRESH":
-        return f"{date.year}_{str(date.timetuple().tm_yday - 1).zfill(4)}"
-    elif name == "CIOFS3":
-        return f"{date.year}_{str(date.timetuple().tm_yday - 1).zfill(4)}"
-    else:
-        raise ValueError(f"get_file_date_string not implemented for {name}.")
-
-
-function_map: dict[str, Callable[[str, str, str], dict[Any, Any]]] = {
+MAKE_KERCHUNK_FUNCTIONS: dict[
+    str, Callable[[datetime, datetime, str], dict[Any, Any]]
+] = {
     "make_nwgoa_kerchunk": make_nwgoa_kerchunk,
     "make_ciofs_kerchunk": make_ciofs_kerchunk,
 }
@@ -218,9 +204,7 @@ def loc_local(
         start_time = start_sim + timedelta(days=1)
         end_time = end_sim - timedelta(days=1)
 
-    start = get_file_date_string(name, start_time)
-    end = get_file_date_string(name, end_time)
-    return function_map[kerchunk_func_str](start, end, name)
+    return MAKE_KERCHUNK_FUNCTIONS[kerchunk_func_str](start_time, end_time, name)
 
 
 def register_on_the_fly(ds_info: dict, ocean_model: str = "ONTHEFLY") -> None:
