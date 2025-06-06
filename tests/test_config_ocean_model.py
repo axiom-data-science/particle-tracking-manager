@@ -14,6 +14,9 @@ from pydantic import ValidationError
 import particle_tracking_manager
 
 from particle_tracking_manager.config_ocean_model import ocean_model_simulation_mapper
+from particle_tracking_manager.models.opendrift.utils import (
+    find_json_files_in_date_range,
+)
 from particle_tracking_manager.ocean_model_registry import ocean_model_registry
 
 
@@ -209,6 +212,92 @@ def test_start_end_times():
                 lat=tests_valid[ocean_model]["lat"],
                 ocean_model_local=True,
             )
+
+
+class MockFileSystem:
+    """Mock file system to simulate globbing for kerchunk JSON files."""
+
+    def __init__(self, files):
+        self.files = files
+
+    def glob(self, year):
+        # Mock glob method takes a year string instead of a pattern
+        return [file for file in self.files if year in file]
+
+
+MOCK_FILES_YEARLY_DATES = [
+    (1, 1),
+    (1, 2),
+    (1, 31),
+    (3, 15),
+    (5, 31),
+    (6, 1),
+    (6, 15),
+    (6, 30),
+    (7, 1),
+    (9, 15),
+    (12, 1),
+    (12, 30),
+    (12, 31),
+]
+MOCK_FILES_DATES = [
+    datetime(year, month, day)
+    for month, day in MOCK_FILES_YEARLY_DATES
+    for year in [2019, 2020, 2021]
+]
+TEST_DATE_RANGES = [
+    ((2020, 6, 5), (2020, 6, 25), 1),
+    ((2020, 1, 1), (2020, 1, 31), 3),
+    ((2020, 1, 31), (2020, 1, 1), 3),
+    ((2019, 12, 1), (2020, 1, 31), 6),
+    ((2019, 12, 31), (2020, 1, 1), 2),
+    ((2020, 1, 1), (2020, 12, 31), 13),
+    ((2020, 1, 3), (2020, 6, 29), 5),
+    ((2020, 6, 29), (2020, 1, 3), 5),
+    ((2019, 12, 31), (2021, 1, 1), None),
+    ((2019, 12, 31), (2021, 12, 31), None),
+    ((2020, 1, 1), (2021, 12, 31), 26),
+]
+
+
+@pytest.mark.parametrize(
+    "start_tuple, end_tuple, expected",
+    TEST_DATE_RANGES,
+    ids=[f"{start}->{end}" for start, end, _ in TEST_DATE_RANGES],
+)
+@pytest.mark.parametrize(
+    "filename_format",
+    ["%Y_0%j", "ciofs_%Y-%m-%d", "nwgoa_%Y-%m-%d"],
+    ids=["CIOFS", "CIOFSOP", "NWGOA"],
+)
+def test_krchunk_json_filtering(filename_format, start_tuple, end_tuple, expected):
+    """Check that kerchunk JSON files are correctly filtered based on date range"""
+    start = datetime(*start_tuple)
+    end = datetime(*end_tuple)
+
+    all_files = [f"{d.strftime(filename_format)}.json" for d in MOCK_FILES_DATES]
+    mock_fs = MockFileSystem(all_files)
+
+    def make_glob_with_check(year: str) -> str:
+        """Check that the input string is a year and return it instead of any pattern.
+
+        The return value will be used by `MockFileSystem.glob` which accounts for this.
+        """
+        assert year == f"{start.year:04}" or year == f"{end.year:04}"
+        return year
+
+    try:
+        jsons = find_json_files_in_date_range(
+            mock_fs,
+            make_glob_with_check,
+            start,
+            end,
+            filename_format,
+        )
+
+        assert len(jsons) == expected
+    except ValueError:
+        assert expected is None, f"Expected {expected} JSON files but got ValueError"
 
 
 def test_user_registry():
