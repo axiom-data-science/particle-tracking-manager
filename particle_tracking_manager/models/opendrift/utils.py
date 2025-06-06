@@ -118,17 +118,17 @@ def find_json_files_in_date_range(
     if end_year != start_year:
         json_list += fs2.glob(make_glob_from_year(end_year))
 
-    def filter_paths(start: datetime, end: datetime, paths: Iterable[str]) -> List[str]:
-        if end < start:
-            # if going backward in time, swap start and end
-            end, start = start, end
-        return [
-            pth
-            for pth in paths
-            if start <= datetime.strptime(Path(pth).stem, filename_date_format) <= end
-        ]
-
-    return filter_paths(start, end, json_list)
+    # if going backward in time, swap start and end
+    from_date, to_date = (end, start) if end < start else (start, end)
+    return [
+        pth
+        for pth in json_list
+        if (
+            from_date
+            <= datetime.strptime(Path(pth).stem, filename_date_format)
+            <= to_date
+        )
+    ]
 
 
 def make_ciofs_kerchunk(start: datetime, end: datetime, name: str) -> dict:
