@@ -2,8 +2,12 @@
 
 ## Unreleased
 
-* Fix kerchunk JSON file filtering.
+* Fixed kerchunk JSON file filtering.
 * Added CIOFS3 as ocean model option.
+* Refactored `OilTypeEnum` so that it's value is only the oil ID. Also add the
+  "oneOf" json schema mapping directly to the field's `json_schema_extra` so that
+  it is part of the schema by default.
+
 
 ## v0.12.2 (April 15, 2025)
 

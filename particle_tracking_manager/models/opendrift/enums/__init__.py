@@ -1,7 +1,7 @@
 """Enums for OpenDrift."""
 
 from .object_types import ObjectTypeEnum
-from .oil_types import ModifyOilTypeJsonSchema, OilTypeEnum
+from .oil_types import OIL_ID_TO_NAME, OilTypeEnum
 from .others import (
     CoastlineActionEnum,
     DiffusivityModelEnum,
@@ -15,7 +15,7 @@ from .others import (
 
 __all__ = [
     "OilTypeEnum",
-    "ModifyOilTypeJsonSchema",
+    "OIL_ID_TO_NAME",
     "ObjectTypeEnum",
     "DriftModelEnum",
     "RadiusTypeEnum",

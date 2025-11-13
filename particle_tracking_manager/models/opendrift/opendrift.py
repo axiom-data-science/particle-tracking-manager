@@ -10,16 +10,16 @@ from pathlib import Path
 from typing import Any
 
 import pandas as pd
-import xarray as xr
 
 # Third-party imports
 from opendrift.readers import reader_ROMS_native
+
+from particle_tracking_manager.models.opendrift.enums.oil_types import OIL_ID_TO_NAME
 
 # Local imports
 from ...ocean_model_registry import ocean_model_registry
 from ...the_manager import ParticleTrackingManager
 from .config_opendrift import OpenDriftConfig, open_drift_mapper
-from .enums import OilTypeEnum
 from .plot import make_plots
 from .utils import (
     apply_known_ocean_model_specific_changes,
@@ -221,8 +221,8 @@ class OpenDriftModel(ParticleTrackingManager):
                         if od_key in self.o._config:  # and od_key is not None:
                             # want the string representation of only this one used
                             if od_key == "seed:oil_type":
-                                # for oil_type, copy the oil name only into the OpenDrift config
-                                field_value = getattr(base_model, key)[1]
+                                # for oil_type, copy the oil name into the OpenDrift config
+                                field_value = OIL_ID_TO_NAME[getattr(base_model, key)]
                             # for others use value
                             else:
                                 field_value = getattr(base_model, key)

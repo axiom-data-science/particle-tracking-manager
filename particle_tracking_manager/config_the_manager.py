@@ -232,7 +232,8 @@ class TheManagerConfig(BaseModel):
     )
 
     model_config = {
-        "validate_defaults": True,
+        "validate_default": True,
+        # Field values will be returned as the `enum.value` - a string in most our cases
         "use_enum_values": True,
         "extra": "forbid",
     }

@@ -195,11 +195,9 @@ def test_OpenOil_parameters():
 
 def test_OpenOil_json_schema():
     schema = OpenOilModelConfig.model_json_schema()
-    assert [
-        True
-        for item in schema["properties"]["oil_type"]["oneOf"]
-        if "{'const': 'AD00010', 'title': 'ABU SAFAH, ARAMCO'}" == str(item)
-    ][0]
+    assert "{'const': 'AD00010', 'title': 'ABU SAFAH, ARAMCO'}" in map(
+        str, schema["properties"]["oil_type"]["oneOf"]
+    )
 
 
 def test_unknown_parameter():
