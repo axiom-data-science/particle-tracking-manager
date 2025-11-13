@@ -209,26 +209,28 @@ class OpenDriftModel(ParticleTrackingManager):
 
         base_models_to_check = [self.config, self.files, self.config.ocean_model_config]
         for base_model in base_models_to_check:
-            for key in base_model.model_fields:
+            for field_name, field in base_model.model_fields.items():
                 if (
-                    getattr(base_model.model_fields[key], "json_schema_extra")
-                    is not None
+                    field.json_schema_extra is None
+                    or "od_mapping" not in field.json_schema_extra
                 ):
-                    if "od_mapping" in base_model.model_fields[key].json_schema_extra:
-                        od_key = base_model.model_fields[key].json_schema_extra[
-                            "od_mapping"
-                        ]
-                        if od_key in self.o._config:  # and od_key is not None:
-                            # want the string representation of only this one used
-                            if od_key == "seed:oil_type":
-                                # for oil_type, copy the oil name into the OpenDrift config
-                                field_value = OIL_ID_TO_NAME[getattr(base_model, key)]
-                            # for others use value
-                            else:
-                                field_value = getattr(base_model, key)
-                                if isinstance(field_value, Enum):
-                                    field_value = field_value.value
-                            self.o._config[od_key]["value"] = field_value
+                    continue
+
+                od_key = field.json_schema_extra["od_mapping"]
+                if od_key not in self.o._config:
+                    continue
+
+                # want the string representation of only this one used
+                if od_key == "seed:oil_type":
+                    # for oil_type, copy the oil name into the OpenDrift config
+                    field_value = OIL_ID_TO_NAME[getattr(base_model, field_name)]
+                # for others use value
+                else:
+                    field_value = getattr(base_model, field_name)
+                    if isinstance(field_value, Enum):
+                        field_value = field_value.value
+
+                self.o._config[od_key]["value"] = field_value
 
     def _modify_opendrift_model_object(self) -> None:
         """Modify the OpenDrift model object."""
