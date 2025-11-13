@@ -10,6 +10,7 @@ logging.getLogger("opendrift").setLevel(logging.WARNING)
 logging.getLogger("numcodecs").setLevel(logging.WARNING)
 
 from .config_the_manager import TheManagerConfig
+from .models import opendrift as opendrift_models
 from .models.opendrift.config_opendrift import (
     LarvalFishModelConfig,
     LeewayModelConfig,
@@ -17,5 +18,16 @@ from .models.opendrift.config_opendrift import (
     OpenDriftConfig,
     OpenOilModelConfig,
 )
-from .models.opendrift.enums import ModifyOilTypeJsonSchema
 from .models.opendrift.opendrift import OpenDriftModel
+
+
+__all__ = [
+    "TheManagerConfig",
+    "LarvalFishModelConfig",
+    "LeewayModelConfig",
+    "OceanDriftModelConfig",
+    "OpenDriftConfig",
+    "OpenOilModelConfig",
+    "OpenDriftModel",
+    "opendrift_models",
+]
