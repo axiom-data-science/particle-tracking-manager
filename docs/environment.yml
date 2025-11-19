@@ -15,7 +15,7 @@ dependencies:
    - xarray
    - kerchunk==0.2.7
    - numpydoc
-   - opendrift <=1.13.0
+   - opendrift ==1.13.0
    # These are needed for the docs themselves
    - furo
    - jupytext
