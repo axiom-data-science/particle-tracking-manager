@@ -114,6 +114,8 @@ def make_ciofs_kerchunk(start: str, end: str, name: str) -> dict:
 
     if name == "CIOFS":
         output_dir_single_files = "/mnt/vault/ciofs/HINDCAST/.kerchunk_json"
+    elif name == "CIOFS3":
+        output_dir_single_files = "/mnt/vault/ciofs/CIOFS3/HINDCAST/.kerchunk_json"
     elif name == "CIOFSFRESH":
         output_dir_single_files = "/mnt/vault/ciofs/HINDCAST_FRESHWATER/.kerchunk_json"
     elif name == "CIOFSOP":
@@ -123,21 +125,24 @@ def make_ciofs_kerchunk(start: str, end: str, name: str) -> dict:
 
     fs2 = fsspec.filesystem("")  # local file system to save final jsons to
 
-    if name in ["CIOFS", "CIOFSFRESH"]:
+    if name in ["CIOFS", "CIOFSFRESH", "CIOFS3"]:
 
         # base for matching
         def base_str(a_time: str) -> str:
             return f"{output_dir_single_files}/{a_time}_*.json"
 
+        file_date_format = "%Y_0%j"
         date_format = "%Y_0%j"
 
     elif name == "CIOFSOP":
 
         # base for matching
         def base_str(a_time: str) -> str:
-            return f"{output_dir_single_files}/ciofs_{a_time}-*.json"
+            return f"{output_dir_single_files}/ciofs_{a_time}*.json"
 
-        date_format = "ciofs_%Y-%m-%d"
+        file_date_format = "ciofs_%Y-%m-%d"
+        date_format = "%Y-%m-%d"
+
     else:
         raise ValueError(f"Name {name} not recognized")
 
@@ -146,21 +151,24 @@ def make_ciofs_kerchunk(start: str, end: str, name: str) -> dict:
     if end[:4] != start[:4]:
         json_list += fs2.glob(base_str(end[:4]))
 
+    start_date = datetime.strptime(start, date_format)
+    end_date = datetime.strptime(end, date_format)
+
     # forward in time
-    if end > start:
+    if end_date >= start_date:
         json_list = [
             j
             for j in json_list
-            if datetime.strptime(Path(j).stem, date_format).isoformat() >= start
-            and datetime.strptime(Path(j).stem, date_format).isoformat() <= end
+            if datetime.strptime(Path(j).stem, file_date_format) >= start_date
+            and datetime.strptime(Path(j).stem, file_date_format) <= end_date
         ]
     # backward in time
-    elif end < start:
+    elif end_date < start_date:
         json_list = [
             j
             for j in json_list
-            if datetime.strptime(Path(j).stem, date_format).isoformat() <= start
-            and datetime.strptime(Path(j).stem, date_format).isoformat() >= end
+            if datetime.strptime(Path(j).stem, file_date_format) <= start_date
+            and datetime.strptime(Path(j).stem, file_date_format) >= end_date
         ]
 
     if json_list == []:
