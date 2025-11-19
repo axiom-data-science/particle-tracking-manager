@@ -1,6 +1,6 @@
 # What's New
 
-## Unreleased
+## v0.13.0 (November 19, 2025)
 
 * Fixed kerchunk JSON file filtering.
 * Added CIOFS3 as ocean model option.
