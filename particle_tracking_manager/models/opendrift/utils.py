@@ -6,6 +6,7 @@
 # Standard library imports
 from datetime import datetime
 from pathlib import Path
+from typing import Callable, Iterable, List
 
 # Third-party imports
 import fsspec
@@ -96,15 +97,48 @@ def apply_user_input_ocean_model_specific_changes(
     return ds
 
 
-def make_ciofs_kerchunk(start: str, end: str, name: str) -> dict:
+def find_json_files_in_date_range(
+    fs2,
+    make_glob_from_year: Callable[[str], str],
+    start: datetime,
+    end: datetime,
+    filename_date_format: str,
+) -> List[str]:
+    """Find JSON files in a date range and return their paths."""
+
+    # only glob start and end year files, order isn't important
+    if abs(start.year - end.year) > 1:
+        raise ValueError(
+            f"Start ({start.year}) and end ({end.year}) "
+            "dates must be at most 1 year apart."
+        )
+    start_year = start.strftime("%Y")
+    end_year = end.strftime("%Y")
+    json_list = fs2.glob(make_glob_from_year(start_year))
+    if end_year != start_year:
+        json_list += fs2.glob(make_glob_from_year(end_year))
+
+    # if going backward in time, swap start and end
+    date_range_from, date_range_to = (start, end) if start <= end else (end, start)
+
+    return [
+        pth
+        for pth in json_list
+        if (
+            date_range_from
+            <= datetime.strptime(Path(pth).stem, filename_date_format)
+            <= date_range_to
+        )
+    ]
+
+
+def make_ciofs_kerchunk(start: datetime, end: datetime, name: str) -> dict:
     """_summary_
 
     Parameters
     ----------
-    start, end : str
-        Should be something like "2004_0001" for YYYY_0DDD where DDD is dayofyear
-        to match the files in the directory, which are by year and day of year
-        ("ciofs_fresh" or "ciofs") or "YYYY-MM-DD" for "aws_ciofs"
+    start, end : datetime
+        Start and end time of the simulation.
 
     Returns
     -------
@@ -125,56 +159,21 @@ def make_ciofs_kerchunk(start: str, end: str, name: str) -> dict:
 
     fs2 = fsspec.filesystem("")  # local file system to save final jsons to
 
-    if name in ["CIOFS", "CIOFSFRESH", "CIOFS3"]:
-
-        # base for matching
-        def base_str(a_time: str) -> str:
-            return f"{output_dir_single_files}/{a_time}_*.json"
-
-        file_date_format = "%Y_0%j"
-        date_format = "%Y_0%j"
-
-    elif name == "CIOFSOP":
-
+    if name == "CIOFSOP":
         # base for matching
         def base_str(a_time: str) -> str:
             return f"{output_dir_single_files}/ciofs_{a_time}*.json"
 
-        file_date_format = "ciofs_%Y-%m-%d"
-        date_format = "%Y-%m-%d"
+        date_format = "ciofs_%Y-%m-%d"
 
-    else:
-        raise ValueError(f"Name {name} not recognized")
+    else:  # name is "CIOFS" or "CIOFSFRESH" or "CIOFS3"
+        # base for matching
+        def base_str(a_time: str) -> str:
+            return f"{output_dir_single_files}/{a_time}_*.json"
 
-    # only glob start and end year files, order isn't important
-    json_list = fs2.glob(base_str(start[:4]))
-    if end[:4] != start[:4]:
-        json_list += fs2.glob(base_str(end[:4]))
+        date_format = "%Y_0%j"
 
-    start_date = datetime.strptime(start, date_format)
-    end_date = datetime.strptime(end, date_format)
-
-    # forward in time
-    if end_date >= start_date:
-        json_list = [
-            j
-            for j in json_list
-            if datetime.strptime(Path(j).stem, file_date_format) >= start_date
-            and datetime.strptime(Path(j).stem, file_date_format) <= end_date
-        ]
-    # backward in time
-    elif end_date < start_date:
-        json_list = [
-            j
-            for j in json_list
-            if datetime.strptime(Path(j).stem, file_date_format) <= start_date
-            and datetime.strptime(Path(j).stem, file_date_format) >= end_date
-        ]
-
-    if json_list == []:
-        raise ValueError(
-            f"No files found in {output_dir_single_files} for {start} to {end}"
-        )
+    json_list = find_json_files_in_date_range(fs2, base_str, start, end, date_format)
 
     # Multi-file JSONs
     # This code uses the output generated above to create a single ensemble dataset,
@@ -288,13 +287,13 @@ def make_ciofs_kerchunk(start: str, end: str, name: str) -> dict:
     return out
 
 
-def make_nwgoa_kerchunk(start: str, end: str, name: str = "NWGOA") -> dict:
+def make_nwgoa_kerchunk(start: datetime, end: datetime, name: str = "NWGOA") -> dict:
     """_summary_
 
     Parameters
     ----------
-    start, end : str
-        Should be something like "1999-01-02" for YYYY-MM-DD
+    start, end : datetime
+        Start and end time of the simulation.
 
     Returns
     -------
@@ -316,33 +315,7 @@ def make_nwgoa_kerchunk(start: str, end: str, name: str = "NWGOA") -> dict:
 
     date_format = "nwgoa_%Y-%m-%d"
 
-    # only glob start and end year files, order isn't important
-    json_list = fs2.glob(base_str(start[:4]))
-
-    if end[:4] != start[:4]:
-        json_list += fs2.glob(base_str(end[:4]))
-
-    # forward in time
-    if end > start:
-        json_list = [
-            j
-            for j in json_list
-            if datetime.strptime(Path(j).stem, date_format).isoformat() >= start
-            and datetime.strptime(Path(j).stem, date_format).isoformat() <= end
-        ]
-    # backward in time
-    elif end < start:
-        json_list = [
-            j
-            for j in json_list
-            if datetime.strptime(Path(j).stem, date_format).isoformat() <= start
-            and datetime.strptime(Path(j).stem, date_format).isoformat() >= end
-        ]
-
-    if json_list == []:
-        raise ValueError(
-            f"No files found in {output_dir_single_files} for {start} to {end}"
-        )
+    json_list = find_json_files_in_date_range(fs2, base_str, start, end, date_format)
 
     # account for double compression
     # Look at individual variables in the files to see what needs to be changed with
