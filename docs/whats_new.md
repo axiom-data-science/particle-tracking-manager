@@ -3,6 +3,7 @@
 ## Unreleased
 
 * Fix kerchunk JSON file filtering.
+* Added CIOFS3 as ocean model option.
 
 ## v0.12.2 (April 15, 2025)
 
