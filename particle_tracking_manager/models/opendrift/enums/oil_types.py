@@ -1301,6 +1301,14 @@ OIL_ID_TO_NAME = {
 }
 
 
+# A dictionary provided for user's convenience
+NAME_TO_OIL_ID: dict[str, list[str]] = {}
+for oil_id, oil_name in OIL_ID_TO_NAME.items():
+    if oil_name not in NAME_TO_OIL_ID:
+        NAME_TO_OIL_ID[oil_name] = []
+    NAME_TO_OIL_ID[oil_name].append(oil_id)
+
+
 class OilTypeEnum(Enum):
     """Representation of oil types
 
