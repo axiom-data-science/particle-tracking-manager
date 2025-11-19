@@ -7,7 +7,7 @@ from os import PathLike
 from pathlib import Path
 
 # Third-party imports
-from pydantic import Field, field_validator, model_validator
+from pydantic import Field, model_validator
 from pydantic.fields import FieldInfo
 from typing_extensions import Self
 
@@ -18,7 +18,6 @@ from .enums import (
     DiffusivityModelEnum,
     DriftModelEnum,
     DropletSizeDistributionEnum,
-    ModifyOilTypeJsonSchema,
     ObjectTypeEnum,
     OilTypeEnum,
     PlotTypeEnum,
@@ -157,13 +156,6 @@ class OpenDriftConfig(TheManagerConfig):
         "use_enum_values": True,
         "extra": "forbid",
     }
-
-    @classmethod
-    def model_json_schema(cls, **kwargs) -> dict:
-        """Override the method to customize the JSON schema to include customization of oil_type."""
-        return super().model_json_schema(
-            schema_generator=ModifyOilTypeJsonSchema, **kwargs
-        )
 
     @model_validator(mode="after")
     def check_interpolator_filename(self) -> Self:
@@ -489,10 +481,14 @@ class OpenOilModelConfig(OceanDriftModelConfig):
     drift_model: DriftModelEnum = DriftModelEnum.OpenOil  # .value
 
     oil_type: OilTypeEnum = Field(
-        default=OilTypeEnum["AD04012"],  # .value,
+        default=OilTypeEnum.AD04012,  # .value,
         description="Oil type to be used for the simulation, from the NOAA ADIOS database.",
         title="Oil Type",
-        json_schema_extra={"od_mapping": "seed:oil_type", "ptm_level": 1},
+        json_schema_extra={
+            "od_mapping": "seed:oil_type",
+            "ptm_level": 1,
+            "oneOf": [{"const": oil.value, "title": oil.title} for oil in OilTypeEnum],
+        },
     )
 
     m3_per_hour: float = Field(
@@ -645,20 +641,6 @@ class OpenOilModelConfig(OceanDriftModelConfig):
         OceanDriftModelConfig.model_fields["vertical_mixing"], Field(default=True)
     )
 
-    @field_validator("oil_type", mode="before")
-    def map_id_to_oil_type_tuple(cls, v):
-        """Map input oil type to enum name (which is the oil type id)."""
-        if (
-            v in OilTypeEnum.__members__
-        ):  # Check if it matches an Enum name (which is the oil type id)
-            return OilTypeEnum[v]  # then return id
-        else:
-            return v  # return the original value
-        # for enum_member in OilTypeEnum:  # Check if it matches an Enum value (which is the oil type name/title)
-        #     if enum_member.value == v:
-        #         return enum_member  # then return id
-        raise ValueError(f"Invalid value or name '{v}' for OilTypeEnum")
-
 
 class LarvalFishModelConfig(OceanDriftModelConfig):
     """Larval fish model configuration for OpenDrift."""
@@ -715,8 +697,8 @@ class LarvalFishModelConfig(OceanDriftModelConfig):
         },
     )
 
-    length: float = Field(
-        default=0,
+    length: float | None = Field(
+        default=None,
         description="Seeding value of length. This is not currently used.",
         title="Length",
         gt=0,

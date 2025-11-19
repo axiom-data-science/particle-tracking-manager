@@ -211,7 +211,7 @@ There are also specific seeding options for this model:
 
 ```{code-cell} ipython3
 m = ptm.OpenDriftModel(drift_model="OpenOil", lon=-89.85, lat=28.08, number=10, steps=45,
-                       z=-10, do3D=True, oil_type=('EC00561', 'Cook Inlet [2003]'),
+                       z=-10, do3D=True, oil_type="EC00561",
                        start_time="2009-11-19T12:00", ocean_model="TXLA",
                        ocean_model_local=False,
                        )
@@ -220,13 +220,24 @@ m.o.set_config('environment:constant:x_wind', -1)
 m.o.set_config('environment:constant:y_wind', 1)
 ```
 
-List available oil types from NOAA's ADIOS database (or check the database online):
+Note that `oil_type` was input by its oil id, in order to disambiguate the oils in ADIOS.
+
+List of available oil types can be found in the
+1. NOAA's ADIOS database https://adios.orr.noaa.gov/oils
+2. or in the library's `OIL_ID_TO_NAME` dictionary:
+    ```{code-cell} ipython3
+    ptm.models.opendrift.enums.oil_types.OIL_ID_TO_NAME
+    ```
+
+You can also find the oil IDs by name in said [database](https://adios.orr.noaa.gov/oils)
+or in the library's `NAME_TO_OIL_ID` dictionary. E.g.:
 
 ```{code-cell} ipython3
-ptm.OpenOilModelConfig.model_json_schema()["$defs"]["OilTypeEnum"]["enum"]
+ptm.models.opendrift.enums.oil_types.NAME_TO_OIL_ID["ALASKA NORTH SLOPE"]
 ```
 
-Note that `oil_type` was input as a tuple containing the oil id and name, in order to disambiguate the oils in ADIOS. You can instead refer to the `oil_type` by its id, for example in this case `oil_tye='EC00561'` would work.
+Keep in mind that some oil types share the same name which is why `NAME_TO_OIL_ID`
+contains lists of IDs.
 
 The configuration parameters for this simulation are:
 

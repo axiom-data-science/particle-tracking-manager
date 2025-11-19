@@ -11,7 +11,7 @@ from pydantic import ValidationError
 
 import particle_tracking_manager as ptm
 
-from particle_tracking_manager.models.opendrift.config_opendrift import OpenDriftConfig
+from particle_tracking_manager.models.opendrift.enums.oil_types import OIL_ID_TO_NAME
 from particle_tracking_manager.models.opendrift.opendrift import OpenDriftModel
 
 
@@ -173,7 +173,7 @@ def test_LarvalFish_seeding():
 
 def test_OpenOil_seeding():
     """Make sure special seed parameters comes through"""
-    oil_type = ("AD00010", "ABU SAFAH, ARAMCO")  # "AD00010"
+    oil_type = "AD00010"
     m = OpenDriftModel(
         drift_model="OpenOil",
         lon=-151,
@@ -189,7 +189,7 @@ def test_OpenOil_seeding():
         droplet_diameter_sigma=0.9,
         oil_film_thickness=5,
         oil_type=oil_type,
-        # oil_type="Generic Diesel (GN00002)",
+        # oil_type="GN00002",
         steps=1,
     )
     m.setup_for_simulation()  # creates m.o
@@ -211,7 +211,7 @@ def test_OpenOil_seeding():
     assert m.o._config["seed:droplet_diameter_sigma"]["value"] == 0.9
     # assert m.o.elements_scheduled.oil_film_thickness == 5
     assert (
-        m.o._config["seed:oil_type"]["value"] == oil_type[1]
+        m.o._config["seed:oil_type"]["value"] == OIL_ID_TO_NAME[oil_type]
     )  # don't use ID because it is stripped off
 
 
@@ -239,11 +239,9 @@ def test_OpenOil_all_oils_exact_match():
     """Make sure that oils in PTM exactly match those in OpenDrift."""
     import opendrift.models.openoil.adios.dirjs as dirjs
 
+    schema = ptm.OpenOilModelConfig.model_json_schema()
     ptm_oils = {
-        oil["const"]: oil["title"]
-        for oil in ptm.OpenOilModelConfig.model_json_schema()["properties"]["oil_type"][
-            "oneOf"
-        ]
+        oil["const"]: oil["title"] for oil in schema["properties"]["oil_type"]["oneOf"]
     }
     od_oils = {oil.id: oil.name for oil in dirjs.oils(limit=1300)}
     assert ptm_oils == od_oils

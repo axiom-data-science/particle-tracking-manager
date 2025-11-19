@@ -129,7 +129,7 @@ class OceanModelSimulation(BaseModel):
 
 def create_ocean_model_simulation(
     ocean_model: OceanModelConfig,
-) -> OceanModelSimulation:
+) -> type[OceanModelSimulation]:
     """Create an ocean model simulation object."""
     ocean_model_name = ocean_model.name
     simulation_model = create_model(
