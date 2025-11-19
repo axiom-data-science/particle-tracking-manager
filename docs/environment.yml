@@ -8,7 +8,6 @@ dependencies:
    - adios_db
    - aiohttp
    - appdirs
-   - cmocean
    - fastparquet
    - importlib_resources  # should update past opendrift 1.12 and remove this when possible
    - numpy
