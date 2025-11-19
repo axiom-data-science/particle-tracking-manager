@@ -44,6 +44,12 @@ tests_valid = {
         "start_time": "2014-01-01T00:00",
         "end_time": "2014-01-01T05:00",
     },
+    "CIOFS3": {
+        "lon": -153,
+        "lat": 59,
+        "start_time": "2023-01-01T00:00",
+        "end_time": "2023-01-01T05:00",
+    },
 }
 
 # Invalid values (except start_times are valid since not testing those here)
@@ -75,6 +81,13 @@ tests_invalid = {
         "start_time": "2022-01-01",
         "end_time": "2022-01-01T05:00",
         "ocean_model_config": ocean_model_registry.get("CIOFSFRESH"),
+    },
+    "CIOFS3": {
+        "lon": -145,
+        "lat": 40,
+        "start_time": "2026-01-01",
+        "end_time": "2026-01-01T05:00",
+        "ocean_model_config": ocean_model_registry.get("CIOFS3"),
     },
 }
 
@@ -142,6 +155,16 @@ def test_oceanmodel_lon0_360():
     assert m.lon == lon_in
 
     m = ocean_model_simulation_mapper["CIOFSFRESH"](
+        start_time="2004-01-01",
+        lon=lon_in,
+        lat=57,
+        end_time="2004-01-01T05:00",
+        ocean_model_local=True,
+    )
+    assert m.ocean_model_config.oceanmodel_lon0_360 == False
+    assert m.lon == lon_in
+
+    m = ocean_model_simulation_mapper["CIOFS3"](
         start_time="2004-01-01",
         lon=lon_in,
         lat=57,

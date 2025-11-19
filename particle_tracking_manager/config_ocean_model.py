@@ -105,6 +105,14 @@ class OceanModelSimulation(BaseModel):
                         drop_variables=drop_vars,
                         decode_times=False,
                     )
+                elif ".parquet" in self.ocean_model_config.loc_remote:
+                    ds = xr.open_dataset(
+                        self.ocean_model_config.loc_remote,
+                        engine="kerchunk",
+                        # chunks={},  # Looks like it is faster not to include this for kerchunk
+                        drop_variables=drop_vars,
+                        decode_times=False,
+                    )
                 else:
                     ds = xr.open_zarr(
                         self.ocean_model_config.loc_remote,
@@ -184,6 +192,8 @@ def get_file_date_string(name: str, date: datetime) -> str:
     elif name == "CIOFS":
         return f"{date.year}_{str(date.timetuple().tm_yday - 1).zfill(4)}"
     elif name == "CIOFSFRESH":
+        return f"{date.year}_{str(date.timetuple().tm_yday - 1).zfill(4)}"
+    elif name == "CIOFS3":
         return f"{date.year}_{str(date.timetuple().tm_yday - 1).zfill(4)}"
     else:
         raise ValueError(f"get_file_date_string not implemented for {name}.")
