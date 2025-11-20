@@ -42,16 +42,18 @@ ds_info = dict(
 
 ptm.config_ocean_model.register_on_the_fly(ds_info)
 
-seed_kws = dict(lon=2, lat=1.5, start_time=0, time_step=0.01)
+# ocean_model_local is False because otherwise it requires a `kerchunk_func_str`
+seed_kws = dict(lon=2, lat=1.5, start_time=0, time_step=0.01, ocean_model_local=False)
 
 
 def test_start_time_tz():
     """Check start time timezone is removed."""
 
-    m = OpenDriftModel(steps=1, start_time="2022-01-01 12:00:00Z")
-    m.add_reader()
-    assert m.config.start_time == pd.Timestamp("2022-01-01 12:00:00")
-    assert m.config.end_time == pd.Timestamp("2022-01-01 12:05:00")
+    m = OpenDriftModel(duration="1s", start_time="1970-01-01T00:00Z",
+                       lon=2, lat=1.5, time_step=0.01, ocean_model="ONTHEFLY", ocean_model_local=False)
+    m.add_reader(ds=ds)
+    assert m.config.start_time == pd.Timestamp("1970-01-01 00:00:00")
+    assert m.config.end_time == pd.Timestamp("1970-01-01 00:00:01")
 
 
 def test_drop_vars_do3D_true():
