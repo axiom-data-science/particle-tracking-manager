@@ -110,12 +110,12 @@ class TheManagerConfig(BaseModel):
     )
     start_time: datetime | None = Field(
         datetime(2022, 1, 1),
-        description="Start time for drifter simulation. start_time or end_time must be input.",
+        description="Start time for drifter simulation. start_time or end_time must be input. If a timezone is included, it will be used and the time will be converted to UTC which is the same timezone as the models.",
         json_schema_extra=dict(ptm_level=1),
     )
     start_time_end: datetime | None = Field(
         None,
-        description="If used, this creates a range of start times for drifters, starting with `start_time` and ending with `start_time_end`. Drifters will be initialized linearly between the two start times.",
+        description="If used, this creates a range of start times for drifters, starting with `start_time` and ending with `start_time_end`. Drifters will be initialized linearly between the two start times. If a timezone is included, it will be used and the time will be converted to UTC which is the same timezone as the models.",
         json_schema_extra=dict(ptm_level=2),
     )
     run_forward: bool = Field(
@@ -149,7 +149,7 @@ class TheManagerConfig(BaseModel):
     )
     end_time: datetime | None = Field(
         None,
-        description="The end of the simulation. steps, end_time, or duration must be input by user. start_time or end_time must be input.",
+        description="The end of the simulation. steps, end_time, or duration must be input by user. start_time or end_time must be input. If a timezone is included, it will be used and the time will be converted to UTC which is the same timezone as the models.",
         json_schema_extra=dict(ptm_level=1),
     )
     # OceanModelEnum was created dynamically and will trigger an issue with mypy, so we suppress it
@@ -377,6 +377,41 @@ class TheManagerConfig(BaseModel):
             else:
                 raise ValueError("start_time has not been calculated")
 
+        return self
+
+    @model_validator(mode="after")
+    def remove_timezone_info(self) -> Self:
+        """Remove timezone information from datetime fields."""
+        if self.start_time is not None and self.start_time.tzinfo is not None:
+            self.start_time = (
+                pd.Timestamp(self.start_time)
+                .tz_convert("UTC")
+                .tz_localize(None)
+                .to_pydatetime()
+            )
+            logger.debug(
+                f"Removed timezone info from start_time, new value is {self.start_time}."
+            )
+        if self.start_time_end is not None and self.start_time_end.tzinfo is not None:
+            self.start_time_end = (
+                pd.Timestamp(self.start_time_end)
+                .tz_convert("UTC")
+                .tz_localize(None)
+                .to_pydatetime()
+            )
+            logger.debug(
+                f"Removed timezone info from start_time_end, new value is {self.start_time_end}."
+            )
+        if self.end_time is not None and self.end_time.tzinfo is not None:
+            self.end_time = (
+                pd.Timestamp(self.end_time)
+                .tz_convert("UTC")
+                .tz_localize(None)
+                .to_pydatetime()
+            )
+            logger.debug(
+                f"Removed timezone info from end_time, new value is {self.end_time}."
+            )
         return self
 
     @computed_field

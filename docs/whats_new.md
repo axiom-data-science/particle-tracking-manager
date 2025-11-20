@@ -1,6 +1,10 @@
 # What's New
 
-## v0.13.0 (November 19, 2025)
+## v0.13.2 (November 20, 2025)
+
+* If timezone-aware `start_time`, `start_time_end`, or `end_time` is input, the timezone is now removed and it is assumed they are in the same timezone as the model times.
+
+## v0.13.1 (November 19, 2025)
 
 * Fixed kerchunk JSON file filtering.
 * Added CIOFS3 as ocean model option.
