@@ -49,8 +49,15 @@ seed_kws = dict(lon=2, lat=1.5, start_time=0, time_step=0.01, ocean_model_local=
 def test_start_time_tz():
     """Check start time timezone is removed."""
 
-    m = OpenDriftModel(duration="1s", start_time="1970-01-01T00:00Z",
-                       lon=2, lat=1.5, time_step=0.01, ocean_model="ONTHEFLY", ocean_model_local=False)
+    m = OpenDriftModel(
+        duration="1s",
+        start_time="1970-01-01T00:00Z",
+        lon=2,
+        lat=1.5,
+        time_step=0.01,
+        ocean_model="ONTHEFLY",
+        ocean_model_local=False,
+    )
     m.add_reader(ds=ds)
     assert m.config.start_time == pd.Timestamp("1970-01-01 00:00:00")
     assert m.config.end_time == pd.Timestamp("1970-01-01 00:00:01")
