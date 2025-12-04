@@ -13,3 +13,4 @@ ONTHEFLY:
   model_drop_vars: []
   dx: null
   kerchunk_func_str: null
+  chunks: null

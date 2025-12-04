@@ -19,7 +19,7 @@ A handful of `pydantic` BaseModels make up the configuration for PTM. This allow
 
 The main configuration classes are:
 1. `TheManagerConfig`
-1. `OpenDriftConfig` and instances `LarvalFishModelConfig`, `LeewayModelConfig`, `OceanDriftModelConfig`, `OpenOilModelConfig`
+1. `OpenDriftConfig` and instances `LarvalFishModelConfig`, `LeewayModelConfig`, `OceanDriftModelConfig`, `OpenOilModelConfig`, `HarmfulAlgalBloomModelConfig`
 
 Other configuration classes are:
 1. `OceanModelConfig`
@@ -38,35 +38,47 @@ To retrieve the JSON schema for most parameters related to a PTM run, you can ac
 ```{code-cell} ipython3
 import particle_tracking_manager as ptm
 import pprint
+import json
 
-pprint.pprint(ptm.OceanDriftModelConfig.model_json_schema())
+schema = ptm.OceanDriftModelConfig.model_json_schema()
+print(json.dumps(schema, indent=2))
 ```
 
 #### LarvalFishModelConfig
 
 ```{code-cell} ipython3
-pprint.pprint(ptm.LarvalFishModelConfig.model_json_schema())
+schema = ptm.LarvalFishModelConfig.model_json_schema()
+print(json.dumps(schema, indent=2))
 ```
 
 #### LeewayModelConfig
 
 ```{code-cell} ipython3
-pprint.pprint(ptm.LeewayModelConfig.model_json_schema())
+schema = ptm.LeewayModelConfig.model_json_schema()
+print(json.dumps(schema, indent=2))
 ```
 
 #### OpenOilModelConfig
 
 ```{code-cell} ipython3
-pprint.pprint(ptm.OpenOilModelConfig.model_json_schema())
+schema = ptm.OpenOilModelConfig.model_json_schema()
+print(json.dumps(schema, indent=2))
 ```
 
+#### HarmfulAlgalBloomModelConfig
 
-#### TheManageConfig
+```{code-cell} ipython3
+schema = ptm.HarmfulAlgalBloomModelConfig.model_json_schema()
+print(json.dumps(schema, indent=2))
+```
+
+#### TheManagerConfig
 
 You can also examine the schema for `TheManagerConfig` directly, which is a subset of the parameters in the scenario classes (which inherit from `TheManagerConfig`).
 
 ```{code-cell} ipython3
-pprint.pprint(ptm.TheManagerConfig.model_json_schema())
+schema = ptm.TheManagerConfig.model_json_schema()
+print(json.dumps(schema, indent=2))
 ```
 
 
@@ -86,6 +98,7 @@ Though `OpenDrift` has more models available, the currently wrapped `drift_model
 * Leeway: scenario for Search and Rescue of various objects at the surface
 * OpenOil: oil spill scenarios
 * LarvalFish: scenario for fish eggs and larvae that can grow
+* HarmfulAlgalBloom: scenario for modeling harmful algal blooms once they exist to see where they travel or where they came from
 
 Set these with e.g.:
 

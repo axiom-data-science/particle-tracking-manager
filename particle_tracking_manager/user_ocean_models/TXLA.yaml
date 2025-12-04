@@ -13,3 +13,4 @@ TXLA:
   model_drop_vars: []
   dx: 1000
   kerchunk_func_str: null
+  chunks: null

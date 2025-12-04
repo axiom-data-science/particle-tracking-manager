@@ -321,6 +321,7 @@ def test_user_registry():
                 "model_drop_vars": [],
                 "dx": 1000,
                 "kerchunk_func_str": None,
+                "chunks": None,
             }
         }
 

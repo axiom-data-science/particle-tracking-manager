@@ -38,7 +38,7 @@ class OpenDriftModel(ParticleTrackingManager):
     Parameters
     ----------
     drift_model : str
-        Options: "OceanDrift", "LarvalFish", "OpenOil", "Leeway"
+        Options: "OceanDrift", "LarvalFish", "OpenOil", "Leeway", "HarmfulAlgalBloom". Default is "OceanDrift".
     export_variables : list
         List of variables to export, by default None. See PTM docs for options.
     radius : int
@@ -190,6 +190,11 @@ class OpenDriftModel(ParticleTrackingManager):
 
             o = OpenOil(loglevel=log_level, weathering_model="noaa")
 
+        elif self.config.drift_model == "HarmfulAlgalBloom":
+            from opendrift.models.harmfulalgalbloom import HarmfulAlgalBloom
+
+            o = HarmfulAlgalBloom(loglevel=log_level)
+
         else:
             raise ValueError(
                 f"Drifter model {self.config.drift_model} is not recognized."
@@ -227,8 +232,8 @@ class OpenDriftModel(ParticleTrackingManager):
                 # for others use value
                 else:
                     field_value = getattr(base_model, field_name)
-                    if isinstance(field_value, Enum):
-                        field_value = field_value.value
+                    # if isinstance(field_value, Enum):
+                    #     field_value = field_value.value
 
                 self.o._config[od_key]["value"] = field_value
 

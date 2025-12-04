@@ -53,6 +53,67 @@ m.run_all()
 ```
 
 
+## Harmful Algal Bloom
+
+The goal of this scenario is to examine the transport of an existing harmful algal bloom or determine where an existing bloom originated, respecting temperature and salinity bounds for the species.
+
+### Initialize manager `m`
+
+```{code-cell} ipython3
+m = ptm.OpenDriftModel(drift_model="HarmfulAlgalBloom", lon = -89.8, lat = 29.08,
+                       number=10, steps=40,
+                       ocean_model="TXLA",
+                       start_time="2009-11-19T12:00",
+                       ocean_model_local=False,
+                       species_type="Pseudo_nitzschia",
+                       plots={'spaghetti': {}})
+```
+
+The currently available species are:
+
+```{code-cell} ipython3
+ptm.HarmfulAlgalBloomModelConfig.model_json_schema()["$defs"]["HABSpeciesTypeEnum"]["enum"]
+```
+
+where `custom` is an option to allow the user to input all necessary parameters to represent a species of their choice.
+
+There are parameters available just for the HAB model:
+
+```{code-cell} ipython3
+import json
+print(json.dumps(ptm.models.opendrift.enums.species_types.HABParameters.model_json_schema(), indent=2))
+```
+
+
+The special parameters for each available species are:
+
+```{code-cell} ipython3
+species = ptm.HarmfulAlgalBloomModelConfig.model_json_schema()["$defs"]["HABSpeciesTypeEnum"]["enum"]
+species.remove('custom')
+for specie in species:
+    print(f"{specie}: {ptm.models.opendrift.enums.species_types.SPECIES_HAB_DEFAULTS[specie]}")
+```
+
+The regular parameters that are set for each available species are:
+
+```{code-cell} ipython3
+for specie in species:
+    print(f"{specie}: {ptm.models.opendrift.enums.species_types.SPECIES_HAB_MANAGER_DEFAULTS[specie]}")
+```
+
+The configuration parameters for this simulation are:
+
+```{code-cell} ipython3
+pprint.pprint(m.config.model_dump())
+```
+
+### Run
+
+```{code-cell} ipython3
+m.run_all()
+```
+
+
 ## Leeway (Search and Rescue)
 
 These are simulations of objects that stay at the surface and are transported by both the wind and ocean currents at rates that depend on how much the object sticks up out of and down into the water. The constants to use for those rates have been experimentally determined by the coastguard and are used in this model.

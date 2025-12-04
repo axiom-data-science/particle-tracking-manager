@@ -11,6 +11,7 @@ class DriftModelEnum(str, Enum):
     LarvalFish = "LarvalFish"
     OpenOil = "OpenOil"
     Leeway = "Leeway"
+    HarmfulAlgalBloom = "HarmfulAlgalBloom"
 
 
 # Enum for radius_type

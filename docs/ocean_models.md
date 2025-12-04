@@ -20,10 +20,11 @@ Here we describe how to user existing ocean model configurations as well as how 
 Some ocean models are built into PTM and can be accessed by the input parameter `ocean_model`.
 
 The built-in ocean models are:
-* **NWGOA** (1999–2008) over the Northwest Gulf of Alaska (Danielson, S. L., K. S. Hedstrom, E. Curchitser,	2016. Cook Inlet Model Calculations, Final Report to Bureau of Ocean Energy Management,	M14AC00014,	OCS	Study BOEM 2015-050, University	of Alaska Fairbanks, Fairbanks,	AK,	149 pp.)
+* **CIOFS3** (1999–2024) across Cook Inlet, Alaska, the newest hindcast version of NOAA's CIOFS model. (Thyng, K. M., C. Liu, 2025. Cook Inlet Circulation Modeling - Long-term Hindcast with Improved Freshwater Forcing and Other Attributes, Final Report to the National Oceanic Atmospheric Administration National Centers for Coastal Ocean Science Kasitsna Bay Lab, Axiom Data Science, Anchorage, AK.)
 * **CIOFS** (1999–2022) across Cook Inlet, Alaska, a hindcast version of NOAA's CIOFS model. (Thyng, K. M., C. Liu, M. Feen, E. L. Dobbins, 2023. Cook Inlet Circulation Modeling, Final Report to Oil Spill Recovery Institute, Axiom Data Science, Anchorage, AK.)
 * **CIOFSOP** (mid-2021 through 48 hours from present time) which is the nowcast/forecast version of the CIOFS model. (Shi, L., L. Lanerolle, Y. Chen, D. Cao, R. Patchen, A. Zhang,
 and E. P. Myers, 2020. NOS Cook Inlet Operational Forecast System: Model development and hindcast skill assessment, NOAA Technical Report NOS CS 40, Silver Spring, Maryland, September 2020.)
+* **NWGOA** (1999–2008) over the Northwest Gulf of Alaska (Danielson, S. L., K. S. Hedstrom, E. Curchitser,	2016. Cook Inlet Model Calculations, Final Report to Bureau of Ocean Energy Management,	M14AC00014,	OCS	Study BOEM 2015-050, University	of Alaska Fairbanks, Fairbanks,	AK,	149 pp.)
 
 
 ### Show available ocean models
@@ -41,7 +42,7 @@ ocean_model_registry.all()
 Show each individual ocean_model:
 
 ```{code-cell} ipython3
-ocean_model_registry.show("NWGOA")
+ocean_model_registry.show("CIOFS3")
 ```
 
 ```{code-cell} ipython3
@@ -50,6 +51,10 @@ ocean_model_registry.show("CIOFS")
 
 ```{code-cell} ipython3
 ocean_model_registry.show("CIOFSOP")
+```
+
+```{code-cell} ipython3
+ocean_model_registry.show("NWGOA")
 ```
 
 ### Return ocean model object

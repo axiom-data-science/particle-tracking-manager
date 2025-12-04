@@ -24,3 +24,4 @@ CIOFSFRESH:
     - "wetdry_mask_psi"
   dx: 100
   kerchunk_func_str: "make_ciofs_kerchunk"
+  chunks: {}

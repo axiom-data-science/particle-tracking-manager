@@ -101,7 +101,7 @@ class OceanModelSimulation(BaseModel):
                 if ".nc" in self.ocean_model_config.loc_remote:
                     ds = xr.open_dataset(
                         self.ocean_model_config.loc_remote,
-                        chunks={},
+                        chunks=self.ocean_model_config.chunks,
                         drop_variables=drop_vars,
                         decode_times=False,
                     )
@@ -116,7 +116,7 @@ class OceanModelSimulation(BaseModel):
                 else:
                     ds = xr.open_zarr(
                         self.ocean_model_config.loc_remote,
-                        chunks={},
+                        chunks=self.ocean_model_config.chunks,
                         drop_variables=drop_vars,
                         decode_times=False,
                     )
