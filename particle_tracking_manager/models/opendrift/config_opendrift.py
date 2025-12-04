@@ -1,10 +1,11 @@
-"""Defines classes OpenDriftConfig, LeewayModelConfig, OceanDriftModelConfig, OpenOilModelConfig, and LarvalFishModelConfig."""
+"""Defines classes OpenDriftConfig, LeewayModelConfig, OceanDriftModelConfig, OpenOilModelConfig, LarvalFishModelConfig, HarmfulAlgalBloomModelConfig."""
 
 # Standard library imports
 import logging
 
 from os import PathLike
 from pathlib import Path
+from typing import Any
 
 # Third-party imports
 from pydantic import Field, model_validator
@@ -18,11 +19,17 @@ from .enums import (
     DiffusivityModelEnum,
     DriftModelEnum,
     DropletSizeDistributionEnum,
+    HABSpeciesTypeEnum,
     ObjectTypeEnum,
     OilTypeEnum,
     PlotTypeEnum,
     RadiusTypeEnum,
     SeafloorActionEnum,
+)
+from .enums.species_types import (
+    SPECIES_HAB_DEFAULTS,
+    SPECIES_HAB_MANAGER_DEFAULTS,
+    HABParameters,
 )
 
 
@@ -267,14 +274,14 @@ class OpenDriftConfig(TheManagerConfig):
             )
 
         # only keep salt and temp for LarvalFish or OpenOil
-        if self.drift_model not in ["LarvalFish", "OpenOil"]:
+        if self.drift_model not in ["LarvalFish", "OpenOil", "HarmfulAlgalBloom"]:
             drop_vars += ["salt", "temp"]
             logger.debug(
-                "Dropping salt and temp variables because drift_model is not LarvalFish nor OpenOil"
+                "Dropping salt and temp variables because drift_model is not LarvalFish nor OpenOil nor HarmfulAlgalBloom"
             )
         else:
             logger.debug(
-                "Retaining salt and temp variables because drift_model is LarvalFish or OpenOil"
+                "Retaining salt and temp variables because drift_model is LarvalFish or OpenOil or HarmfulAlgalBloom"
             )
 
         # keep some ice variables for OpenOil (though later see if these are used)
@@ -759,9 +766,145 @@ class LarvalFishModelConfig(OceanDriftModelConfig):
         return self
 
 
+class HarmfulAlgalBloomModelConfig(HABParameters, OceanDriftModelConfig):
+    """Harmful algal bloom model configuration for OpenDrift."""
+
+    drift_model: DriftModelEnum = DriftModelEnum.HarmfulAlgalBloom
+
+    species_type: HABSpeciesTypeEnum = Field(
+        default=HABSpeciesTypeEnum("Pseudo_nitzschia"),
+        description="HarmfulAlgalBloom species category for this simulation. This option maps to individual properties which can instead be set manually if desired.",
+        title="HAB Species Type",
+        json_schema_extra={"ptm_level": 1},
+    )
+
+    # # new field: full parameter bundle for the HAB species
+    # hab_params: HABParameters = Field(
+    #     description=(
+    #         "Biological parameters for the HAB model. If omitted or partially "
+    #         "specified, defaults are taken from the selected species_type and "
+    #         "overridden by any provided values."
+    #     ),
+    #     json_schema_extra={"ptm_level": 1},
+    # )
+
+    # temperature_death_min: float = Field(
+    #     # default=3.0,
+    #     description="Minimum temperature for living. Below this temperature, cells have high mortality rate. Between this and temperature_viable_min, cells have no growth.",
+    #     title="Boundary temperature for cell death.",
+    #     # gt=-3,
+    #     json_schema_extra={
+    #         "units": "degrees",
+    #         "od_mapping": "hab:temperature_death_min",
+    #         "ptm_level": 2,
+    #     },
+    # )
+
+    # # override inherited parameter defaults
+    # vertical_mixing: bool = FieldInfo.merge_field_infos(
+    #     OceanDriftModelConfig.model_fields["vertical_mixing"], Field(default=True)
+    # )
+    # do3D: bool = FieldInfo.merge_field_infos(
+    #     TheManagerConfig.model_fields["do3D"], Field(default=True)
+    # )
+
+    @model_validator(mode="before")
+    @classmethod
+    def apply_species_defaults(cls, data: Any) -> Any:
+        """
+        - If species_type has presets:
+            * Start from species HAB defaults
+            * Overlay any user-provided hab_params
+            * Set z/do3D defaults only if user didn't supply them
+        - If species_type has no presets (e.g., Custom):
+            * Require user to provide hab_params explicitly
+            * z/do3D behave as usual (user or base defaults)
+        """
+        if not isinstance(data, dict):
+            return data
+
+        # Ensure species_type has some value in raw input
+        data.setdefault("species_type", HABSpeciesTypeEnum("Pseudo_nitzschia"))
+        species = data["species_type"]
+
+        # -------- HAB param defaults (flattened) --------
+        if species in SPECIES_HAB_DEFAULTS:
+            # species defaults
+            default_params = SPECIES_HAB_DEFAULTS[species].model_dump()
+
+            # apply defaults only where user did not provide a value
+            for field_name, default_value in default_params.items():
+                data.setdefault(field_name, default_value)
+        else:
+            # species has no preset (e.g. Custom): require all HAB fields
+            required_fields = HABParameters.model_fields.keys()
+            missing = [f for f in required_fields if f not in data]
+            if missing:
+                raise ValueError(
+                    "Custom HAB species requires explicit values for all HAB parameters. "
+                    f"Missing: {', '.join(missing)}"
+                )
+
+        # -------- Other config field defaults (e.g. z, do3D) --------
+        field_defaults = SPECIES_HAB_MANAGER_DEFAULTS.get(species, {})
+        for field_name, default_value in field_defaults.items():
+            # only apply if the user did not supply this field
+            data.setdefault(field_name, default_value)
+
+        return data
+
+    # @model_validator(mode="after")
+    # def setup_species_parameters(self) -> Self:
+    #     """Assign species-specific parameters."""
+
+    #     if self.species_type == HABSpeciesTypeEnum("Pseudo_nitzschia"):
+
+    #         if self.do3D:
+    #             raise ValueError("Pseudo_nitzschia species requires do3D to be False.")
+    #         if self.z != 0.0:
+    #             raise ValueError("Pseudo_nitzschia species requires z to be 0.0 m.")
+    #         logger.debug("HAB species Pseudo_nitzschia selected.")
+
+    #     else:
+    #         raise ValueError(
+    #             f"Species type {self.species_type} not recognized for HarmfulAlgalBloom model."
+    #         )
+    #     return self
+
+    # @model_validator(mode="after")
+    # def check_do3D(self) -> Self:
+    #     """Check if do3D is set to True for LarvalFish model."""
+    #     if not self.do3D:
+    #         raise ValueError("do3D must be True with the LarvalFish drift model.")
+
+    #     return self
+
+    # @model_validator(mode="after")
+    # def check_vertical_mixing(self) -> Self:
+    #     """Check if vertical_mixing is set to True for LarvalFish model."""
+    #     if not self.vertical_mixing:
+    #         raise ValueError(
+    #             "vertical_mixing must be True with the LarvalFish drift model."
+    #         )
+
+    #     return self
+
+    # @model_validator(mode="after")
+    # def check_hatched_and_stage_fraction(self) -> Self:
+    #     """If hatched==1, stage_fraction should be None.
+
+    #     This only applies for seeding, not for the simulation.
+    #     """
+
+    #     if self.hatched == 1 and self.stage_fraction is not None:
+    #         raise ValueError("If hatched==1, stage_fraction should be None.")
+    #     return self
+
+
 open_drift_mapper: dict[str, type[OpenDriftConfig]] = {
     "OceanDrift": OceanDriftModelConfig,
     "OpenOil": OpenOilModelConfig,
     "LarvalFish": LarvalFishModelConfig,
     "Leeway": LeewayModelConfig,
+    "HarmfulAlgalBloom": HarmfulAlgalBloomModelConfig,
 }

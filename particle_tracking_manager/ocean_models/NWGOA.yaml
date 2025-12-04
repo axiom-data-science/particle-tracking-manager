@@ -30,3 +30,4 @@ NWGOA:
     - "snow_thick"
   dx: 1500
   kerchunk_func_str: "make_nwgoa_kerchunk"
+  chunks: {}

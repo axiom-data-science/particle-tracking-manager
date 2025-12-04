@@ -101,6 +101,10 @@ class OceanModelConfig(BaseModel):
         str | None,
         Field(description="Remote location of the model dataset."),
     ]
+    chunks: Annotated[
+        dict | None,
+        Field(description="Chunking strategy for the model dataset."),
+    ]
     dx: Annotated[
         float | None,
         Field(

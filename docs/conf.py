@@ -62,6 +62,11 @@ extensions = [
     "myst_nb",
 ]
 
+myst_enable_extensions = [
+    "dollarmath",  # enables $...$ and $$...$$
+    "amsmath",  # enables \begin{equation}, \text{}, etc.
+]
+
 # for compiling notebooks with mystnb
 # https://docs.readthedocs.io/en/stable/guides/jupyter.html#using-notebooks-in-other-formats
 nb_custom_formats = {

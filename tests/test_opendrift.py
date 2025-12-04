@@ -277,7 +277,30 @@ def test_OpenOil_all_oils_exact_match():
         oil["const"]: oil["title"] for oil in schema["properties"]["oil_type"]["oneOf"]
     }
     od_oils = {oil.id: oil.name for oil in dirjs.oils(limit=1300)}
+
+    # OpenDrift has 5 extra Norwegian oils that are not in PTM so we remove them for this test
+    extra_od_oils = ["NO00167", "NO00168", "NO00169", "NO00170", "NO00171"]
+    for extra_oil in extra_od_oils:
+        od_oils.pop(extra_oil, None)
+
     assert ptm_oils == od_oils
+
+
+def test_HarmfulAlgalBloom_seeding():
+    """Make sure special parameter comes through"""
+
+    m = OpenDriftModel(
+        drift_model="HarmfulAlgalBloom",
+        species_type="Pseudo_nitzschia",
+        temperature_death_min=1,
+        lon=-151,
+        lat=60,
+        start_time="2022-01-01T00:00:00",
+        use_auto_landmask=True,
+        steps=1,
+    )
+    m.setup_for_simulation()  # creates m.o
+    assert m.o._config["hab:temperature_death_min"]["value"] == 1
 
 
 def test_wind_drift():

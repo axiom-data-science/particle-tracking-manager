@@ -1,5 +1,11 @@
 # What's New
 
+## Unreleased
+
+* Added a new model scenario: `HarmfalAlgalBloom`.
+* Fix a bug for running backward in time.
+* Ocean model configuration files now need to include `chunks`
+
 ## v0.13.2 (November 20, 2025)
 
 * If timezone-aware `start_time`, `start_time_end`, or `end_time` is input, the timezone is now removed and it is assumed they are in the same timezone as the model times.

@@ -301,9 +301,21 @@ class TheManagerConfig(BaseModel):
         """Set timedir to 1 for forward, -1 for backward."""
         if self.run_forward:
             value = 1
+            logger.info("Running model forward in time.")
         else:
             value = -1
+            logger.info("Running model backward in time.")
         return value
+
+    @model_validator(mode="after")
+    def match_time_step_sign_to_timedir_sign(self) -> Self:
+        """If simulation is backward, make time_step negative.
+
+        Sign of input time_step is ignored.
+        """
+        self.time_step = abs(self.time_step) * self.timedir
+        logger.debug(f"Setting time_step to {self.time_step} to match timedir sign.")
+        return self
 
     @model_validator(mode="after")
     def calculate_config_times(self) -> Self:

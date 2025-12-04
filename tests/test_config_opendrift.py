@@ -5,6 +5,7 @@ import pytest
 from pydantic import ValidationError
 
 from particle_tracking_manager.models.opendrift.config_opendrift import (
+    HarmfulAlgalBloomModelConfig,
     LarvalFishModelConfig,
     LeewayModelConfig,
     OceanDriftModelConfig,
@@ -12,6 +13,9 @@ from particle_tracking_manager.models.opendrift.config_opendrift import (
     OpenOilModelConfig,
 )
 from particle_tracking_manager.models.opendrift.enums import ObjectTypeEnum
+from particle_tracking_manager.models.opendrift.enums.species_types import (
+    SPECIES_HAB_DEFAULTS,
+)
 from particle_tracking_manager.models.opendrift.opendrift import OpenDriftModel
 
 
@@ -121,6 +125,7 @@ def test_Leeway_disallowed_settings():
         m = LeewayModelConfig(drift_model="Leeway", do3D=True, steps=1)
 
 
+@pytest.mark.slow
 def test_object_type_list():
     """Make sure options are exactly the same as in OpenDrift."""
 
@@ -200,6 +205,7 @@ def test_OpenOil_json_schema():
     )
 
 
+## OceanDrift
 def test_unknown_parameter():
     """Make sure unknown parameters are not input."""
 
@@ -250,3 +256,70 @@ def test_interpolator_filename():
 
     m = OpenDriftConfig(use_cache=True, interpolator_filename=None, steps=1)
     assert m.interpolator_filename.name == "CIOFSOP_interpolator.pickle"
+
+
+## HarmfulAlgalBloom ##
+
+
+def test_HarmfulAlgalBloom_init():
+    m = HarmfulAlgalBloomModelConfig(
+        drift_model="HarmfulAlgalBloom",
+        steps=1,
+    )
+
+
+def test_HarmfulAlgalBloom_parameters():
+    """Make sure HarmfulAlgalBloom-specific parameters are present."""
+    m = HarmfulAlgalBloomModelConfig(drift_model="HarmfulAlgalBloom", steps=1)
+    params = [
+        "species_type",
+        "temperature_death_min",
+        "temperature_death_max",
+        "salinity_death_min",
+        "salinity_death_max",
+    ]
+    for param in params:
+        assert hasattr(m, param)
+
+
+def test_HarmfulAlgalBloom_species_type():
+    """Make sure species_type parameter works as expected."""
+    m = HarmfulAlgalBloomModelConfig(
+        drift_model="HarmfulAlgalBloom",
+        species_type="Pseudo_nitzschia",
+        steps=1,
+    )
+    assert m.species_type == "Pseudo_nitzschia"
+    assert (
+        m.temperature_death_min
+        == SPECIES_HAB_DEFAULTS["Pseudo_nitzschia"].temperature_death_min
+    )
+    assert (
+        m.temperature_death_max
+        == SPECIES_HAB_DEFAULTS["Pseudo_nitzschia"].temperature_death_max
+    )
+    assert (
+        m.salinity_death_min
+        == SPECIES_HAB_DEFAULTS["Pseudo_nitzschia"].salinity_death_min
+    )
+    assert (
+        m.salinity_death_max
+        == SPECIES_HAB_DEFAULTS["Pseudo_nitzschia"].salinity_death_max
+    )
+
+
+def test_HarmfulAlgalBloom_disallowed_settings():
+    """HarmfulAlgalBloom is incompatible with some settings depending on the species.
+
+    HarmfulAlgalBloom has to always be 3D with vertical_mixing on.
+    """
+
+    with pytest.raises(ValidationError):
+        m = HarmfulAlgalBloomModelConfig(
+            drift_model="HarmfulAlgalBloom",
+            steps=1,
+            species_type="custom",
+        )
+
+    # with pytest.raises(ValidationError):
+    #     m = HarmfulAlgalBloomModelConfig(drift_model="HarmfulAlgalBloom", do3D=True, steps=1, species_type="Pseudo_nitzschia")

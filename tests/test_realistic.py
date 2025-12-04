@@ -118,3 +118,27 @@ def test_run_netcdf_and_plot():
         == manager.config.time_step
         # == m.o.get_configspec()["general:time_step_minutes"]["value"]  # this is not correct, don't know why
     )
+
+
+@pytest.mark.slow
+def test_run_HarmfulAlgalBloom_biomass_change():
+    """Set up and run HarmfulAlgalBloom and match biomass change."""
+
+    seeding_kwargs = dict(lon=-90, lat=28.7, number=1, start_time="2009-11-19T12:00:00")
+    manager = ptm.OpenDriftModel(
+        **seeding_kwargs,
+        use_static_masks=True,
+        duration="1h",
+        ocean_model="TXLA",
+        ocean_model_local=False,
+        drift_model="HarmfulAlgalBloom",
+    )
+    manager.run_all()
+
+    # check that biomass decreased due to temperature-induced mortality
+    # calculated as: biomass = initial_biomass * exp(-mortality_rate_high * time)
+    # initial biomass is 1.0, mortality_rate_high is 0.5 days^-1, time is 1 hour = 1/24 days
+    assert np.allclose(
+        float(manager.o.elements.biomass[0]),
+        np.exp(-manager.config.mortality_rate_high * 3600 / 86400),
+    )

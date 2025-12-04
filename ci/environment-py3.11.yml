@@ -14,7 +14,7 @@ dependencies:
   - kerchunk ==0.2.7
   - xarray
   - numpy <=1.26.4  # req from opendrift
-  - opendrift ==1.13.0
+  # - opendrift ==1.13.0
   - scipy
   - dask
   - netcdf4
@@ -31,8 +31,8 @@ dependencies:
   - coverage
   - pip
   - pytest
-  # - pip:
+  - pip:
     # - adios_db
-    # - git+https://github.com/OpenDrift/opendrift
+    - git+https://github.com/kthyng/opendrift.git@start_habs
     # - git+https://github.com/fsspec/kerchunk
     # - xroms  # can't be found on conda-forge for CI, but don't need since in runslow tests?
