@@ -65,7 +65,7 @@ m = ptm.OpenDriftModel(drift_model="HarmfulAlgalBloom", lon = -89.8, lat = 29.08
                        ocean_model="TXLA",
                        start_time="2009-11-19T12:00",
                        ocean_model_local=False,
-                       species_type="Pseudo_nitzschia",
+                       species_type="Pseudo nitzschia",
                        plots={'spaghetti': {}})
 ```
 

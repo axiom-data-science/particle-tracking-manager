@@ -30,6 +30,7 @@ from .enums.species_types import (
     SPECIES_HAB_DEFAULTS,
     SPECIES_HAB_MANAGER_DEFAULTS,
     HABParameters,
+    _species_descriptions,
 )
 
 
@@ -770,12 +771,14 @@ class HarmfulAlgalBloomModelConfig(HABParameters, OceanDriftModelConfig):
     """Harmful algal bloom model configuration for OpenDrift."""
 
     drift_model: DriftModelEnum = DriftModelEnum.HarmfulAlgalBloom
-
+    # import pdb; pdb.set_trace()
     species_type: HABSpeciesTypeEnum = Field(
-        default=HABSpeciesTypeEnum("Pseudo_nitzschia"),
+        default=HABSpeciesTypeEnum.PN,
         description="HarmfulAlgalBloom species category for this simulation. This option maps to individual properties which can instead be set manually if desired.",
         title="HAB Species Type",
-        json_schema_extra={"ptm_level": 1},
+        json_schema_extra={"ptm_level": 1,
+                            "oneOf": [{"const": species.name, "title": species.value, "description": _species_descriptions[species.value]} for species in HABSpeciesTypeEnum],
+                        },
     )
 
     # # new field: full parameter bundle for the HAB species
@@ -824,7 +827,7 @@ class HarmfulAlgalBloomModelConfig(HABParameters, OceanDriftModelConfig):
             return data
 
         # Ensure species_type has some value in raw input
-        data.setdefault("species_type", HABSpeciesTypeEnum("Pseudo_nitzschia"))
+        data.setdefault("species_type", HABSpeciesTypeEnum.PN)
         species = data["species_type"]
 
         # -------- HAB param defaults (flattened) --------

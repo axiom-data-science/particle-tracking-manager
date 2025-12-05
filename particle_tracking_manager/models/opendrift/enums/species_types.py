@@ -8,7 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field
 class HABSpeciesTypeEnum(str, Enum):
     """Enum for species types used in HarmfulAlgalBloom model in OpenDrift."""
 
-    Pseudo_nitzschia = "Pseudo_nitzschia"
+    PN = "Pseudo nitzschia"
     custom = "custom"  # for fully user-specified params
 
 
@@ -20,6 +20,7 @@ class HABParameters(BaseModel):
         title="Cell death below this temperature",
         ge=-5.0,
         le=40.0,
+        default=3.0,
         json_schema_extra={
             "units": "degrees",
             "od_mapping": "hab:temperature_death_min",
@@ -32,6 +33,7 @@ class HABParameters(BaseModel):
         title="Cell death above this temperature",
         ge=-5.0,
         le=40.0,
+        default=22.0,
         json_schema_extra={
             "units": "degrees",
             "od_mapping": "hab:temperature_death_max",
@@ -44,6 +46,7 @@ class HABParameters(BaseModel):
         title="High mortality rate",
         ge=0.0,
         le=10.0,
+        default=1.0,
         json_schema_extra={
             "units": "days^-1",
             "od_mapping": "hab:mortality_rate_high",
@@ -56,6 +59,7 @@ class HABParameters(BaseModel):
         title="Cell death below this salinity",
         ge=0.0,
         le=50.0,
+        default=25.0,
         json_schema_extra={
             "units": "psu",
             "od_mapping": "hab:salinity_death_min",
@@ -68,6 +72,7 @@ class HABParameters(BaseModel):
         title="Cell death above this salinity",
         ge=0.0,
         le=50.0,
+        default=36.0,
         json_schema_extra={
             "units": "psu",
             "od_mapping": "hab:salinity_death_max",
@@ -78,7 +83,7 @@ class HABParameters(BaseModel):
 
 # Species default for HarmfulAlgalBloom model
 SPECIES_HAB_DEFAULTS: dict[HABSpeciesTypeEnum, HABParameters] = {
-    HABSpeciesTypeEnum.Pseudo_nitzschia: HABParameters(
+    HABSpeciesTypeEnum.PN: HABParameters(
         temperature_death_min=3.0,
         temperature_death_max=22.0,
         mortality_rate_high=1.0,
@@ -91,10 +96,14 @@ SPECIES_HAB_DEFAULTS: dict[HABSpeciesTypeEnum, HABParameters] = {
 
 # Other config defaults per species (z, do3D, etc.)
 SPECIES_HAB_MANAGER_DEFAULTS: dict[HABSpeciesTypeEnum, dict[str, object]] = {
-    HABSpeciesTypeEnum.Pseudo_nitzschia: {
+    HABSpeciesTypeEnum.PN: {
         "z": -1.0,
         "do3D": False,
     },
     # HABSpeciesTypeEnum.Alexandrium: {"do3D": True, ...},
     # HABSpeciesTypeEnum.Dinophysis: {...},
 }
+
+# this is for the schema
+_species_descriptions = {species.value: "Defaults: " + ", ".join([f"{key}={value}" for key, value in SPECIES_HAB_DEFAULTS[species].model_dump().items()]) for species in HABSpeciesTypeEnum if species != "custom"}
+_species_descriptions["custom"] = "Custom species with user-defined parameters."

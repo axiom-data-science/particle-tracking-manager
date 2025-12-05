@@ -291,7 +291,7 @@ def test_HarmfulAlgalBloom_seeding():
 
     m = OpenDriftModel(
         drift_model="HarmfulAlgalBloom",
-        species_type="Pseudo_nitzschia",
+        species_type="Pseudo nitzschia",
         temperature_death_min=1,
         lon=-151,
         lat=60,
