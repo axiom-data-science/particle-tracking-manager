@@ -105,5 +105,15 @@ SPECIES_HAB_MANAGER_DEFAULTS: dict[HABSpeciesTypeEnum, dict[str, object]] = {
 }
 
 # this is for the schema
-_species_descriptions = {species.value: "Defaults: " + ", ".join([f"{key}={value}" for key, value in SPECIES_HAB_DEFAULTS[species].model_dump().items()]) for species in HABSpeciesTypeEnum if species != "custom"}
+_species_descriptions = {
+    species.value: "Defaults: "
+    + ", ".join(
+        [
+            f"{key}={value}"
+            for key, value in SPECIES_HAB_DEFAULTS[species].model_dump().items()
+        ]
+    )
+    for species in HABSpeciesTypeEnum
+    if species != "custom"
+}
 _species_descriptions["custom"] = "Custom species with user-defined parameters."

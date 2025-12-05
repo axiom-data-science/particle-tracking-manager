@@ -776,9 +776,17 @@ class HarmfulAlgalBloomModelConfig(HABParameters, OceanDriftModelConfig):
         default=HABSpeciesTypeEnum.PN,
         description="HarmfulAlgalBloom species category for this simulation. This option maps to individual properties which can instead be set manually if desired.",
         title="HAB Species Type",
-        json_schema_extra={"ptm_level": 1,
-                            "oneOf": [{"const": species.name, "title": species.value, "description": _species_descriptions[species.value]} for species in HABSpeciesTypeEnum],
-                        },
+        json_schema_extra={
+            "ptm_level": 1,
+            "oneOf": [
+                {
+                    "const": species.name,
+                    "title": species.value,
+                    "description": _species_descriptions[species.value],
+                }
+                for species in HABSpeciesTypeEnum
+            ],
+        },
     )
 
     # # new field: full parameter bundle for the HAB species
