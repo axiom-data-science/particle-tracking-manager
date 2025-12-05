@@ -1,6 +1,11 @@
 # What's New
 
-## Unreleased
+## v2.0.2 (Decemeber 5, 2025)
+
+* Changed "name" of `HarmfulAlgalBloom` `species_type` enum to be an abbreviation "PN" and the value for the initial species to be "Pseudo nitzschia" instead of "Pseudo_nitzschia".
+* Added to the `HarmfulAlgalBloom` schema to have a "oneOf" output containing the preset values associated with a `species_type` in the description.
+
+## v2.0.0 (December 4, 2025)
 
 * Added a new model scenario: `HarmfalAlgalBloom`.
 * Fix a bug for running backward in time.

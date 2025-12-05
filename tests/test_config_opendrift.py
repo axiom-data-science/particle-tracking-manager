@@ -286,25 +286,25 @@ def test_HarmfulAlgalBloom_species_type():
     """Make sure species_type parameter works as expected."""
     m = HarmfulAlgalBloomModelConfig(
         drift_model="HarmfulAlgalBloom",
-        species_type="Pseudo_nitzschia",
+        species_type="Pseudo nitzschia",
         steps=1,
     )
-    assert m.species_type == "Pseudo_nitzschia"
+    assert m.species_type == "Pseudo nitzschia"
     assert (
         m.temperature_death_min
-        == SPECIES_HAB_DEFAULTS["Pseudo_nitzschia"].temperature_death_min
+        == SPECIES_HAB_DEFAULTS["Pseudo nitzschia"].temperature_death_min
     )
     assert (
         m.temperature_death_max
-        == SPECIES_HAB_DEFAULTS["Pseudo_nitzschia"].temperature_death_max
+        == SPECIES_HAB_DEFAULTS["Pseudo nitzschia"].temperature_death_max
     )
     assert (
         m.salinity_death_min
-        == SPECIES_HAB_DEFAULTS["Pseudo_nitzschia"].salinity_death_min
+        == SPECIES_HAB_DEFAULTS["Pseudo nitzschia"].salinity_death_min
     )
     assert (
         m.salinity_death_max
-        == SPECIES_HAB_DEFAULTS["Pseudo_nitzschia"].salinity_death_max
+        == SPECIES_HAB_DEFAULTS["Pseudo nitzschia"].salinity_death_max
     )
 
 
