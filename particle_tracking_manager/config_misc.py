@@ -6,22 +6,19 @@ import logging
 import pathlib
 
 from os import PathLike
-from typing import Self
+from typing import Any, Mapping, Self
 
 # Third-party imports
-from pydantic import (
-    BaseModel,
-    ConfigDict,
-    Field,
-    computed_field,
-    create_model,
-    field_validator,
-    model_validator,
-)
+from pydantic import BaseModel, Field, computed_field, field_validator, model_validator
 
 # Local imports
 from .config_the_manager import OutputFormatEnum, TheManagerConfig
 
+
+OUTPUT_FORMAT_SUFFIX: Mapping[OutputFormatEnum, str] = {
+    OutputFormatEnum.netcdf: ".nc",
+    OutputFormatEnum.parquet: ".parquet",
+}
 
 logger = logging.getLogger()
 
@@ -56,37 +53,27 @@ class SetupOutputFiles(BaseModel):
     model_config = {"validate_default": True}
 
     @field_validator("output_file", mode="after")
-    def assign_output_file_if_needed(value: str | None) -> str:
+    def assign_output_file_if_needed(value: Any) -> str:
         """Assign a default output file name if not provided."""
         if value is None:
             return generate_default_output_file()
         return value
 
-    @field_validator("output_file", mode="after")
-    def clean_output_file(value: str) -> str:
-        """Clean the output file name by removing extensions."""
-        value = (
-            str(value).replace(".nc", "").replace(".parquet", "").replace(".parq", "")
-        )
-        return value
-
     @model_validator(mode="after")
-    def add_output_file_extension(self) -> Self:
-        """Add the appropriate file extension based on the output format."""
+    def set_output_file_extension(self) -> Self:
+        """Set the appropriate file extension based on the output format."""
         assert self.output_file is not None
-        if self.output_format is not None:
-            if self.output_format == "netcdf":
-                self.output_file = pathlib.Path(self.output_file).with_suffix(".nc")
-            elif self.output_format == "parquet":
-                self.output_file = pathlib.Path(self.output_file).with_suffix(
-                    ".parquet"
-                )
-            else:
-                raise ValueError(f"output_format {self.output_format} not recognized.")
+        if self.output_format not in OUTPUT_FORMAT_SUFFIX:
+            raise ValueError(f"output_format {self.output_format} not recognized.")
+
+        self.output_file = pathlib.Path(self.output_file).with_suffix(
+            OUTPUT_FORMAT_SUFFIX[self.output_format]
+        )
+
         return self
 
     @computed_field
     def logfile_name(self) -> str:
         """Generate a log file name based on the output file name."""
         assert self.output_file is not None
-        return pathlib.Path(self.output_file).stem + ".log"
+        return str(pathlib.Path(self.output_file).with_suffix(".log"))
