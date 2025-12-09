@@ -1,5 +1,11 @@
 # What's New
 
+## Unreleased
+
+* Changes to `HarmfulAlgalBloom` to support updates in `OpenDrift` model:
+  * Added and renamed some parameters.
+  * Added another test, to test growth in the HAB scenario since that has now been added.
+
 ## v2.0.2 (Decemeber 5, 2025)
 
 * Changed "name" of `HarmfulAlgalBloom` `species_type` enum to be an abbreviation "PN" and the value for the initial species to be "Pseudo nitzschia" instead of "Pseudo_nitzschia".
