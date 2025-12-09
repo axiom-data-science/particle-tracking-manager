@@ -1,5 +1,11 @@
 # What's New
 
+## Unreleased
+
+* Changes to `HarmfulAlgalBloom` to support updates in `OpenDrift` model:
+  * Added and renamed some parameters.
+  * Added another test, to test growth in the HAB scenario since that has now been added.
+
 ## v2.1.2 (December 19, 2025)
 
 * Fixed bug so that CIOFSOP `end_time` is updated before the simulation run `end_time` gets validated
@@ -36,7 +42,6 @@
 ## v2.0.3 (Decemeber 5, 2025)
 
 * Fixed docs.
-
 
 ## v2.0.2 (Decemeber 5, 2025)
 

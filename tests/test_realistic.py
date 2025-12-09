@@ -28,27 +28,30 @@ def is_parquet(path):
 # set up an alternate dataset on-the-fly
 ds = xr.Dataset(
     data_vars={
-        "u": (("ocean_time", "Z", "Y", "X"), np.zeros((2, 3, 2, 3))),
-        "v": (("ocean_time", "Z", "Y", "X"), np.zeros((2, 3, 2, 3))),
-        "w": (("ocean_time", "Z", "Y", "X"), np.zeros((2, 3, 2, 3))),
-        "salt": (("ocean_time", "Z", "Y", "X"), np.zeros((2, 3, 2, 3))),
-        "temp": (("ocean_time", "Z", "Y", "X"), np.zeros((2, 3, 2, 3))),
-        "wetdry_mask_rho": (("ocean_time", "Z", "Y", "X"), np.zeros((2, 3, 2, 3))),
-        "mask_rho": (("Y", "X"), np.zeros((2, 3))),
-        "Uwind": (("ocean_time", "Y", "X"), np.zeros((2, 2, 3))),
-        "Vwind": (("ocean_time", "Y", "X"), np.zeros((2, 2, 3))),
+        "u": (("ocean_time", "Z", "Y", "X"), np.ones((2, 3, 4, 5))),
+        "v": (("ocean_time", "Z", "Y", "X"), np.ones((2, 3, 4, 5))),
+        "w": (("ocean_time", "Z", "Y", "X"), np.zeros((2, 3, 4, 5))),
+        "salt": (("ocean_time", "Z", "Y", "X"), np.ones((2, 3, 4, 5))*31),
+        "temp": (("ocean_time", "Z", "Y", "X"), np.ones((2, 3, 4, 5))*18),
+        "wetdry_mask_rho": (("ocean_time", "Y", "X"), np.ones((2, 4, 5))),
+        "mask_rho": (("Y", "X"), np.ones((4, 5))),
+        "h": (("Y", "X"), np.ones((4, 5))*10),
+        "angle": (("Y", "X"), np.zeros((4, 5))),
+        "Uwind": (("ocean_time", "Y", "X"), np.zeros((2, 4, 5))),
+        "Vwind": (("ocean_time", "Y", "X"), np.zeros((2, 4, 5))),
         "Cs_r": (("Z"), np.linspace(-1, 0, 3)),
         "hc": 16,
     },
     coords={
-        "ocean_time": ("ocean_time", [0, 1], {"units": "seconds since 1970-01-01"}),
+        # "ocean_time": ("ocean_time", ["1970-01-01T00:00:00", "1970-01-01T00:10:00"], {"units": "seconds since 1970-01-01"}),
+        "ocean_time": ("ocean_time", [0, 60*10], {"units": "seconds since 1970-01-01"}),
         "s_rho": (("Z"), np.linspace(-1, 0, 3)),
-        "lon_rho": (("Y", "X"), np.array([[1, 2, 3], [1, 2, 3]])),
-        "lat_rho": (("Y", "X"), np.array([[1, 1, 1], [2, 2, 2]])),
+        "lon_rho": (("Y", "X"), np.array([[1.1, 1.2, 1.3, 1.4, 1.5], [1.1, 1.2, 1.3, 1.4, 1.5], [1.1, 1.2, 1.3, 1.4, 1.5], [1.1, 1.2, 1.3, 1.4, 1.5]])),
+        "lat_rho": (("Y", "X"), np.array([[2.1, 2.2, 2.3, 2.4, 2.5], [2.1, 2.2, 2.3, 2.4, 2.5], [2.1, 2.2, 2.3, 2.4, 2.5], [2.1, 2.2, 2.3, 2.4, 2.5]])),
     },
 )
 ds_info = dict(
-    lon_min=1, lon_max=3, lat_min=1, lat_max=2, start_time_model=0, end_time_fixed=1
+    lon_min=1.1, lon_max=1.5, lat_min=2.1, lat_max=2.5, start_time_model=0, end_time_fixed=60*10
 )
 
 ptm.config_ocean_model.register_on_the_fly(ds_info)
@@ -182,9 +185,39 @@ def test_run_HarmfulAlgalBloom_biomass_change():
     manager.run_all()
 
     # check that biomass decreased due to temperature-induced mortality
-    # calculated as: biomass = initial_biomass * exp(-mortality_rate_high * time)
+    # calculated as: biomass = initial_biomass * exp(growth_rate-mortality_rate_high * time)
     # initial biomass is 1.0, mortality_rate_high is 0.5 days^-1, time is 1 hour = 1/24 days
+    # growth_rate is zero due to conditions
     assert np.allclose(
         float(manager.o.elements.biomass[0]),
         np.exp(-manager.config.mortality_rate_high * 3600 / 86400),
+    )
+
+
+@pytest.mark.slow
+def test_run_HarmfulAlgalBloom_biomass_change2():
+    """Set up and run HarmfulAlgalBloom and match biomass change."""
+
+    seeding_kwargs = dict(lon=-90, lat=28.7, number=1, start_time="2009-11-19T12:00:00")
+    m = ptm.OpenDriftModel(
+        **seeding_kwargs,
+        use_static_masks=True,
+        duration="1h",
+        ocean_model="TXLA",
+        ocean_model_local=False,
+        drift_model="HarmfulAlgalBloom",
+    )
+    m.add_reader()
+    
+    # change model values for test
+    inds = m.ds.temp.notnull()
+    m.ds["temp"].values[inds] = 15.0
+    m.ds["salt"].values[inds] = 32.0
+    m.run_all()
+
+    # check that biomass decreased due to temperature-induced mortality
+    # calculated as: biomass = initial_biomass * exp(growth_rate-mortality_rate_high * time)
+    assert np.allclose(
+        float(m.o.elements.biomass[0]),
+        np.exp((m.config.growth_rate_high - m.config.mortality_rate_low) * 3600 / 86400),
     )

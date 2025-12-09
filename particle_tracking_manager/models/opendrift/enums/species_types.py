@@ -52,16 +52,29 @@ class HABParameters(BaseModel):
             "ptm_level": 2,
         },
     )
-
-    mortality_rate_high: float = Field(
-        description="Rate of mortality applied below temperature_death_min and above temperature_death_max.",
-        title="High mortality rate",
-        ge=0.0,
-        le=10.0,
-        default=1.0,
+    
+    temperature_pref_min: float = Field(
+        description="Minimum temperature for preferred temperature range; cells have regular growth.",
+        title="Minimum preferred temperature",
+        ge=-5.0,
+        le=40.0,
+        default=10.0,
         json_schema_extra={
-            "units": "days^-1",
-            "od_mapping": "hab:mortality_rate_high",
+            "units": "degrees",
+            "od_mapping": "hab:temperature_pref_min",
+            "ptm_level": 2,
+        },
+    )
+    
+    temperature_pref_max: float = Field(
+        description="Maximum temperature for preferred temperature range; cells have regular growth.",
+        title="Maximum preferred temperature",
+        ge=-5.0,
+        le=40.0,
+        default=20.0,
+        json_schema_extra={
+            "units": "degrees",
+            "od_mapping": "hab:temperature_pref_max",
             "ptm_level": 2,
         },
     )
@@ -91,6 +104,110 @@ class HABParameters(BaseModel):
             "ptm_level": 2,
         },
     )
+    
+    salinity_pref_min: float = Field(
+        description="Minimum salinity for preferred salinity range; cells have regular growth.",
+        title="Minimum preferred salinity",
+        ge=0.0,
+        le=50.0,
+        default=30.0,
+        json_schema_extra={
+            "units": "psu",
+            "od_mapping": "hab:salinity_pref_min",
+            "ptm_level": 2,
+        },
+    )
+    
+    salinity_pref_max: float = Field(
+        description="Maximum salinity for preferred salinity range; cells have regular growth.",
+        title="Maximum preferred salinity",
+        ge=0.0,
+        le=50.0,
+        default=40.0,
+        json_schema_extra={
+            "units": "psu",
+            "od_mapping": "hab:salinity_pref_max",
+            "ptm_level": 2,
+        },
+    )
+
+    mortality_rate_high: float = Field(
+        description="Rate of mortality applied below temperature_death_min and above temperature_death_max.",
+        title="High mortality rate",
+        ge=0.0,
+        le=10.0,
+        default=1.0,
+        json_schema_extra={
+            "units": "days^-1",
+            "od_mapping": "hab:mortality_rate_high",
+            "ptm_level": 2,
+        },
+    )
+
+    mortality_rate_medium: float = Field(
+        description="Rate of mortality applied in edge conditions defined by temperature_death_min, temperature_death_max, salinity_death_min, salinity_death_max, temperature_pref_min, temperature_pref_max, salinity_pref_min, and salinity_pref_max.",
+        title="Medium mortality rate",
+        ge=0.0,
+        le=10.0,
+        default=0.5,
+        json_schema_extra={
+            "units": "days^-1",
+            "od_mapping": "hab:mortality_rate_medium",
+            "ptm_level": 2,
+        },
+    )
+
+    mortality_rate_low: float = Field(
+        description="Rate of mortality applied in preferred conditions defined by temperature_pref_min, temperature_pref_max, salinity_pref_min, and salinity_pref_max.",
+        title="Low mortality rate",
+        ge=0.0,
+        le=10.0,
+        default=0.1,
+        json_schema_extra={
+            "units": "days^-1",
+            "od_mapping": "hab:mortality_rate_low",
+            "ptm_level": 2,
+        },
+    )
+
+    growth_rate_high: float = Field(
+        description="Rate of growth applied in preferred conditions defined by temperature_pref_min, temperature_pref_max, salinity_pref_min, and salinity_pref_max.",
+        title="High growth rate",
+        ge=0.0,
+        le=10.0,
+        default=0.7,
+        json_schema_extra={
+            "units": "days^-1",
+            "od_mapping": "hab:growth_rate_high",
+            "ptm_level": 2,
+        },
+    )
+
+    growth_rate_medium: float = Field(
+        description="Rate of growth applied in edge conditions defined by temperature_death_min, temperature_death_max, salinity_death_min, salinity_death_max, temperature_pref_min, temperature_pref_max, salinity_pref_min, and salinity_pref_max.",
+        title="Medium growth rate",
+        ge=0.0,
+        le=10.0,
+        default=0.2,
+        json_schema_extra={
+            "units": "days^-1",
+            "od_mapping": "hab:growth_rate_medium",
+            "ptm_level": 2,
+        },
+    )
+
+    growth_rate_low: float = Field(
+        description="Rate of growth applied below viable conditions defined by temperature_death_min, temperature_death_max, salinity_death_min, and salinity_death_max.",
+        title="Low growth rate",
+        ge=0.0,
+        le=10.0,
+        default=0.0,
+        json_schema_extra={
+            "units": "days^-1",
+            "od_mapping": "hab:growth_rate_low",
+            "ptm_level": 2,
+        },
+    )
 
 
 # Species default for HarmfulAlgalBloom model
@@ -98,9 +215,18 @@ SPECIES_HAB_DEFAULTS: dict[HABSpeciesTypeEnum, HABParameters] = {
     HABSpeciesTypeEnum.PN: HABParameters(
         temperature_death_min=3.0,
         temperature_death_max=22.0,
-        mortality_rate_high=1.0,
+        temperature_pref_min=10.0,
+        temperature_pref_max=18.0,
         salinity_death_min=25.0,
         salinity_death_max=36.0,
+        salinity_pref_min=30.0,
+        salinity_pref_max=34.0,
+        mortality_rate_high=1.0,
+        mortality_rate_medium=0.5,
+        mortality_rate_low=0.1,
+        growth_rate_high=0.7,
+        growth_rate_medium=0.2,
+        growth_rate_low=0.0,
     ),
     # HABSpeciesTypeEnum.custom intentionally has no entry
 }
