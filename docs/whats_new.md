@@ -1,5 +1,13 @@
 # What's New
 
+## Unreleased
+
+* Fix a log file path bug where the log file path was just the filename only.
+  Because of that it would get created in the current working directory and not
+  in the outputs directory next to the simulation output.
+* Refactor the `SetupOutputFiles` model to simplify things a bit and update tests.
+
+
 ## v2.0.2 (Decemeber 5, 2025)
 
 * Changed "name" of `HarmfulAlgalBloom` `species_type` enum to be an abbreviation "PN" and the value for the initial species to be "Pseudo nitzschia" instead of "Pseudo_nitzschia".
