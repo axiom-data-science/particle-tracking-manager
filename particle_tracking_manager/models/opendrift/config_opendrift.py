@@ -31,6 +31,7 @@ from .enums.species_types import (
     SPECIES_HAB_MANAGER_DEFAULTS,
     HABParameters,
     _species_descriptions,
+    HAB_SPECIES_LABELS,
 )
 
 
@@ -780,8 +781,8 @@ class HarmfulAlgalBloomModelConfig(HABParameters, OceanDriftModelConfig):
             "ptm_level": 1,
             "oneOf": [
                 {
-                    "const": species.name,
-                    "title": species.value,
+                    "const": species.value,
+                    "title": HAB_SPECIES_LABELS[species],
                     "description": _species_descriptions[species.value],
                 }
                 for species in HABSpeciesTypeEnum

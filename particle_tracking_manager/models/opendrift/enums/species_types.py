@@ -6,10 +6,18 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class HABSpeciesTypeEnum(str, Enum):
-    """Enum for species types used in HarmfulAlgalBloom model in OpenDrift."""
+    PN = "PN"
+    # AX = "AX"
+    # DP = "DP"
+    custom = "custom"
 
-    PN = "Pseudo nitzschia"
-    custom = "custom"  # for fully user-specified params
+
+HAB_SPECIES_LABELS = {
+    HABSpeciesTypeEnum.PN: "Pseudo nitzschia",
+    # HABSpeciesTypeEnum.AX: "Alexandrium",
+    # HABSpeciesTypeEnum.DP: "Dinophysis",
+    HABSpeciesTypeEnum.custom: "Custom species (manual parameters)",
+}
 
 
 class HABParameters(BaseModel):
