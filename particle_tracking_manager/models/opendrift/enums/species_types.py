@@ -9,15 +9,15 @@ class HABSpeciesTypeEnum(str, Enum):
     """Harmful Algal Bloom species types supported by OpenDrift."""
 
     PN = "PN"
-    # AX = "AX"
-    # DP = "DP"
+    AX = "AX"
+    DP = "DP"
     custom = "custom"
 
 
 HAB_SPECIES_LABELS = {
     HABSpeciesTypeEnum.PN: "Pseudo nitzschia",
-    # HABSpeciesTypeEnum.AX: "Alexandrium",
-    # HABSpeciesTypeEnum.DP: "Dinophysis",
+    HABSpeciesTypeEnum.AX: "Alexandrium",
+    HABSpeciesTypeEnum.DP: "Dinophysis",
     HABSpeciesTypeEnum.custom: "Custom species (manual parameters)",
 }
 
@@ -332,10 +332,10 @@ SPECIES_HAB_DEFAULTS: dict[HABSpeciesTypeEnum, HABParameters] = {
         growth_rate_low=0.0,
         # Alexandrium defaults
         vertical_behavior="diel_band",
-        swim_speed=0.0007,          # m/s (≈ 60 m/day max vertical travel)
+        swim_speed=0.001,          # m/s 
 
         # Day: deeper, avoid highest surface light/grazers
-        diel_day_depth=-20.0,       # m
+        diel_day_depth=-15.0,       # m
         # Night: shallower, closer to surface
         diel_night_depth=-5.0,      # m
 
@@ -378,9 +378,10 @@ SPECIES_HAB_MANAGER_DEFAULTS: dict[HABSpeciesTypeEnum, dict[str, object]] = {
     HABSpeciesTypeEnum.PN: {
         # "z": -1.0,
         "do3D": True,
+        "vertical_mixing": True
     },
-    HABSpeciesTypeEnum.AX: {"do3D": True, },
-    HABSpeciesTypeEnum.DP: {"do3D": True, },
+    HABSpeciesTypeEnum.AX: {"do3D": True, "vertical_mixing": True},
+    HABSpeciesTypeEnum.DP: {"do3D": True, "vertical_mixing": True},
 }
 
 # this is for the schema

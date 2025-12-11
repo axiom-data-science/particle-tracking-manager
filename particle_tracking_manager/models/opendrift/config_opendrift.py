@@ -419,13 +419,13 @@ class OceanDriftModelConfig(OpenDriftConfig):
     )
 
     mixed_layer_depth: float = Field(
-        default=10,
+        default=20,
         description="mixed_layer_depth controls how deep the vertical diffusivity profile reaches. This sets the fallback value for ocean_mixed_layer_thickness if not available from any reader.",
         title="Mixed Layer Depth",
         ge=0.0,
         json_schema_extra={
             "units": "m",
-            "od_mapping": "environment:mixed_layer_depth",
+            "od_mapping": "environment:constant:ocean_mixed_layer_thickness",
             "ptm_level": 3,
         },
     )

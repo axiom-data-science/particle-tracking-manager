@@ -5,6 +5,9 @@
 * Changes to `HarmfulAlgalBloom` to support updates in `OpenDrift` model:
   * Added and renamed some parameters.
   * Added another test, to test growth in the HAB scenario since that has now been added.
+* Added vertical behavior
+* Added two new species
+* Fixed `mixed_layer_depth` so it is actually used now
 
 ## v2.1.2 (December 19, 2025)
 
