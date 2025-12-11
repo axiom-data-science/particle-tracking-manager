@@ -6,6 +6,8 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class HABSpeciesTypeEnum(str, Enum):
+    """Harmful Algal Bloom species types supported by OpenDrift."""
+
     PN = "PN"
     # AX = "AX"
     # DP = "DP"
@@ -21,6 +23,8 @@ HAB_SPECIES_LABELS = {
 
 
 class HABParameters(BaseModel):
+    """Harmful Algal Bloom species parameters for OpenDrift."""
+
     model_config = ConfigDict(extra="forbid")
 
     temperature_death_min: float = Field(
