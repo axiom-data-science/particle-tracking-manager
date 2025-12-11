@@ -1,5 +1,9 @@
 # What's New
 
+## v2.0.5 (December 10, 2025)
+
+* Changed the schema for `HarmfulAlgalBloom` so that "PN", for example, is input, though a nice label is also provided through "title" in the schema.
+
 ## v2.0.4 (Decemeber 9, 2025)
 
 * Fixed a log file path bug where the log file path was just the filename only.
