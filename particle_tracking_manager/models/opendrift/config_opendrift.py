@@ -96,7 +96,7 @@ class OpenDriftConfig(TheManagerConfig):
     # OpenDriftSimulation parameters
 
     max_speed: float = Field(
-        default=7.0,
+        default=20.0,
         description="Typical maximum speed of elements, used to estimate reader buffer size",
         gt=0,
         title="Maximum speed",
@@ -795,36 +795,6 @@ class HarmfulAlgalBloomModelConfig(HABParameters, OceanDriftModelConfig):
         },
     )
 
-    # # new field: full parameter bundle for the HAB species
-    # hab_params: HABParameters = Field(
-    #     description=(
-    #         "Biological parameters for the HAB model. If omitted or partially "
-    #         "specified, defaults are taken from the selected species_type and "
-    #         "overridden by any provided values."
-    #     ),
-    #     json_schema_extra={"ptm_level": 1},
-    # )
-
-    # temperature_death_min: float = Field(
-    #     # default=3.0,
-    #     description="Minimum temperature for living. Below this temperature, cells have high mortality rate. Between this and temperature_viable_min, cells have no growth.",
-    #     title="Boundary temperature for cell death.",
-    #     # gt=-3,
-    #     json_schema_extra={
-    #         "units": "degrees",
-    #         "od_mapping": "hab:temperature_death_min",
-    #         "ptm_level": 2,
-    #     },
-    # )
-
-    # # override inherited parameter defaults
-    # vertical_mixing: bool = FieldInfo.merge_field_infos(
-    #     OceanDriftModelConfig.model_fields["vertical_mixing"], Field(default=True)
-    # )
-    # do3D: bool = FieldInfo.merge_field_infos(
-    #     TheManagerConfig.model_fields["do3D"], Field(default=True)
-    # )
-
     @model_validator(mode="before")
     @classmethod
     def apply_species_defaults(cls, data: Any) -> Any:
@@ -904,17 +874,6 @@ class HarmfulAlgalBloomModelConfig(HABParameters, OceanDriftModelConfig):
     #             "vertical_mixing must be True with the LarvalFish drift model."
     #         )
 
-    #     return self
-
-    # @model_validator(mode="after")
-    # def check_hatched_and_stage_fraction(self) -> Self:
-    #     """If hatched==1, stage_fraction should be None.
-
-    #     This only applies for seeding, not for the simulation.
-    #     """
-
-    #     if self.hatched == 1 and self.stage_fraction is not None:
-    #         raise ValueError("If hatched==1, stage_fraction should be None.")
     #     return self
 
 
