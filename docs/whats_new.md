@@ -5,11 +5,31 @@
 * Changes to `HarmfulAlgalBloom` to support updates in `OpenDrift` model:
   * Added and renamed some parameters.
   * Added another test, to test growth in the HAB scenario since that has now been added.
+* Added vertical behavior
+* Added two new species
+
+## v2.0.5 (December 10, 2025)
+
+* Changed the schema for `HarmfulAlgalBloom` so that "PN", for example, is input, though a nice label is also provided through "title" in the schema.
+
+## v2.0.4 (Decemeber 9, 2025)
+
+* Fixed a log file path bug where the log file path was just the filename only.
+  Because of that it would get created in the current working directory and not
+  in the outputs directory next to the simulation output.
+* Refactored the `SetupOutputFiles` model to simplify things a bit and update tests.
+
+
+## v2.0.3 (Decemeber 5, 2025)
+
+* Fixed docs.
+
 
 ## v2.0.2 (Decemeber 5, 2025)
 
 * Changed "name" of `HarmfulAlgalBloom` `species_type` enum to be an abbreviation "PN" and the value for the initial species to be "Pseudo nitzschia" instead of "Pseudo_nitzschia".
 * Added to the `HarmfulAlgalBloom` schema to have a "oneOf" output containing the preset values associated with a `species_type` in the description.
+
 
 ## v2.0.0 (December 4, 2025)
 
@@ -17,9 +37,11 @@
 * Fix a bug for running backward in time.
 * Ocean model configuration files now need to include `chunks`
 
+
 ## v0.13.2 (November 20, 2025)
 
 * If timezone-aware `start_time`, `start_time_end`, or `end_time` is input, the timezone is now removed and it is assumed they are in the same timezone as the model times.
+
 
 ## v0.13.1 (November 19, 2025)
 

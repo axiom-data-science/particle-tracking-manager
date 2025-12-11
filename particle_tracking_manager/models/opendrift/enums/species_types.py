@@ -6,13 +6,25 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class HABSpeciesTypeEnum(str, Enum):
-    """Enum for species types used in HarmfulAlgalBloom model in OpenDrift."""
+    """Harmful Algal Bloom species types supported by OpenDrift."""
 
-    PN = "Pseudo nitzschia"
-    custom = "custom"  # for fully user-specified params
+    PN = "PN"
+    # AX = "AX"
+    # DP = "DP"
+    custom = "custom"
+
+
+HAB_SPECIES_LABELS = {
+    HABSpeciesTypeEnum.PN: "Pseudo nitzschia",
+    # HABSpeciesTypeEnum.AX: "Alexandrium",
+    # HABSpeciesTypeEnum.DP: "Dinophysis",
+    HABSpeciesTypeEnum.custom: "Custom species (manual parameters)",
+}
 
 
 class HABParameters(BaseModel):
+    """Harmful Algal Bloom species parameters for OpenDrift."""
+
     model_config = ConfigDict(extra="forbid")
 
     temperature_death_min: float = Field(
