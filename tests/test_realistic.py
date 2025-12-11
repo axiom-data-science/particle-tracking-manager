@@ -232,7 +232,7 @@ def test_run_HarmfulAlgalBloom_PN():
         ocean_model="TXLA",
         ocean_model_local=False,
         drift_model="HarmfulAlgalBloom",
-        species_type="Pseudo nitzschia",
+        species_type="PN",
         vertical_mixing=False,
         do3D=False,
     )
@@ -270,7 +270,7 @@ def test_run_HarmfulAlgalBloom_AX():
         ocean_model="TXLA",
         ocean_model_local=False,
         drift_model="HarmfulAlgalBloom",
-        species_type="Alexandrium",
+        species_type="AX",
         vertical_mixing=False,
         do3D=False,
     )
@@ -309,7 +309,7 @@ def test_run_HarmfulAlgalBloom_DP():
         ocean_model="TXLA",
         ocean_model_local=False,
         drift_model="HarmfulAlgalBloom",
-        species_type="Dinophysis",
+        species_type="DP",
         vertical_mixing=False,
         do3D=False,
     )

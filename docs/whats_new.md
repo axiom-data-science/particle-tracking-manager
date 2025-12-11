@@ -7,6 +7,7 @@
   * Added another test, to test growth in the HAB scenario since that has now been added.
 * Added vertical behavior
 * Added two new species
+* Fixed `mixed_layer_depth` so it is actually used now
 
 ## v2.0.5 (December 10, 2025)
 
