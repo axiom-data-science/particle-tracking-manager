@@ -27,11 +27,11 @@ from .enums import (
     SeafloorActionEnum,
 )
 from .enums.species_types import (
+    HAB_SPECIES_LABELS,
     SPECIES_HAB_DEFAULTS,
     SPECIES_HAB_MANAGER_DEFAULTS,
     HABParameters,
     _species_descriptions,
-    HAB_SPECIES_LABELS,
 )
 
 
