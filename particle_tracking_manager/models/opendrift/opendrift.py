@@ -10,11 +10,14 @@ from pathlib import Path
 from typing import Any
 
 import pandas as pd
+import xarray as xr
 
 # Third-party imports
 from opendrift.readers import reader_ROMS_native
 
 from particle_tracking_manager.models.opendrift.enums.oil_types import OIL_ID_TO_NAME
+
+from ...config_the_manager import OutputFormatEnum
 
 # Local imports
 from ...ocean_model_registry import ocean_model_registry
@@ -168,32 +171,35 @@ class OpenDriftModel(ParticleTrackingManager):
         # resave as parquet after adding in extra config
         # TODO: should drift_model be instantiated in OpenDriftConfig or here?
         log_level = logger.level
+        iomodule = self.config.output_format
+        if iomodule == "both":
+            iomodule = (
+                OutputFormatEnum.netcdf
+            )  # first output netcdf, then additionally output parquet at the end
         if self.config.drift_model == "Leeway":
             from opendrift.models.leeway import Leeway
 
-            o = Leeway(loglevel=log_level)
+            o = Leeway(loglevel=log_level, iomodule=iomodule)
 
         elif self.config.drift_model == "OceanDrift":
             from opendrift.models.oceandrift import OceanDrift
 
-            o = OceanDrift(
-                loglevel=log_level,
-            )
+            o = OceanDrift(loglevel=log_level, iomodule=iomodule)
 
         elif self.config.drift_model == "LarvalFish":
             from opendrift.models.larvalfish import LarvalFish
 
-            o = LarvalFish(loglevel=log_level)
+            o = LarvalFish(loglevel=log_level, iomodule=iomodule)
 
         elif self.config.drift_model == "OpenOil":
             from opendrift.models.openoil import OpenOil
 
-            o = OpenOil(loglevel=log_level, weathering_model="noaa")
+            o = OpenOil(loglevel=log_level, iomodule=iomodule, weathering_model="noaa")
 
         elif self.config.drift_model == "HarmfulAlgalBloom":
             from opendrift.models.harmfulalgalbloom import HarmfulAlgalBloom
 
-            o = HarmfulAlgalBloom(loglevel=log_level)
+            o = HarmfulAlgalBloom(loglevel=log_level, iomodule=iomodule)
 
         else:
             raise ValueError(
@@ -453,6 +459,29 @@ class OpenDriftModel(ParticleTrackingManager):
             export_variables=self.config.export_variables,
             outfile=str(self.files.output_file),
         )
+
+        # if output format is both, also save as parquet
+        if self.config.output_format == "both":
+            assert self.files.output_file is not None
+            parquet_file = Path(self.files.output_file).with_suffix(".parquet")
+
+            # Open the netCDF as an xarray.Dataset
+            ds = xr.open_dataset(self.files.output_file)
+
+            # Expect dims (trajectory, time)
+            # Convert to a tidy DataFrame: columns = trajectory, time, variables
+            df = ds.to_dataframe().reset_index()
+
+            # # Optional: drop rows with NaN lon as “unseeded”/invalid
+            # if "lon" in df.columns:
+            #     df = df[~df["lon"].isna()]
+
+            # Ensure time is datetime64[ns]
+            df["time"] = pd.to_datetime(df["time"])
+
+            # Save to parquet
+            df.to_parquet(parquet_file, engine="fastparquet")
+            logger.info(f"Also saved output to parquet file {parquet_file}.")
 
         # plot if requested
         if self.config.plots:

@@ -48,6 +48,7 @@ class OutputFormatEnum(str, Enum):
 
     netcdf = "netcdf"
     parquet = "parquet"
+    both = "both"
 
 
 # Enum for "log_level"
@@ -180,7 +181,7 @@ class TheManagerConfig(BaseModel):
     )
     output_format: OutputFormatEnum = Field(
         OutputFormatEnum.netcdf,
-        description='Output file format. Options are "netcdf" or "parquet".',
+        description='Output file format. Options are "netcdf", "parquet", or "both".',
         json_schema_extra=dict(ptm_level=2),
     )
     use_cache: bool = Field(

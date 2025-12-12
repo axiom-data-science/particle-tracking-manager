@@ -17,7 +17,8 @@ from .config_the_manager import OutputFormatEnum, TheManagerConfig
 
 OUTPUT_FORMAT_SUFFIX: Mapping[OutputFormatEnum, str] = {
     OutputFormatEnum.netcdf: ".nc",
-    OutputFormatEnum.parquet: ".parquet",
+    OutputFormatEnum.parquet: ".parquet",  # can't be read back in by OpenDrift which is necessary for plots in PTM
+    OutputFormatEnum.both: ".nc",  # first netcdf, then additionally output parquet at the end
 }
 
 logger = logging.getLogger()
