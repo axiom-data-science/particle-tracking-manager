@@ -11,6 +11,20 @@ import xarray as xr
 import particle_tracking_manager as ptm
 
 
+def is_netcdf(path):
+    with open(path, "rb") as f:
+        sig = f.read(8)
+    return sig.startswith(b"CDF") or sig.startswith(b"\x89HDF\r\n\x1a\n")
+
+
+def is_parquet(path):
+    with open(path, "rb") as f:
+        start = f.read(4)
+        f.seek(-4, 2)
+        end = f.read(4)
+    return start == b"PAR1" and end == b"PAR1"
+
+
 # set up an alternate dataset on-the-fly
 ds = xr.Dataset(
     data_vars={
@@ -55,8 +69,27 @@ def test_add_new_reader():
     manager.add_reader(ds=ds)
 
 
+# reinstitute this test once OpenDrift PR is accepted that outputs parquet files directly
+# @pytest.mark.slow
+# def test_run_parquet():
+#     """Set up and run."""
+
+#     seeding_kwargs = dict(lon=-90, lat=28.7, number=1, start_time="2009-11-19T12:00:00")
+#     manager = ptm.OpenDriftModel(
+#         **seeding_kwargs,
+#         use_static_masks=True,
+#         steps=2,
+#         output_format="parquet",
+#         ocean_model="TXLA",
+#         ocean_model_local=False,
+#     )
+#     manager.run_all()
+
+#     assert "parquet" in manager.o.outfile_name
+
+
 @pytest.mark.slow
-def test_run_parquet():
+def test_run_parquet_and_netcdf():
     """Set up and run."""
 
     seeding_kwargs = dict(lon=-90, lat=28.7, number=1, start_time="2009-11-19T12:00:00")
@@ -64,13 +97,26 @@ def test_run_parquet():
         **seeding_kwargs,
         use_static_masks=True,
         steps=2,
-        output_format="parquet",
+        output_format="both",
         ocean_model="TXLA",
         ocean_model_local=False,
     )
     manager.run_all()
 
-    assert "parquet" in manager.o.outfile_name
+    assert "nc" in manager.o.outfile_name
+
+    # 2. parquet file with same stem exists
+    out_parquet = Path(manager.o.outfile_name).with_suffix(".parquet")
+    assert out_parquet.exists()
+
+    # Check actual file format signatures
+    assert is_netcdf(manager.o.outfile_name), "NC file is not valid netCDF"
+    assert not is_parquet(
+        manager.o.outfile_name
+    ), "NC file is incorrectly a parquet file"
+
+    assert is_parquet(out_parquet), "Parquet file is not valid parquet"
+    assert not is_netcdf(out_parquet), "Parquet file is incorrectly netCDF"
 
 
 @pytest.mark.slow

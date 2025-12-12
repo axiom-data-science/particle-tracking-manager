@@ -1,5 +1,10 @@
 # What's New
 
+## v2.0.6 (December 11, 2025)
+
+* `output_format="parquet"` is still present and will work with the newest version of `OpenDrift` once a PR is merged.
+* A new option has been added: `output_format="both"`. This saves `OpenDrift` output to a netCDF file but then after the simulation is over also saves a parquet file, not using `OpenDrift` for that step. This allows PTM to produce both a netCDF file and parquet file for the same `OpenDrift` simulation, which is helpful because the same metadata is not currently available in an output parquet file as is a netCDF file, so you can't go between without losing information.
+
 ## v2.0.5 (December 10, 2025)
 
 * Changed the schema for `HarmfulAlgalBloom` so that "PN", for example, is input, though a nice label is also provided through "title" in the schema.
