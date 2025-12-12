@@ -48,175 +48,175 @@ ptm.config_ocean_model.register_on_the_fly(ds_info)
 ptm.config_ocean_model.update_TXLA_with_download_location()
 
 
-# @pytest.mark.slow
-# def test_add_new_reader():
-#     """Add a separate reader from the defaults using ds."""
+@pytest.mark.slow
+def test_add_new_reader():
+    """Add a separate reader from the defaults using ds."""
 
-#     manager = ptm.OpenDriftModel(
-#         steps=1, ocean_model="ONTHEFLY", lon=1.2, lat=2.2, start_time=0, time_step=0.01
-#     )
-#     manager.add_reader(ds=ds)
-
-
-# @pytest.mark.slow
-# def test_run_parquet():
-#     """Set up and run."""
-
-#     seeding_kwargs = dict(lon=-90, lat=28.7, number=1, start_time="2009-11-19T12:00:00")
-#     manager = ptm.OpenDriftModel(
-#         **seeding_kwargs,
-#         use_static_masks=True,
-#         steps=2,
-#         output_format="parquet",
-#         ocean_model="TXLA",
-#         ocean_model_local=False,
-#     )
-#     manager.run_all()
-
-#     assert "parquet" in manager.o.outfile_name
+    manager = ptm.OpenDriftModel(
+        steps=1, ocean_model="ONTHEFLY", lon=1.2, lat=2.2, start_time=0, time_step=0.01
+    )
+    manager.add_reader(ds=ds)
 
 
-# @pytest.mark.slow
-# def test_run_netcdf_and_plot():
-#     """Set up and run."""
+@pytest.mark.slow
+def test_run_parquet():
+    """Set up and run."""
 
-#     import tempfile
+    seeding_kwargs = dict(lon=-90, lat=28.7, number=1, start_time="2009-11-19T12:00:00")
+    manager = ptm.OpenDriftModel(
+        **seeding_kwargs,
+        use_static_masks=True,
+        steps=2,
+        output_format="parquet",
+        ocean_model="TXLA",
+        ocean_model_local=False,
+    )
+    manager.run_all()
 
-#     ts = 6 * 60  # 6 minutes in seconds
-
-#     seeding_kwargs = dict(lon=-90, lat=28.7, number=1, start_time="2009-11-19T12:00:00")
-#     with tempfile.NamedTemporaryFile(delete=False) as temp_file:
-#         manager = ptm.OpenDriftModel(
-#             **seeding_kwargs,
-#             use_static_masks=True,
-#             steps=2,
-#             output_format="netcdf",
-#             use_cache=True,
-#             interpolator_filename=temp_file.name,
-#             ocean_model="TXLA",
-#             ocean_model_local=False,
-#             plots={
-#                 "all": {},
-#             },
-#             time_step=ts,
-#         )
-#         manager.run_all()
-
-#         assert "nc" in manager.o.outfile_name
-#         assert manager.config.interpolator_filename == Path(temp_file.name).with_suffix(
-#             ".pickle"
-#         )
-
-#         # Replace 'path_to_pickle_file.pkl' with the actual path to your pickle file
-#         with open(manager.config.interpolator_filename, "rb") as file:
-#             data = pickle.load(file)
-#         assert "spl_x" in data
-#         assert "spl_y" in data
-
-#     # check time_step across access points
-#     assert (
-#         # m.o._config["general:time_step_minutes"]["value"]  # this is not correct, don't know why
-#         manager.o.time_step.total_seconds()
-#         == ts
-#         == manager.config.time_step
-#         # == m.o.get_configspec()["general:time_step_minutes"]["value"]  # this is not correct, don't know why
-#     )
+    assert "parquet" in manager.o.outfile_name
 
 
-# @pytest.mark.slow
-# def test_run_HarmfulAlgalBloom_biomass_change():
-#     """Set up and run HarmfulAlgalBloom and match biomass change."""
+@pytest.mark.slow
+def test_run_netcdf_and_plot():
+    """Set up and run."""
 
-#     seeding_kwargs = dict(lon=-90, lat=28.7, number=1, start_time="2009-11-19T12:00:00")
-#     m = ptm.OpenDriftModel(
-#         **seeding_kwargs,
-#         use_static_masks=True,
-#         duration="1h",
-#         ocean_model="TXLA",
-#         ocean_model_local=False,
-#         drift_model="HarmfulAlgalBloom",
-#     )
-#     m.add_reader()
+    import tempfile
+
+    ts = 6 * 60  # 6 minutes in seconds
+
+    seeding_kwargs = dict(lon=-90, lat=28.7, number=1, start_time="2009-11-19T12:00:00")
+    with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+        manager = ptm.OpenDriftModel(
+            **seeding_kwargs,
+            use_static_masks=True,
+            steps=2,
+            output_format="netcdf",
+            use_cache=True,
+            interpolator_filename=temp_file.name,
+            ocean_model="TXLA",
+            ocean_model_local=False,
+            plots={
+                "all": {},
+            },
+            time_step=ts,
+        )
+        manager.run_all()
+
+        assert "nc" in manager.o.outfile_name
+        assert manager.config.interpolator_filename == Path(temp_file.name).with_suffix(
+            ".pickle"
+        )
+
+        # Replace 'path_to_pickle_file.pkl' with the actual path to your pickle file
+        with open(manager.config.interpolator_filename, "rb") as file:
+            data = pickle.load(file)
+        assert "spl_x" in data
+        assert "spl_y" in data
+
+    # check time_step across access points
+    assert (
+        # m.o._config["general:time_step_minutes"]["value"]  # this is not correct, don't know why
+        manager.o.time_step.total_seconds()
+        == ts
+        == manager.config.time_step
+        # == m.o.get_configspec()["general:time_step_minutes"]["value"]  # this is not correct, don't know why
+    )
+
+
+@pytest.mark.slow
+def test_run_HarmfulAlgalBloom_biomass_change():
+    """Set up and run HarmfulAlgalBloom and match biomass change."""
+
+    seeding_kwargs = dict(lon=-90, lat=28.7, number=1, start_time="2009-11-19T12:00:00")
+    m = ptm.OpenDriftModel(
+        **seeding_kwargs,
+        use_static_masks=True,
+        duration="1h",
+        ocean_model="TXLA",
+        ocean_model_local=False,
+        drift_model="HarmfulAlgalBloom",
+    )
+    m.add_reader()
     
-#     # change model values for test
-#     inds = m.ds.temp.notnull()
-#     m.ds["temp"].values[inds] = 15.0
-#     m.ds["salt"].values[inds] = 32.0
-#     m.run_all()
+    # change model values for test
+    inds = m.ds.temp.notnull()
+    m.ds["temp"].values[inds] = 15.0
+    m.ds["salt"].values[inds] = 32.0
+    m.run_all()
 
-#     # check that biomass decreased due to temperature-induced mortality
-#     # calculated as: biomass = initial_biomass * exp(growth_rate-mortality_rate_high * time)
-#     assert np.allclose(
-#         float(m.o.elements.biomass[0]),
-#         np.exp((m.config.growth_rate_high - m.config.mortality_rate_low) * 3600 / 86400),
-#     )
+    # check that biomass decreased due to temperature-induced mortality
+    # calculated as: biomass = initial_biomass * exp(growth_rate-mortality_rate_high * time)
+    assert np.allclose(
+        float(m.o.elements.biomass[0]),
+        np.exp((m.config.growth_rate_high - m.config.mortality_rate_low) * 3600 / 86400),
+    )
 
 
-# @pytest.mark.slow
-# def test_run_HarmfulAlgalBloom_vertical_behavior_band():
-#     """Set up and run HarmfulAlgalBloom and match vertical change."""
+@pytest.mark.slow
+def test_run_HarmfulAlgalBloom_vertical_behavior_band():
+    """Set up and run HarmfulAlgalBloom and match vertical change."""
 
-#     seeding_kwargs = dict(lon=-90, lat=28.7, number=1, start_time="2009-11-19T12:00:00",
-#                           swim_speed=0.001, z=-30)
-#     m = ptm.OpenDriftModel(
-#         **seeding_kwargs,
-#         use_static_masks=True,
-#         duration="1h",
-#         ocean_model="TXLA",
-#         ocean_model_local=False,
-#         drift_model="HarmfulAlgalBloom",
-#         vertical_behavior="band",
-#         band_center_depth=-10.0,
-#         band_half_width=0.0,
-#         vertical_mixing=False,
-#         do3D=False,
-#     )
-#     m.add_reader()
-#     m.run_all()
+    seeding_kwargs = dict(lon=-90, lat=28.7, number=1, start_time="2009-11-19T12:00:00",
+                          swim_speed=0.001, z=-30)
+    m = ptm.OpenDriftModel(
+        **seeding_kwargs,
+        use_static_masks=True,
+        duration="1h",
+        ocean_model="TXLA",
+        ocean_model_local=False,
+        drift_model="HarmfulAlgalBloom",
+        vertical_behavior="band",
+        band_center_depth=-10.0,
+        band_half_width=0.0,
+        vertical_mixing=False,
+        do3D=False,
+    )
+    m.add_reader()
+    m.run_all()
     
-#     dz = seeding_kwargs["swim_speed"] * 3600  # swim speed * time in seconds
-#     assert np.allclose(float(m.o.elements.z[0]), seeding_kwargs["z"] + dz)
+    dz = seeding_kwargs["swim_speed"] * 3600  # swim speed * time in seconds
+    assert np.allclose(float(m.o.elements.z[0]), seeding_kwargs["z"] + dz)
 
-# @pytest.mark.slow
-# def test_run_HarmfulAlgalBloom_vertical_behavior_diel_band():
-#     """Set up and run HarmfulAlgalBloom with diel_band and match vertical change.
+@pytest.mark.slow
+def test_run_HarmfulAlgalBloom_vertical_behavior_diel_band():
+    """Set up and run HarmfulAlgalBloom with diel_band and match vertical change.
 
-#     Particle starts deeper than both diel_day_depth and diel_night_depth, so
-#     it should swim upward at constant swim_speed for the duration, independent
-#     of whether this hour is classified as day or night.
-#     """
+    Particle starts deeper than both diel_day_depth and diel_night_depth, so
+    it should swim upward at constant swim_speed for the duration, independent
+    of whether this hour is classified as day or night.
+    """
 
-#     seeding_kwargs = dict(
-#         lon=-90.0,
-#         lat=28.7,
-#         number=1,
-#         start_time="2009-11-19T12:00:00",  # same as band test
-#         swim_speed=0.001,
-#         z=-30.0,
-#     )
+    seeding_kwargs = dict(
+        lon=-90.0,
+        lat=28.7,
+        number=1,
+        start_time="2009-11-19T12:00:00",  # same as band test
+        swim_speed=0.001,
+        z=-30.0,
+    )
 
-#     m = ptm.OpenDriftModel(
-#         **seeding_kwargs,
-#         use_static_masks=True,
-#         duration="1h",
-#         ocean_model="TXLA",
-#         ocean_model_local=False,
-#         drift_model="HarmfulAlgalBloom",
-#         vertical_behavior="diel_band",
-#         diel_day_depth=-20.0,
-#         diel_night_depth=-10.0,
-#         vertical_mixing=False,
-#         do3D=False,
-#     )
-#     m.add_reader()
-#     m.run_all()
+    m = ptm.OpenDriftModel(
+        **seeding_kwargs,
+        use_static_masks=True,
+        duration="1h",
+        ocean_model="TXLA",
+        ocean_model_local=False,
+        drift_model="HarmfulAlgalBloom",
+        vertical_behavior="diel_band",
+        diel_day_depth=-20.0,
+        diel_night_depth=-10.0,
+        vertical_mixing=False,
+        do3D=False,
+    )
+    m.add_reader()
+    m.run_all()
 
-#     # Analytical expectation: no vertical advection/mixing, so only active
-#     # swimming contributes. 1 hour = 3600 s.
-#     dz = seeding_kwargs["swim_speed"] * 3600  # swim_speed * time (s)
-#     expected_z = seeding_kwargs["z"] + dz
+    # Analytical expectation: no vertical advection/mixing, so only active
+    # swimming contributes. 1 hour = 3600 s.
+    dz = seeding_kwargs["swim_speed"] * 3600  # swim_speed * time (s)
+    expected_z = seeding_kwargs["z"] + dz
 
-#     assert np.allclose(float(m.o.elements.z[0]), expected_z)
+    assert np.allclose(float(m.o.elements.z[0]), expected_z)
 
 
 @pytest.mark.slow
