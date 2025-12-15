@@ -332,16 +332,18 @@ SPECIES_HAB_DEFAULTS: dict[HABSpeciesTypeEnum, HABParameters] = {
         growth_rate_low=0.0,
         # Alexandrium defaults
         vertical_behavior="diel_band",
-        swim_speed=0.001,          # m/s 
+        swim_speed=0.0005,          # m/s 
 
-        # Day: deeper, avoid highest surface light/grazers
-        diel_day_depth=-15.0,       # m
-        # Night: shallower, closer to surface
-        diel_night_depth=-5.0,      # m
+        # MLD 20 like in Lower Cook Inlet
+        diel_day_depth=-6.0,       # m 
+        diel_night_depth=-26.0,      # m, this should be below the MLD
+        # # MLD 12 like in KB
+        # diel_day_depth=-4.0,       # m
+        # diel_night_depth=-18.0,      # m
 
-        # If you ever use pure band:
-        band_center_depth=-10.0,
-        band_half_width=10.0,
+        # # If you ever use pure band: (not used for AX)
+        # band_center_depth=-10.0,
+        band_half_width=5.0,
     ),
     HABSpeciesTypeEnum.DP: HABParameters(
         temperature_death_min=6.0,
@@ -376,11 +378,11 @@ SPECIES_HAB_DEFAULTS: dict[HABSpeciesTypeEnum, HABParameters] = {
 # Other config defaults per species (z, do3D, etc.)
 SPECIES_HAB_MANAGER_DEFAULTS: dict[HABSpeciesTypeEnum, dict[str, object]] = {
     HABSpeciesTypeEnum.PN: {
-        # "z": -1.0,
+        "z": -1.0,
         "do3D": True,
         "vertical_mixing": True
     },
-    HABSpeciesTypeEnum.AX: {"do3D": True, "vertical_mixing": True},
+    HABSpeciesTypeEnum.AX: {"z": -1.0, "do3D": True, "vertical_mixing": True},
     HABSpeciesTypeEnum.DP: {"do3D": True, "vertical_mixing": True},
 }
 
