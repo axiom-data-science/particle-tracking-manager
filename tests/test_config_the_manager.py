@@ -133,9 +133,7 @@ def test_seed_location_inputs():
         "geometry": {"type": "Point", "coordinates": [0, 0]},
     }
 
-    m = TheManagerConfig(
-        steps=1, start_time="2022-01-01", geojson=None
-    )
+    m = TheManagerConfig(steps=1, start_time="2022-01-01", geojson=None)
     # these are set in a validator if geojson is None and lon/lat are None
     assert m.lon == -151.0
     assert m.lat == 58.0
@@ -155,9 +153,7 @@ def test_seed_location_inputs():
         geojson=geojson,
     )
 
-    m = TheManagerConfig(
-        steps=1, lon=-154, lat=58
-    )
+    m = TheManagerConfig(steps=1, lon=-154, lat=58)
 
 
 def test_misc_parameters():

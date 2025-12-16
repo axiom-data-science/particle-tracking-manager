@@ -69,14 +69,14 @@ class TheManagerConfig(BaseModel):
         None,
         ge=-180,
         le=180,
-        description='Central longitude for seeding drifters. If this is set, `lat` should also be set, and `geojson` should be None.',
+        description="Central longitude for seeding drifters. If this is set, `lat` should also be set, and `geojson` should be None.",
         json_schema_extra=dict(ptm_level=1, units="degrees_east"),
     )
     lat: float | None = Field(
         None,
         ge=-90,
         le=90,
-        description='Central latitude for seeding drifters. If this is set, `lon` should also be set, and `geojson` should be None.',
+        description="Central latitude for seeding drifters. If this is set, `lon` should also be set, and `geojson` should be None.",
         json_schema_extra=dict(ptm_level=1, units="degrees_north"),
     )
     geojson: dict | None = Field(
@@ -213,7 +213,7 @@ class TheManagerConfig(BaseModel):
         "use_enum_values": True,
         "extra": "forbid",
     }
-    
+
     @model_validator(mode="after")
     def check_lon_lat_geojson_consistency(self) -> Self:
         """Check if lon and lat are set when geojson is None, and vice versa."""
@@ -221,7 +221,9 @@ class TheManagerConfig(BaseModel):
             if self.lon is None and self.lat is None:
                 self.lon = -151.0
                 self.lat = 58.0
-                logger.info("Using default lon and lat set to -151.0 and 58.0 respectively.")
+                logger.info(
+                    "Using default lon and lat set to -151.0 and 58.0 respectively."
+                )
             elif self.lon is None or self.lat is None:
                 raise ValueError(
                     "If `geojson` is None, both `lon` and `lat` must be set."
