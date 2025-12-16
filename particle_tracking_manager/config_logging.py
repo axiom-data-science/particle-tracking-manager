@@ -67,4 +67,4 @@ class LoggerConfig(BaseModel):
                 for handler in logger.handlers:
                     od_logger.addHandler(handler)
                 od_logger.setLevel(logger.level)
-                od_logger.propagate = False
+                od_logger.propagate = True
