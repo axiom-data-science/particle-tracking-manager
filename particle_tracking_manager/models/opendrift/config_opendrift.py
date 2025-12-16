@@ -7,14 +7,18 @@ from os import PathLike
 from pathlib import Path
 from typing import Any
 
-# Third-party imports
-from particle_tracking_manager.ocean_model_registry import get_model_end_time
 from pydantic import Field, model_validator
 from pydantic.fields import FieldInfo
 from typing_extensions import Self
 
+# Third-party imports
+from particle_tracking_manager.ocean_model_registry import get_model_end_time
+
+from ...config_ocean_model import register_on_the_fly
+
 # Local imports
 from ...config_the_manager import TheManagerConfig
+from ...ocean_model_registry import get_model_end_time
 from .enums import (
     CoastlineActionEnum,
     DiffusivityModelEnum,
@@ -34,8 +38,6 @@ from .enums.species_types import (
     HABParameters,
     _species_descriptions,
 )
-from ...ocean_model_registry import get_model_end_time
-from ...config_ocean_model import register_on_the_fly
 
 
 logger = logging.getLogger()

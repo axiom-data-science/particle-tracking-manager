@@ -377,10 +377,16 @@ def test_CIOFSOP_max_update(model_CIOFSOP_max):
     return_value1 = datetime(2025, 1, 16, 23, 0)
     model_CIOFSOP_max.return_value = return_value1
     m = particle_tracking_manager.OpenDriftModel(drift_model="Leeway", steps=1)
-    assert m.config.ocean_model_simulation.model_fields['end_time'].metadata[1].le == return_value1
+    assert (
+        m.config.ocean_model_simulation.model_fields["end_time"].metadata[1].le
+        == return_value1
+    )
 
     # check the value again to see if it is updated, like it would be in real life
     return_value2 = datetime(2025, 2, 16, 23, 0)
     model_CIOFSOP_max.return_value = return_value2
     m = particle_tracking_manager.OpenDriftModel(drift_model="Leeway", steps=1)
-    assert m.config.ocean_model_simulation.model_fields['end_time'].metadata[1].le == return_value2
+    assert (
+        m.config.ocean_model_simulation.model_fields["end_time"].metadata[1].le
+        == return_value2
+    )
