@@ -208,24 +208,24 @@ def loc_local(
 
 
 def register_on_the_fly(ds_info: dict, ocean_model: str = "ONTHEFLY") -> None:
-    """Register a new ocean model on the fly.
+    """Update an ocean model in the registry and rebuild its Pydantic model.
 
     The default model to register is "ONTHEFLY", which is a placeholder for user-defined models.
-    However, alternations could also be made to any exiting model in the registry.
+    However, alternations could also be made to any existing model in the registry.
 
     ds_info can contain any of the OceanModelConfig fields.
     """
 
-    # Update the "ONTHEFLY" user ocean model template with user dataset information
+    # Update the ocean model template with user dataset information
     ocean_model_registry.update_model(ocean_model, ds_info)
 
     # Create the ocean model simulation object for the new ocean model
-    ONTHEFLYSimulation = create_ocean_model_simulation(
+    simulation_cls = create_ocean_model_simulation(
         ocean_model_registry.get(ocean_model)
     )
 
     # Update the ocean model simulation mapper with the new ocean model simulation
-    ocean_model_simulation_mapper.update({ocean_model: ONTHEFLYSimulation})
+    ocean_model_simulation_mapper.update({ocean_model: simulation_cls})
 
     logger.info(
         "Registered new ocean model or altered existing ocean model in the registry."

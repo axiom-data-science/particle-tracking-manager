@@ -1,5 +1,9 @@
 # What's New
 
+## Unreleased
+
+* Fixed bug so now CIOFSOP `end_time` is updated each time a new instance of `OpenDriftModel` is created.
+
 ## v2.0.6 (December 11, 2025)
 
 * `output_format="parquet"` is still present and will work with the newest version of `OpenDrift` once a PR is merged.
