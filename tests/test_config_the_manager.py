@@ -125,35 +125,25 @@ def test_z():
         m = TheManagerConfig(steps=1, start_time="2022-01-01", z=10)
 
 
-def test_seed_flag_elements():
-    """Check seed flag elements."""
-
-    with pytest.raises(ValidationError):
-        m = TheManagerConfig(
-            steps=1, start_time="2022-01-01", seed_flag="elements", lon=None, lat=None
-        )
-
-    m = TheManagerConfig(steps=1, start_time="2022-01-01", seed_flag="elements")
-
-
-def test_seed_flag_geojson():
-    """Check seed flag geojson."""
+def test_seed_location_inputs():
+    """Check lonlat vs geojson."""
     geojson = {
         "type": "Feature",
         "properties": {},
         "geometry": {"type": "Point", "coordinates": [0, 0]},
     }
 
-    with pytest.raises(ValidationError):
-        m = TheManagerConfig(
-            steps=1, start_time="2022-01-01", seed_flag="geojson", geojson=None
-        )
+    m = TheManagerConfig(
+        steps=1, start_time="2022-01-01", geojson=None
+    )
+    # these are set in a validator if geojson is None and lon/lat are None
+    assert m.lon == -151.0
+    assert m.lat == 58.0
 
     with pytest.raises(ValidationError):
         m = TheManagerConfig(
             steps=1,
             start_time="2022-01-01",
-            seed_flag="geojson",
             geojson=geojson,
             lon=50,
             lat=50,
@@ -162,10 +152,11 @@ def test_seed_flag_geojson():
     m = TheManagerConfig(
         steps=1,
         start_time="2022-01-01",
-        seed_flag="geojson",
         geojson=geojson,
-        lon=None,
-        lat=None,
+    )
+
+    m = TheManagerConfig(
+        steps=1, lon=-154, lat=58
     )
 
 
