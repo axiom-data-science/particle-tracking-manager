@@ -29,7 +29,6 @@ def test_seeding_from_geojson():
         },
     }
     m = ptm.OpenDriftModel(
-        seed_flag="geojson",
         geojson=geo,
         use_auto_landmask=True,
         number=2,

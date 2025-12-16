@@ -26,13 +26,11 @@ class ParticleTrackingManager(ABC):
         Name of Lagrangian model package to use for drifter tracking. Only option
         currently is "opendrift".
     lon : Optional[Union[int,float]], optional
-        Longitude of center of initial drifter locations, by default None. Use with `seed_flag="elements"`.
+        Central longitude for seeding drifters. If this is set, `lat` should also be set, and `geojson` should be None.
     lat : Optional[Union[int,float]], optional
-        Latitude of center of initial drifter locations, by default None. Use with `seed_flag="elements"`.
+        Central latitude for seeding drifters. If this is set, `lon` should also be set, and `geojson` should be None.
     geojson : Optional[dict], optional
-        GeoJSON object defining polygon for seeding drifters, by default None. Use with `seed_flag="geojson"`.
-    seed_flag : str, optional
-        Flag for seeding drifters. Options are "elements", "geojson". Default is "elements".
+        GeoJSON describing a polygon within which to seed drifters; must contain "geometry". If this is set, `lon` and `lat` should be None.
     start_time : Optional[str,datetime.datetime,pd.Timestamp], optional
         Start time of simulation, by default None
     start_time_end : Optional[str,datetime.datetime,pd.Timestamp], optional

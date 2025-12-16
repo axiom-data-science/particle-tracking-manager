@@ -34,14 +34,6 @@ class ModelEnum(str, Enum):
     opendrift = "opendrift"
 
 
-# Enum for "seed_flag"
-class SeedFlagEnum(str, Enum):
-    """Method for seeding drifters."""
-
-    elements = "elements"
-    geojson = "geojson"
-
-
 # Enum for "output_format"
 class OutputFormatEnum(str, Enum):
     """Output file format."""
@@ -74,39 +66,22 @@ class TheManagerConfig(BaseModel):
         json_schema_extra=dict(ptm_level=1),
     )
     lon: float | None = Field(
-        -151.0,
+        None,
         ge=-180,
         le=180,
-        description='Central longitude for seeding drifters. Only used if `seed_flag=="elements"`.',
+        description="Central longitude for seeding drifters. If this is set, `lat` should also be set, and `geojson` should be None.",
         json_schema_extra=dict(ptm_level=1, units="degrees_east"),
     )
     lat: float | None = Field(
-        58.0,
+        None,
         ge=-90,
         le=90,
-        description='Central latitude for seeding drifters. Only used if `seed_flag=="elements"`.',
+        description="Central latitude for seeding drifters. If this is set, `lon` should also be set, and `geojson` should be None.",
         json_schema_extra=dict(ptm_level=1, units="degrees_north"),
     )
     geojson: dict | None = Field(
         None,
-        description='GeoJSON describing a polygon within which to seed drifters. To use this parameter, also have `seed_flag=="geojson"`.',
-        json_schema_extra=dict(ptm_level=1),
-    )
-    # geojson: GeoJSON | None = Field(
-    #     None,
-    #     description='GeoJSON describing a polygon within which to seed drifters. To use this parameter, also have `seed_flag=="geojson"`.',
-    #     json_schema_extra=dict(ptm_level=1),
-    # )
-    # geojson: Annotated[
-    #     Point | LineString | Polygon | None,
-    #     Field(
-    #         None,
-    #         description="GeoJSON describing a point, line, or polygon for seeding drifters.",  # noqa: E501
-    #     ),
-    # ]
-    seed_flag: SeedFlagEnum = Field(
-        SeedFlagEnum.elements,
-        description='Method for seeding drifters. Options are "elements" or "geojson". If "elements", seed drifters at or around a single point defined by lon and lat. If "geojson", seed drifters within a polygon described by a GeoJSON object.',
+        description='GeoJSON describing a polygon within which to seed drifters; must contain "geometry". If this is set, `lon` and `lat` should be None.',
         json_schema_extra=dict(ptm_level=1),
     )
     start_time: datetime | None = Field(
@@ -240,28 +215,36 @@ class TheManagerConfig(BaseModel):
     }
 
     @model_validator(mode="after")
-    def check_config_seed_flag_elements(self) -> Self:
-        """Check if lon and lat are set when using seed_flag 'elements'."""
-        if self.seed_flag == "elements" and (self.lon is None or self.lat is None):
-            raise ValueError(
-                'lon and lat need non-None values if using `seed_flag="elements"`.'
-            )
+    def check_lon_lat_geojson_consistency(self) -> Self:
+        """Check if lon and lat are set when geojson is None, and vice versa."""
+        if self.geojson is None:
+            if self.lon is None and self.lat is None:
+                self.lon = -151.0
+                self.lat = 58.0
+                logger.info(
+                    "Using default lon and lat set to -151.0 and 58.0 respectively."
+                )
+            elif self.lon is None or self.lat is None:
+                raise ValueError(
+                    "If `geojson` is None, both `lon` and `lat` must be set."
+                )
+        else:
+            if self.lon is not None or self.lat is not None:
+                raise ValueError(
+                    "If `geojson` is set, both `lon` and `lat` must be None."
+                )
         return self
 
-    @model_validator(mode="after")
-    def check_config_seed_flag_geojson(self) -> Self:
-        """Check if geojson is set when using seed_flag 'geojson'."""
-        if self.seed_flag == "geojson" and self.geojson is None:
-            raise ValueError(
-                'geojson need non-None value if using `seed_flag="geojson"`.'
-            )
-        if self.seed_flag == "geojson" and (
-            self.lon is not None or self.lat is not None
-        ):
-            raise ValueError(
-                'lon and lat need to be None if using `seed_flag="geojson"`.'
-            )
-        return self
+    @computed_field
+    def seed_flag(self) -> str:
+        """Determine seed_flag based on whether geojson is set."""
+        if self.geojson is None:
+            value = "elements"
+            logger.info('Using seed_flag "elements".')
+        else:
+            value = "geojson"
+            logger.info('Using seed_flag "geojson".')
+        return value
 
     @model_validator(mode="after")
     def check_config_time_parameters(self) -> Self:

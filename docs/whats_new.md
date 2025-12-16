@@ -1,8 +1,10 @@
 # What's New
 
-## Unreleased
+## v2.1.0 (December 15, 2025)
 
 * Fixed bug so now CIOFSOP `end_time` is updated each time a new instance of `OpenDriftModel` is created.
+* fixed logging issue so `OpenDrift` logs show up more fully again.
+* `seed_flag` is no longer in the schema and whether to input particle locations is determined by whether `lon` and `lat` are input or a `geojson` input is input. If neither are input, default lon/lat are available that work with the default ocean model.
 
 ## v2.0.6 (December 11, 2025)
 
