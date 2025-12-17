@@ -1,5 +1,9 @@
 # What's New
 
+## v2.1.1 (December 17, 2025)
+
+* Fixed bug when using geojson particle seeding. Now `PTM` will properly assign `radius` and `radius_type` when using a geojson `Point`, `LineString`, or `Polygon`.
+
 ## v2.1.0 (December 15, 2025)
 
 * Fixed bug so now CIOFSOP `end_time` is updated each time a new instance of `OpenDriftModel` is created.
