@@ -421,6 +421,14 @@ class OpenDriftModel(ParticleTrackingManager):
                     "radius_type": self.config.radius_type,
                 }
             )
+        elif self.config.seed_flag == "geojson":
+            # add additional seed parameters
+            _seed_kws.update(
+                {
+                    "radius": self.config.radius,
+                    "radius_type": self.config.radius_type,
+                }
+            )
 
         self._seed_kws = _seed_kws
         return self._seed_kws
