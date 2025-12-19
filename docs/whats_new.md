@@ -1,6 +1,6 @@
 # What's New
 
-## Unreleased
+## v2.1.2 (December 19, 2025)
 
 * Fixed bug so that CIOFSOP `end_time` is updated before the simulation run `end_time` gets validated
   against it.
