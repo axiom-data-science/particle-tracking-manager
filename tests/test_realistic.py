@@ -206,7 +206,7 @@ def test_run_HarmfulAlgalBloom_vertical_behavior_diel_band():
         number=1,
         start_time="2009-11-19T12:00:00",  # same as band test
         swim_speed=0.001,
-        z=-30.0,
+        z=-50.0,
     )
 
     m = ptm.OpenDriftModel(
@@ -316,8 +316,9 @@ def test_run_HarmfulAlgalBloom_PN():
 
     # Analytical expectation: no vertical advection/mixing, so only active
     # swimming contributes. 1 hour = 3600 s.
+    # particles are swimming downward from near the surface
     dz = m.config.swim_speed * 3600  # swim_speed * time (s)
-    expected_z = seeding_kwargs["z"] + dz
+    expected_z = seeding_kwargs["z"] - dz
     assert np.allclose(float(m.o.elements.z[0]), expected_z)
 
 @pytest.mark.slow
@@ -325,7 +326,7 @@ def test_run_HarmfulAlgalBloom_AX():
     """Set up and run HarmfulAlgalBloom for Alexandrium."""
 
     seeding_kwargs = dict(lon=-90, lat=28.7, number=1, start_time="2009-11-19T12:00:00",
-                          z=-30)
+                          z=-40)
     m = ptm.OpenDriftModel(
         **seeding_kwargs,
         use_static_masks=True,
@@ -364,7 +365,7 @@ def test_run_HarmfulAlgalBloom_DP():
     """Set up and run HarmfulAlgalBloom for Dinophysis."""
 
     seeding_kwargs = dict(lon=-90, lat=28.7, number=1, start_time="2009-11-19T12:00:00",
-                          z=-20)
+                          z=-1)
     m = ptm.OpenDriftModel(
         **seeding_kwargs,
         use_static_masks=True,

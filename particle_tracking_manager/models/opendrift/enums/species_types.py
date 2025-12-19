@@ -363,13 +363,13 @@ SPECIES_HAB_DEFAULTS: dict[HABSpeciesTypeEnum, HABParameters] = {
         vertical_behavior="band",
         swim_speed=0.0003,          # m/s (≈ 26 m/day max vertical travel)
 
-        # Day: somewhat deeper, but not as deep as Alexandrium
-        diel_day_depth=-15.0,
-        # Night: a bit shallower, but not right at the surface
-        diel_night_depth=-5.0,
-        # Optional pure band settings:
-        band_center_depth=-10.0,
-        band_half_width=10.0
+        # # Day: somewhat deeper, but not as deep as Alexandrium
+        # diel_day_depth=-15.0,
+        # # Night: a bit shallower, but not right at the surface
+        # diel_night_depth=-5.0,
+        # Band settings:
+        band_center_depth=-12.5,
+        band_half_width=7.5
     ),
     # HABSpeciesTypeEnum.custom intentionally has no entry
 }
