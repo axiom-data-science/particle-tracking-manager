@@ -190,20 +190,6 @@ class OpenDriftConfig(TheManagerConfig):
                 raise ValueError("z needs to be None if seed_seafloor is True.")
         return self
 
-    @model_validator(mode="after")
-    def refresh_dynamic_ocean_model(self) -> Self:
-        """Ensure dynamic ocean models (just CIOFSOP for now) have fresh end_time bounds.
-
-        This updates the registry entry and rebuilds the corresponding
-        OceanModelSimulation class in ocean_model_simulation_mapper before
-        any further validation or schema use.
-        """
-        if self.ocean_model == "CIOFSOP":
-            # Use the shared helper from ocean_model_registry.py
-            new_end = get_model_end_time("CIOFSOP")
-            register_on_the_fly({"end_time_fixed": new_end}, ocean_model="CIOFSOP")
-        return self
-
     # this is not true! For example, OpenOil has by default no vertical advection but yes vertical mixing
     # @model_validator(mode="after")
     # def check_config_do3D(self) -> Self:
