@@ -8,6 +8,7 @@
 * Added vertical behavior
 * Added two new species
 * Fixed `mixed_layer_depth` so it is actually used now
+* unpinned `OpenDrift`
 
 ## v2.1.2 (December 19, 2025)
 
