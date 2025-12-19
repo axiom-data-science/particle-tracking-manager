@@ -19,9 +19,14 @@ from .config_ocean_model import (
     OceanModelEnum,
     OceanModelSimulation,
     ocean_model_simulation_mapper,
+    register_on_the_fly,
     update_TXLA_with_download_location,
 )
-from .ocean_model_registry import OceanModelConfig, ocean_model_registry
+from .ocean_model_registry import (
+    OceanModelConfig,
+    get_model_end_time,
+    ocean_model_registry,
+)
 
 
 logger = logging.getLogger()
@@ -418,6 +423,15 @@ class TheManagerConfig(BaseModel):
     @computed_field
     def ocean_model_simulation(self) -> OceanModelSimulation:
         """Select ocean model simulation based on ocean_model."""
+
+        # Before validating OceanModelSimulation with CIOFSOP, we need to refresh
+        # the model end time because the model is dynamic. That way the time extent
+        # validation is up to date.
+        if self.ocean_model == "CIOFSOP":
+            new_end = get_model_end_time("CIOFSOP")
+            # Update the existing model in the registry
+            register_on_the_fly({"end_time_fixed": new_end}, ocean_model="CIOFSOP")
+
         inputs = {
             "lon": self.lon,
             "lat": self.lat,

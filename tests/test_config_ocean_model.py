@@ -373,20 +373,31 @@ def test_CIOFSOP_max_update(model_CIOFSOP_max):
     ...when the model is updated. Mock input from calculate_CIOFSOP_max.
     """
 
-    # check the value once
-    return_value1 = datetime(2025, 1, 16, 23, 0)
-    model_CIOFSOP_max.return_value = return_value1
-    m = particle_tracking_manager.OpenDriftModel(drift_model="Leeway", steps=1)
+    first_end_time = datetime(2025, 1, 16, 23, 0)
+    model_CIOFSOP_max.return_value = first_end_time
+    m = particle_tracking_manager.OpenDriftModel(
+        drift_model="Leeway",
+        # start a day and a minute away from the max
+        start_time=datetime(2025, 1, 15, 22, 59),
+        duration="P1D",
+    )
+    # Check that the max date is actually used in the validation
     assert (
         m.config.ocean_model_simulation.model_fields["end_time"].metadata[1].le
-        == return_value1
+        == first_end_time
     )
 
     # check the value again to see if it is updated, like it would be in real life
-    return_value2 = datetime(2025, 2, 16, 23, 0)
-    model_CIOFSOP_max.return_value = return_value2
-    m = particle_tracking_manager.OpenDriftModel(drift_model="Leeway", steps=1)
+    second_end_time = datetime(2025, 2, 16, 23, 0)
+    model_CIOFSOP_max.return_value = second_end_time
+    m = particle_tracking_manager.OpenDriftModel(
+        drift_model="Leeway",
+        # start a day and a minute away from the new updated max
+        start_time=datetime(2025, 2, 15, 22, 59),
+        duration="P1D",
+    )
+    # Double check that the max date used in the validation has updated
     assert (
         m.config.ocean_model_simulation.model_fields["end_time"].metadata[1].le
-        == return_value2
+        == second_end_time
     )

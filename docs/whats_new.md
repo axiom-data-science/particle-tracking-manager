@@ -1,5 +1,11 @@
 # What's New
 
+## Unreleased
+
+* Fixed bug so that CIOFSOP `end_time` is updated before the simulation run `end_time` gets validated
+  against it.
+
+
 ## v2.1.1 (December 17, 2025)
 
 * Fixed bug when using geojson particle seeding. Now `PTM` will properly assign `radius` and `radius_type` when using a geojson `Point`, `LineString`, or `Polygon`.
