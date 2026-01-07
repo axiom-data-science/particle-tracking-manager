@@ -46,12 +46,12 @@ ds = xr.Dataset(
         # "ocean_time": ("ocean_time", ["1970-01-01T00:00:00", "1970-01-01T00:10:00"], {"units": "seconds since 1970-01-01"}),
         "ocean_time": ("ocean_time", [0, 60*10], {"units": "seconds since 1970-01-01"}),
         "s_rho": (("Z"), np.linspace(-1, 0, 3)),
-        "lon_rho": (("Y", "X"), np.array([[1.1, 1.2, 1.3, 1.4, 1.5], [1.1, 1.2, 1.3, 1.4, 1.5], [1.1, 1.2, 1.3, 1.4, 1.5], [1.1, 1.2, 1.3, 1.4, 1.5]])),
-        "lat_rho": (("Y", "X"), np.array([[2.1, 2.2, 2.3, 2.4, 2.5], [2.1, 2.2, 2.3, 2.4, 2.5], [2.1, 2.2, 2.3, 2.4, 2.5], [2.1, 2.2, 2.3, 2.4, 2.5]])),
+        "lon_rho": (("Y", "X"), np.array([[1, 1.5, 2, 2.5, 3], [1, 1.5, 2, 2.5, 3], [1, 1.5, 2, 2.5, 3], [1, 1.5, 2, 2.5, 3]])),
+        "lat_rho": (("Y", "X"), np.array([[1, 1.25, 1.5, 1.75, 2], [1, 1.25, 1.5, 1.75, 2], [1, 1.25, 1.5, 1.75, 2], [1, 1.25, 1.5, 1.75, 2]])),
     },
 )
 ds_info = dict(
-    lon_min=1.1, lon_max=1.5, lat_min=2.1, lat_max=2.5, start_time_model=0, end_time_fixed=60*10
+    lon_min=1, lon_max=3, lat_min=1, lat_max=2, start_time_model=0, end_time_fixed=60*10
 )
 
 ptm.config_ocean_model.register_on_the_fly(ds_info)
@@ -67,7 +67,7 @@ def test_add_new_reader():
     """Add a separate reader from the defaults using ds."""
 
     manager = ptm.OpenDriftModel(
-        steps=1, ocean_model="ONTHEFLY", lon=1.2, lat=2.2, start_time=0, time_step=0.01
+        steps=1, ocean_model="ONTHEFLY", lon=1.2, lat=1.2, start_time=0, time_step=0.01
     )
     manager.add_reader(ds=ds)
 
