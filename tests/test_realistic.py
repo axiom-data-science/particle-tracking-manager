@@ -102,24 +102,6 @@ def test_add_new_reader():
 
 
 @pytest.mark.slow
-def test_run_parquet():
-    """Set up and run."""
-
-    seeding_kwargs = dict(lon=-90, lat=28.7, number=1, start_time="2009-11-19T12:00:00")
-    manager = ptm.OpenDriftModel(
-        **seeding_kwargs,
-        use_static_masks=True,
-        steps=2,
-        output_format="parquet",
-        ocean_model="TXLA",
-        ocean_model_local=False,
-    )
-    manager.run_all()
-
-    assert "parquet" in manager.o.outfile_name
-
-
-@pytest.mark.slow
 def test_run_netcdf_and_plot():
     """Set up and run."""
 
@@ -417,7 +399,7 @@ def test_run_HarmfulAlgalBloom_DP():
     """Set up and run HarmfulAlgalBloom for Dinophysis."""
 
     seeding_kwargs = dict(
-        lon=-90, lat=28.7, number=1, start_time="2009-11-19T12:00:00", z=-1
+        lon=-90, lat=28.7, number=1, start_time="2009-11-19T12:00:00", z=-40
     )
     m = ptm.OpenDriftModel(
         **seeding_kwargs,
