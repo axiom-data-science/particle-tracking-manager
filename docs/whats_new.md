@@ -1,6 +1,6 @@
 # What's New
 
-## Unreleased
+## v2.2.0 (January 7, 2026)
 
 * Changes to `HarmfulAlgalBloom` to support updates in `OpenDrift` model:
   * Added and renamed some parameters.

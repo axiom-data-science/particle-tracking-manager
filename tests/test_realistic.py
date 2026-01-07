@@ -31,11 +31,11 @@ ds = xr.Dataset(
         "u": (("ocean_time", "Z", "Y", "X"), np.ones((2, 3, 4, 5))),
         "v": (("ocean_time", "Z", "Y", "X"), np.ones((2, 3, 4, 5))),
         "w": (("ocean_time", "Z", "Y", "X"), np.zeros((2, 3, 4, 5))),
-        "salt": (("ocean_time", "Z", "Y", "X"), np.ones((2, 3, 4, 5))*31),
-        "temp": (("ocean_time", "Z", "Y", "X"), np.ones((2, 3, 4, 5))*18),
+        "salt": (("ocean_time", "Z", "Y", "X"), np.ones((2, 3, 4, 5)) * 31),
+        "temp": (("ocean_time", "Z", "Y", "X"), np.ones((2, 3, 4, 5)) * 18),
         "wetdry_mask_rho": (("ocean_time", "Y", "X"), np.ones((2, 4, 5))),
         "mask_rho": (("Y", "X"), np.ones((4, 5))),
-        "h": (("Y", "X"), np.ones((4, 5))*10),
+        "h": (("Y", "X"), np.ones((4, 5)) * 10),
         "angle": (("Y", "X"), np.zeros((4, 5))),
         "Uwind": (("ocean_time", "Y", "X"), np.zeros((2, 4, 5))),
         "Vwind": (("ocean_time", "Y", "X"), np.zeros((2, 4, 5))),
@@ -44,14 +44,43 @@ ds = xr.Dataset(
     },
     coords={
         # "ocean_time": ("ocean_time", ["1970-01-01T00:00:00", "1970-01-01T00:10:00"], {"units": "seconds since 1970-01-01"}),
-        "ocean_time": ("ocean_time", [0, 60*10], {"units": "seconds since 1970-01-01"}),
+        "ocean_time": (
+            "ocean_time",
+            [0, 60 * 10],
+            {"units": "seconds since 1970-01-01"},
+        ),
         "s_rho": (("Z"), np.linspace(-1, 0, 3)),
-        "lon_rho": (("Y", "X"), np.array([[1, 1.5, 2, 2.5, 3], [1, 1.5, 2, 2.5, 3], [1, 1.5, 2, 2.5, 3], [1, 1.5, 2, 2.5, 3]])),
-        "lat_rho": (("Y", "X"), np.array([[1, 1.25, 1.5, 1.75, 2], [1, 1.25, 1.5, 1.75, 2], [1, 1.25, 1.5, 1.75, 2], [1, 1.25, 1.5, 1.75, 2]])),
+        "lon_rho": (
+            ("Y", "X"),
+            np.array(
+                [
+                    [1, 1.5, 2, 2.5, 3],
+                    [1, 1.5, 2, 2.5, 3],
+                    [1, 1.5, 2, 2.5, 3],
+                    [1, 1.5, 2, 2.5, 3],
+                ]
+            ),
+        ),
+        "lat_rho": (
+            ("Y", "X"),
+            np.array(
+                [
+                    [1, 1.25, 1.5, 1.75, 2],
+                    [1, 1.25, 1.5, 1.75, 2],
+                    [1, 1.25, 1.5, 1.75, 2],
+                    [1, 1.25, 1.5, 1.75, 2],
+                ]
+            ),
+        ),
     },
 )
 ds_info = dict(
-    lon_min=1, lon_max=3, lat_min=1, lat_max=2, start_time_model=0, end_time_fixed=60*10
+    lon_min=1,
+    lon_max=3,
+    lat_min=1,
+    lat_max=2,
+    start_time_model=0,
+    end_time_fixed=60 * 10,
 )
 
 ptm.config_ocean_model.register_on_the_fly(ds_info)
@@ -151,7 +180,7 @@ def test_run_HarmfulAlgalBloom_biomass_change():
         drift_model="HarmfulAlgalBloom",
     )
     m.add_reader()
-    
+
     # change model values for test
     inds = m.ds.temp.notnull()
     m.ds["temp"].values[inds] = 15.0
@@ -162,7 +191,9 @@ def test_run_HarmfulAlgalBloom_biomass_change():
     # calculated as: biomass = initial_biomass * exp(growth_rate-mortality_rate_high * time)
     assert np.allclose(
         float(m.o.elements.biomass[0]),
-        np.exp((m.config.growth_rate_high - m.config.mortality_rate_low) * 3600 / 86400),
+        np.exp(
+            (m.config.growth_rate_high - m.config.mortality_rate_low) * 3600 / 86400
+        ),
     )
 
 
@@ -170,8 +201,14 @@ def test_run_HarmfulAlgalBloom_biomass_change():
 def test_run_HarmfulAlgalBloom_vertical_behavior_band():
     """Set up and run HarmfulAlgalBloom and match vertical change."""
 
-    seeding_kwargs = dict(lon=-90, lat=28.7, number=1, start_time="2009-11-19T12:00:00",
-                          swim_speed=0.001, z=-30)
+    seeding_kwargs = dict(
+        lon=-90,
+        lat=28.7,
+        number=1,
+        start_time="2009-11-19T12:00:00",
+        swim_speed=0.001,
+        z=-30,
+    )
     m = ptm.OpenDriftModel(
         **seeding_kwargs,
         use_static_masks=True,
@@ -187,9 +224,10 @@ def test_run_HarmfulAlgalBloom_vertical_behavior_band():
     )
     m.add_reader()
     m.run_all()
-    
+
     dz = seeding_kwargs["swim_speed"] * 3600  # swim speed * time in seconds
     assert np.allclose(float(m.o.elements.z[0]), seeding_kwargs["z"] + dz)
+
 
 @pytest.mark.slow
 def test_run_HarmfulAlgalBloom_vertical_behavior_diel_band():
@@ -251,6 +289,7 @@ def test_run_HarmfulAlgalBloom_vertical_behavior_diel_band():
 
 #     assert "parquet" in manager.o.outfile_name
 
+
 @pytest.mark.slow
 def test_run_parquet_and_netcdf():
     """Set up and run."""
@@ -286,8 +325,9 @@ def test_run_parquet_and_netcdf():
 def test_run_HarmfulAlgalBloom_PN():
     """Set up and run HarmfulAlgalBloom for Pseudo Nitzschia."""
 
-    seeding_kwargs = dict(lon=-90, lat=28.7, number=1, start_time="2009-11-19T12:00:00",
-                          z=-20)
+    seeding_kwargs = dict(
+        lon=-90, lat=28.7, number=1, start_time="2009-11-19T12:00:00", z=-20
+    )
     m = ptm.OpenDriftModel(
         **seeding_kwargs,
         use_static_masks=True,
@@ -300,18 +340,24 @@ def test_run_HarmfulAlgalBloom_PN():
         do3D=False,
     )
     m.add_reader()
-    
+
     # change model values for test
     inds = m.ds.temp.notnull()
     m.ds["temp"].values[inds] = m.config.temperature_pref_min
-    m.ds["salt"].values[inds] = m.config.salinity_death_min + 0.5  # this causes medium mortality/growth
+    m.ds["salt"].values[inds] = (
+        m.config.salinity_death_min + 0.5
+    )  # this causes medium mortality/growth
     m.run_all()
 
     # check that biomass decreased due to temperature-induced mortality
     # calculated as: biomass = initial_biomass * exp(growth_rate-mortality_rate_high * time)
     assert np.allclose(
         float(m.o.elements.biomass[0]),
-        np.exp((m.config.growth_rate_medium - m.config.mortality_rate_medium) * 3600 / 86400),
+        np.exp(
+            (m.config.growth_rate_medium - m.config.mortality_rate_medium)
+            * 3600
+            / 86400
+        ),
     )
 
     # Analytical expectation: no vertical advection/mixing, so only active
@@ -321,12 +367,14 @@ def test_run_HarmfulAlgalBloom_PN():
     expected_z = seeding_kwargs["z"] - dz
     assert np.allclose(float(m.o.elements.z[0]), expected_z)
 
+
 @pytest.mark.slow
 def test_run_HarmfulAlgalBloom_AX():
     """Set up and run HarmfulAlgalBloom for Alexandrium."""
 
-    seeding_kwargs = dict(lon=-90, lat=28.7, number=1, start_time="2009-11-19T12:00:00",
-                          z=-40)
+    seeding_kwargs = dict(
+        lon=-90, lat=28.7, number=1, start_time="2009-11-19T12:00:00", z=-40
+    )
     m = ptm.OpenDriftModel(
         **seeding_kwargs,
         use_static_masks=True,
@@ -339,10 +387,12 @@ def test_run_HarmfulAlgalBloom_AX():
         do3D=False,
     )
     m.add_reader()
-    
+
     # change model values for test
     inds = m.ds.temp.notnull()
-    m.ds["temp"].values[inds] = m.config.temperature_death_max + 0.5  # this causes high mortality/low growth
+    m.ds["temp"].values[inds] = (
+        m.config.temperature_death_max + 0.5
+    )  # this causes high mortality/low growth
     m.ds["salt"].values[inds] = m.config.salinity_pref_max
     m.run_all()
 
@@ -350,7 +400,9 @@ def test_run_HarmfulAlgalBloom_AX():
     # calculated as: biomass = initial_biomass * exp(growth_rate-mortality_rate_high * time)
     assert np.allclose(
         float(m.o.elements.biomass[0]),
-        np.exp((m.config.growth_rate_low - m.config.mortality_rate_high) * 3600 / 86400),
+        np.exp(
+            (m.config.growth_rate_low - m.config.mortality_rate_high) * 3600 / 86400
+        ),
     )
 
     # Analytical expectation: no vertical advection/mixing, so only active
@@ -364,8 +416,9 @@ def test_run_HarmfulAlgalBloom_AX():
 def test_run_HarmfulAlgalBloom_DP():
     """Set up and run HarmfulAlgalBloom for Dinophysis."""
 
-    seeding_kwargs = dict(lon=-90, lat=28.7, number=1, start_time="2009-11-19T12:00:00",
-                          z=-1)
+    seeding_kwargs = dict(
+        lon=-90, lat=28.7, number=1, start_time="2009-11-19T12:00:00", z=-1
+    )
     m = ptm.OpenDriftModel(
         **seeding_kwargs,
         use_static_masks=True,
@@ -378,7 +431,7 @@ def test_run_HarmfulAlgalBloom_DP():
         do3D=False,
     )
     m.add_reader()
-    
+
     # change model values for test
     inds = m.ds.temp.notnull()
     m.ds["temp"].values[inds] = m.config.temperature_pref_max
@@ -389,7 +442,9 @@ def test_run_HarmfulAlgalBloom_DP():
     # calculated as: biomass = initial_biomass * exp(growth_rate-mortality_rate_high * time)
     assert np.allclose(
         float(m.o.elements.biomass[0]),
-        np.exp((m.config.growth_rate_high - m.config.mortality_rate_low) * 3600 / 86400),
+        np.exp(
+            (m.config.growth_rate_high - m.config.mortality_rate_low) * 3600 / 86400
+        ),
     )
 
     # Analytical expectation: no vertical advection/mixing, so only active

@@ -60,7 +60,7 @@ class HABParameters(BaseModel):
             "ptm_level": 2,
         },
     )
-    
+
     temperature_pref_min: float = Field(
         description="Minimum temperature for preferred temperature range; cells have regular growth.",
         title="Minimum preferred temperature",
@@ -73,7 +73,7 @@ class HABParameters(BaseModel):
             "ptm_level": 2,
         },
     )
-    
+
     temperature_pref_max: float = Field(
         description="Maximum temperature for preferred temperature range; cells have regular growth.",
         title="Maximum preferred temperature",
@@ -112,7 +112,7 @@ class HABParameters(BaseModel):
             "ptm_level": 2,
         },
     )
-    
+
     salinity_pref_min: float = Field(
         description="Minimum salinity for preferred salinity range; cells have regular growth.",
         title="Minimum preferred salinity",
@@ -125,7 +125,7 @@ class HABParameters(BaseModel):
             "ptm_level": 2,
         },
     )
-    
+
     salinity_pref_max: float = Field(
         description="Maximum salinity for preferred salinity range; cells have regular growth.",
         title="Maximum preferred salinity",
@@ -239,7 +239,7 @@ class HABParameters(BaseModel):
             "ptm_level": 2,
         },
     )
-    
+
     band_center_depth: float = Field(
         description="Target center of preferred depth band (m, negative down).",
         title="Band center depth",
@@ -307,12 +307,12 @@ SPECIES_HAB_DEFAULTS: dict[HABSpeciesTypeEnum, HABParameters] = {
         mortality_rate_high=1.0,
         mortality_rate_medium=0.5,
         mortality_rate_low=0.1,
-        growth_rate_high=0.8,       # day⁻¹  (within 0.4–1.04 observed)
-        growth_rate_medium=0.3,       # day⁻¹
+        growth_rate_high=0.8,  # day⁻¹  (within 0.4–1.04 observed)
+        growth_rate_medium=0.3,  # day⁻¹
         growth_rate_low=0.0,
         vertical_behavior="none",
-        band_center_depth=-5.0,     # m
-        band_half_width=10.0,        # m   (very broad, not tight band)
+        band_center_depth=-5.0,  # m
+        band_half_width=10.0,  # m   (very broad, not tight band)
         swim_speed=0.0,
     ),
     HABSpeciesTypeEnum.AX: HABParameters(
@@ -327,20 +327,18 @@ SPECIES_HAB_DEFAULTS: dict[HABSpeciesTypeEnum, HABParameters] = {
         mortality_rate_high=1.0,
         mortality_rate_medium=0.5,
         mortality_rate_low=0.1,
-        growth_rate_high=0.65,      # day⁻¹  (near 0.63 observed)
-        growth_rate_medium=0.25,      # day⁻¹
+        growth_rate_high=0.65,  # day⁻¹  (near 0.63 observed)
+        growth_rate_medium=0.25,  # day⁻¹
         growth_rate_low=0.0,
         # Alexandrium defaults
         vertical_behavior="diel_band",
-        swim_speed=0.0005,          # m/s 
-
+        swim_speed=0.0005,  # m/s
         # MLD 20 like in Lower Cook Inlet
-        diel_day_depth=-6.0,       # m 
-        diel_night_depth=-26.0,      # m, this should be below the MLD
+        diel_day_depth=-6.0,  # m
+        diel_night_depth=-26.0,  # m, this should be below the MLD
         # # MLD 12 like in KB
         # diel_day_depth=-4.0,       # m
         # diel_night_depth=-18.0,      # m
-
         # # If you ever use pure band: (not used for AX)
         # band_center_depth=-10.0,
         band_half_width=5.0,
@@ -357,19 +355,18 @@ SPECIES_HAB_DEFAULTS: dict[HABSpeciesTypeEnum, HABParameters] = {
         mortality_rate_high=1.0,
         mortality_rate_medium=0.5,
         mortality_rate_low=0.1,
-        growth_rate_high=0.4,       # day⁻¹  (near 0.36–0.39 observed)
-        growth_rate_medium=0.15,      # day⁻¹
+        growth_rate_high=0.4,  # day⁻¹  (near 0.36–0.39 observed)
+        growth_rate_medium=0.15,  # day⁻¹
         growth_rate_low=0.0,
         vertical_behavior="band",
-        swim_speed=0.0003,          # m/s (≈ 26 m/day max vertical travel)
-
+        swim_speed=0.0003,  # m/s (≈ 26 m/day max vertical travel)
         # # Day: somewhat deeper, but not as deep as Alexandrium
         # diel_day_depth=-15.0,
         # # Night: a bit shallower, but not right at the surface
         # diel_night_depth=-5.0,
         # Band settings:
         band_center_depth=-12.5,
-        band_half_width=7.5
+        band_half_width=7.5,
     ),
     # HABSpeciesTypeEnum.custom intentionally has no entry
 }
@@ -377,11 +374,7 @@ SPECIES_HAB_DEFAULTS: dict[HABSpeciesTypeEnum, HABParameters] = {
 
 # Other config defaults per species (z, do3D, etc.)
 SPECIES_HAB_MANAGER_DEFAULTS: dict[HABSpeciesTypeEnum, dict[str, object]] = {
-    HABSpeciesTypeEnum.PN: {
-        "z": -1.0,
-        "do3D": True,
-        "vertical_mixing": True
-    },
+    HABSpeciesTypeEnum.PN: {"z": -1.0, "do3D": True, "vertical_mixing": True},
     HABSpeciesTypeEnum.AX: {"z": -1.0, "do3D": True, "vertical_mixing": True},
     HABSpeciesTypeEnum.DP: {"do3D": True, "vertical_mixing": True},
 }
