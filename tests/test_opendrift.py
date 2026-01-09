@@ -192,7 +192,7 @@ def test_LarvalFish_seeding():
         lat=60,
         do3D=True,
         hatched=1,
-        stage_fraction=None,
+        stage_fraction=1,  # value has to be a number but won't be used since hatched==1
         start_time="2022-01-01T00:00:00",
         use_auto_landmask=True,
         steps=1,

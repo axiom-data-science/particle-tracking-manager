@@ -72,16 +72,12 @@ def test_LarvalFish_disallowed_settings():
 
 
 def test_LarvalFish_hatched_stage_fraction():
-    """If hatched==1, stage_fraction must be None."""
+    """If hatched==1, stage_fraction must be a number but will be ignored."""
 
     with pytest.raises(ValidationError):
         m = LarvalFishModelConfig(
-            drift_model="LarvalFish", steps=1, hatched=1, stage_fraction=0.5
+            drift_model="LarvalFish", steps=1, hatched=1, stage_fraction=None
         )
-
-    m = LarvalFishModelConfig(
-        drift_model="LarvalFish", steps=1, hatched=1, stage_fraction=None
-    )
 
     m = LarvalFishModelConfig(
         drift_model="LarvalFish", steps=1, hatched=0, stage_fraction=0.5
