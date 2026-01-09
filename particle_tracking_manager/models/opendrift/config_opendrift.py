@@ -795,6 +795,14 @@ class HarmfulAlgalBloomModelConfig(HABParameters, OceanDriftModelConfig):
         },
     )
 
+    # override inherited parameter defaults
+    vertical_mixing: bool = FieldInfo.merge_field_infos(
+        OceanDriftModelConfig.model_fields["vertical_mixing"], Field(default=True)
+    )
+    do3D: bool = FieldInfo.merge_field_infos(
+        TheManagerConfig.model_fields["do3D"], Field(default=True)
+    )
+
     @model_validator(mode="before")
     @classmethod
     def apply_species_defaults(cls, data: Any) -> Any:
