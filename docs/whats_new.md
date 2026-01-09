@@ -1,5 +1,10 @@
 # What's New
 
+## Unreleased
+
+* Added parameters `do3D=True` and `vertical_mixing=True` for the HarmfulAlgalBloom scenario
+
+
 ## v2.2.0 (January 7, 2026)
 
 * Changes to `HarmfulAlgalBloom` to support updates in `OpenDrift` model:
