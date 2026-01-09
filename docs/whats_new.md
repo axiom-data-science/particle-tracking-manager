@@ -1,8 +1,9 @@
 # What's New
 
-## Unreleased
+## v2.2.1 (January 9, 2026)
 
 * Added parameters `do3D=True` and `vertical_mixing=True` for the HarmfulAlgalBloom scenario
+* Change so that when `hatched==1`, `stage_fraction` needs to be a number that will be ignored instead of `None`
 
 
 ## v2.2.0 (January 7, 2026)

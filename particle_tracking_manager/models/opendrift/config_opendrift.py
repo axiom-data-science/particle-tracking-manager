@@ -685,9 +685,9 @@ class LarvalFishModelConfig(OceanDriftModelConfig):
         },
     )
 
-    stage_fraction: float | None = Field(
+    stage_fraction: float = Field(
         default=0.0,
-        description="Seeding value of stage_fraction. stage_fraction tracks percentage of development time completed, from 0 to 1, where a value of 1 means the egg has hatched. If `hatched==1` then `stage_fraction` is ignored in `OpenDrift`, but has to be None.",
+        description="Seeding value of stage_fraction. stage_fraction tracks percentage of development time completed, from 0 to 1, where a value of 1 means the egg has hatched. If `hatched==1` then `stage_fraction` is ignored in `OpenDrift`.",
         title="Stage Fraction",
         ge=0,
         le=1,
@@ -761,16 +761,16 @@ class LarvalFishModelConfig(OceanDriftModelConfig):
 
         return self
 
-    @model_validator(mode="after")
-    def check_hatched_and_stage_fraction(self) -> Self:
-        """If hatched==1, stage_fraction should be None.
+    # @model_validator(mode="after")
+    # def check_hatched_and_stage_fraction(self) -> Self:
+    #     """If hatched==1, stage_fraction should be None.
 
-        This only applies for seeding, not for the simulation.
-        """
+    #     This only applies for seeding, not for the simulation.
+    #     """
 
-        if self.hatched == 1 and self.stage_fraction is not None:
-            raise ValueError("If hatched==1, stage_fraction should be None.")
-        return self
+    #     if self.hatched == 1 and self.stage_fraction is not None:
+    #         raise ValueError("If hatched==1, stage_fraction should be None.")
+    #     return self
 
 
 class HarmfulAlgalBloomModelConfig(HABParameters, OceanDriftModelConfig):
