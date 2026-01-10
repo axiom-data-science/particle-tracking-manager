@@ -311,15 +311,15 @@ def test_wind_drift():
         lon=-151,
         lat=60,
         do3D=True,
-        wind_drift_factor=1,
-        wind_drift_depth=10,
+        wind_drift_factor=0.05,
+        wind_drift_depth=0.5,
         start_time="2023-01-01T00:00:00",
         use_auto_landmask=True,
         steps=1,
     )
     m.setup_for_simulation()  # creates m.o
-    assert m.o._config["seed:wind_drift_factor"]["value"] == 1
-    assert m.o._config["drift:wind_drift_depth"]["value"] == 10
+    assert m.o._config["seed:wind_drift_factor"]["value"] == 0.05
+    assert m.o._config["drift:wind_drift_depth"]["value"] == 0.5
 
 
 def test_plots_linecolor():

@@ -1,5 +1,12 @@
 # What's New
 
+## Unreleased
+
+* No longer requiring `z==None` when `seed_seabed==True`; also `z` can no longer have the value `None`.
+* Max value of `wind_drift_depth` is now 1 instead of 10.
+* Max value of `wind_drift_factor` is now 0.1 instead of 1.
+
+
 ## v2.2.1 (January 9, 2026)
 
 * Added parameters `do3D=True` and `vertical_mixing=True` for the HarmfulAlgalBloom scenario
