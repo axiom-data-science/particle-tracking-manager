@@ -156,7 +156,7 @@ class OpenDriftConfig(TheManagerConfig):
         TheManagerConfig.model_fields["stokes_drift"],
         Field(json_schema_extra=dict(od_mapping="drift:stokes_drift")),
     )
-    z: float | None = FieldInfo.merge_field_infos(
+    z: float = FieldInfo.merge_field_infos(
         TheManagerConfig.model_fields["z"],
         Field(json_schema_extra=dict(od_mapping="seed:z")),
     )
@@ -180,15 +180,15 @@ class OpenDriftConfig(TheManagerConfig):
             )
         return self
 
-    @model_validator(mode="after")
-    def check_config_z_value(self) -> Self:
-        """Check if z is set correctly."""
-        if hasattr(self, "seed_seafloor"):
-            if not self.seed_seafloor and self.z is None:
-                raise ValueError("z needs a non-None value if seed_seafloor is False.")
-            if self.seed_seafloor and self.z is not None:
-                raise ValueError("z needs to be None if seed_seafloor is True.")
-        return self
+    # @model_validator(mode="after")
+    # def check_config_z_value(self) -> Self:
+    #     """Check if z is set correctly."""
+    #     if hasattr(self, "seed_seafloor"):
+    #         if not self.seed_seafloor and self.z is None:
+    #             raise ValueError("z needs a non-None value if seed_seafloor is False.")
+    #         if self.seed_seafloor and self.z is not None:
+    #             raise ValueError("z needs to be None if seed_seafloor is True.")
+    #     return self
 
     # this is not true! For example, OpenOil has by default no vertical advection but yes vertical mixing
     # @model_validator(mode="after")
@@ -440,12 +440,12 @@ class OceanDriftModelConfig(OpenDriftConfig):
         },
     )
 
-    wind_drift_depth: float | None = Field(
+    wind_drift_depth: float = Field(
         default=0.1,
         description="The direct wind drift (windage) is linearly decreasing from the surface value (wind_drift_factor) until 0 at this depth.",
         title="Wind Drift Depth",
         ge=0,
-        le=10,
+        le=1,
         json_schema_extra={
             "units": "meters",
             "od_mapping": "drift:wind_drift_depth",
@@ -468,9 +468,10 @@ class OceanDriftModelConfig(OpenDriftConfig):
 
     wind_drift_factor: float = Field(
         default=0.02,
-        description="Elements at surface are moved with this fraction of the wind vector, in addition to currents and Stokes drift.",
+        description="Elements at surface are moved with this fraction of the wind vector, in addition to currents and Stokes drift. Multiply by 100 to get the percent windage.",
         title="Wind Drift Factor",
         ge=0,
+        le=0.1,
         json_schema_extra={
             "units": "1",
             "od_mapping": "seed:wind_drift_factor",
