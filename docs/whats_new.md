@@ -1,6 +1,6 @@
 # What's New
 
-## Unreleased
+## v2.2.2 (January 12, 2026)
 
 * No longer requiring `z==None` when `seed_seabed==True`; also `z` can no longer have the value `None`.
 * Max value of `wind_drift_depth` is now 1 instead of 10.
