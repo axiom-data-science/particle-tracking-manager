@@ -489,6 +489,16 @@ class OceanDriftModelConfig(OpenDriftConfig):
         },
     )
 
+    vertical_mixing_at_surface: bool = Field(
+        default=True,
+        description="If vertical mixing is activated, surface elements (z=0) can only be mixed (downwards) if this setting it True.",
+        title="Vertical Mixing At Surface",
+        json_schema_extra={
+            "od_mapping": "drift:vertical_mixing_at_surface",
+            "ptm_level": 2,
+        },
+    )
+
 
 class OpenOilModelConfig(OceanDriftModelConfig):
     """OpenOil model configuration for OpenDrift."""
