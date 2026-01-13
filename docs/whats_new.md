@@ -1,5 +1,13 @@
 # What's New
 
+## v2.2.4 (January 12, 2026)
+
+* add new `OpenDrift` parameter `vertical_advection_at_surface` which is necessary to have vertical advection at the very surface. These new parameters are in all 3D scenarios except oil.
+
+## v2.2.3 (January 12, 2026)
+
+* added new `OpenDrift` parameter `vertical_mixing_at_surface` without which particles will stick to the surface
+
 ## v2.2.2 (January 12, 2026)
 
 * No longer requiring `z==None` when `seed_seabed==True`; also `z` can no longer have the value `None`.

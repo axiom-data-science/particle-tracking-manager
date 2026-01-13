@@ -499,6 +499,16 @@ class OceanDriftModelConfig(OpenDriftConfig):
         },
     )
 
+    vertical_advection_at_surface: bool = Field(
+        default=True,
+        description="If vertical advection is activated, surface elements (z=0) can only be advected (downwards) if this setting it True.",
+        title="Vertical Advection At Surface",
+        json_schema_extra={
+            "od_mapping": "drift:vertical_advection_at_surface",
+            "ptm_level": 2,
+        },
+    )
+
 
 class OpenOilModelConfig(OceanDriftModelConfig):
     """OpenOil model configuration for OpenDrift."""
@@ -664,6 +674,14 @@ class OpenOilModelConfig(OceanDriftModelConfig):
     )
     vertical_mixing: bool = FieldInfo.merge_field_infos(
         OceanDriftModelConfig.model_fields["vertical_mixing"], Field(default=True)
+    )
+    vertical_mixing_at_surface: bool = FieldInfo.merge_field_infos(
+        OceanDriftModelConfig.model_fields["vertical_mixing_at_surface"],
+        Field(default=False),
+    )
+    vertical_advection_at_surface: bool = FieldInfo.merge_field_infos(
+        OceanDriftModelConfig.model_fields["vertical_advection_at_surface"],
+        Field(default=False),
     )
 
 
