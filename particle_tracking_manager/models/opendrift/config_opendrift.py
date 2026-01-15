@@ -34,7 +34,6 @@ from .enums import (
 from .enums.species_types import (
     HAB_SPECIES_LABELS,
     SPECIES_HAB_DEFAULTS,
-    SPECIES_HAB_MANAGER_DEFAULTS,
     HABParameters,
     _species_descriptions,
 )
@@ -806,7 +805,7 @@ class HarmfulAlgalBloomModelConfig(HABParameters, OceanDriftModelConfig):
     """Harmful algal bloom model configuration for OpenDrift."""
 
     drift_model: DriftModelEnum = DriftModelEnum.HarmfulAlgalBloom
-    # import pdb; pdb.set_trace()
+
     species_type: HABSpeciesTypeEnum = Field(
         default=HABSpeciesTypeEnum.PN,
         description="HarmfulAlgalBloom species category for this simulation. This option maps to individual properties which can instead be set manually if desired.",
@@ -869,17 +868,63 @@ class HarmfulAlgalBloomModelConfig(HABParameters, OceanDriftModelConfig):
                     f"Missing: {', '.join(missing)}"
                 )
 
-        # -------- Other config field defaults (e.g. z, do3D) --------
-        field_defaults = SPECIES_HAB_MANAGER_DEFAULTS.get(species, {})
-        for field_name, default_value in field_defaults.items():
-            # only apply if the user did not supply this field
-            data.setdefault(field_name, default_value)
+        # # -------- Other config field defaults (e.g. z, do3D) --------
+        # field_defaults = SPECIES_HAB_MANAGER_DEFAULTS.get(species, {})
+        # for field_name, default_value in field_defaults.items():
+        #     # only apply if the user did not supply this field
+        #     data.setdefault(field_name, default_value)
 
         return data
 
-    # @model_validator(mode="after")
-    # def setup_species_parameters(self) -> Self:
-    #     """Assign species-specific parameters."""
+    @model_validator(mode="after")
+    def setup_species_parameters(self) -> Self:
+        """Assign species-specific parameters that depend on other inputs."""
+
+        MLD = self.mixed_layer_depth
+
+        if self.species_type == HABSpeciesTypeEnum.PN:
+            # Pseudo-nitzschia
+
+            # want to cap the resulting max depth to 25m
+            # a straight forward way to do this is to control the max MLD in this calculation
+            effective_MLD = min(MLD, 31.25)  # 0.4*31.25 + 0.4*31.25 = 25
+
+            # use the mixed layer depth to calculate band_center_depth and band_half_width
+            self.band_center_depth = -0.4 * effective_MLD
+            self.band_half_width = 0.4 * effective_MLD
+
+        elif self.species_type == HABSpeciesTypeEnum.AX:
+            # Alexandrium
+
+            # want to cap the resulting diel_night_depth to about 40m
+            # a straight forward way to do this is to control the max MLD in this calculation
+            effective_MLD = min(MLD, 30.75)  # 1.3*30.75 = 39.975
+
+            # use the mixed layer depth to calculate band_center_depth and band_half_width
+            self.diel_day_depth = -0.3 * effective_MLD
+            self.diel_night_depth = -1.3 * effective_MLD
+
+        elif self.species_type == HABSpeciesTypeEnum.DP:
+            # Dinophysis
+
+            d = 2.5
+            # want min depth to be about 5m
+            # a straight forward way to do this is to control the max MLD in this calculation
+            effective_MLD = max(MLD, 5)  # -(MLD+d)+0.5*MLD with MLD=5
+
+            # want to cap the resulting max depth to about 25m
+            # a straight forward way to do this is to control the min MLD in this calculation
+            effective_MLD = min(effective_MLD, 15)  # -(MLD+d)-0.5*MLD with MLD=15
+
+            # use the mixed layer depth to calculate band_center_depth and band_half_width
+            self.band_center_depth = -(effective_MLD + d)
+            self.band_half_width = 0.5 * effective_MLD
+
+        else:
+            raise ValueError(
+                f"Species type {self.species_type} not recognized for HarmfulAlgalBloom model."
+            )
+        return self
 
     #     if self.species_type == HABSpeciesTypeEnum("Pseudo_nitzschia"):
 
