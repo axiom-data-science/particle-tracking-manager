@@ -1,5 +1,9 @@
 # What's New
 
+## v2.3.0 (January 15, 2026)
+
+* The depths required for `HarmfulAlgalBloom` species types are now calculated for the 3 available species from the mixed layer depth.
+
 ## v2.2.4 (January 12, 2026)
 
 * add new `OpenDrift` parameter `vertical_advection_at_surface` which is necessary to have vertical advection at the very surface. These new parameters are in all 3D scenarios except oil.
