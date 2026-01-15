@@ -311,8 +311,9 @@ SPECIES_HAB_DEFAULTS: dict[HABSpeciesTypeEnum, HABParameters] = {
         growth_rate_medium=0.3,  # day⁻¹
         growth_rate_low=0.0,
         vertical_behavior="none",
-        band_center_depth=-5.0,  # m
-        band_half_width=10.0,  # m   (very broad, not tight band)
+        # these are now calculated using mixed layer depth
+        # band_center_depth=-5.0,  # m
+        # band_half_width=10.0,  # m   (very broad, not tight band)
         swim_speed=0.0,
     ),
     HABSpeciesTypeEnum.AX: HABParameters(
@@ -333,15 +334,15 @@ SPECIES_HAB_DEFAULTS: dict[HABSpeciesTypeEnum, HABParameters] = {
         # Alexandrium defaults
         vertical_behavior="diel_band",
         swim_speed=0.0005,  # m/s
-        # MLD 20 like in Lower Cook Inlet
-        diel_day_depth=-6.0,  # m
-        diel_night_depth=-26.0,  # m, this should be below the MLD
-        # # MLD 12 like in KB
-        # diel_day_depth=-4.0,       # m
-        # diel_night_depth=-18.0,      # m
-        # # If you ever use pure band: (not used for AX)
-        # band_center_depth=-10.0,
-        band_half_width=5.0,
+        # # # MLD 20 like in Lower Cook Inlet
+        # # diel_day_depth=-6.0,  # m
+        # # diel_night_depth=-26.0,  # m, this should be below the MLD
+        # # # # MLD 12 like in KB
+        # # # diel_day_depth=-4.0,       # m
+        # # # diel_night_depth=-18.0,      # m
+        # # # # If you ever use pure band: (not used for AX)
+        # # # band_center_depth=-10.0,
+        # band_half_width=5.0,
     ),
     HABSpeciesTypeEnum.DP: HABParameters(
         temperature_death_min=6.0,
@@ -364,20 +365,20 @@ SPECIES_HAB_DEFAULTS: dict[HABSpeciesTypeEnum, HABParameters] = {
         # diel_day_depth=-15.0,
         # # Night: a bit shallower, but not right at the surface
         # diel_night_depth=-5.0,
-        # Band settings:
-        band_center_depth=-12.5,
-        band_half_width=7.5,
+        # # Band settings:
+        # band_center_depth=-12.5,
+        # band_half_width=7.5,
     ),
     # HABSpeciesTypeEnum.custom intentionally has no entry
 }
 
 
-# Other config defaults per species (z, do3D, etc.)
-SPECIES_HAB_MANAGER_DEFAULTS: dict[HABSpeciesTypeEnum, dict[str, object]] = {
-    HABSpeciesTypeEnum.PN: {"z": -1.0, "do3D": True, "vertical_mixing": True},
-    HABSpeciesTypeEnum.AX: {"z": -1.0, "do3D": True, "vertical_mixing": True},
-    HABSpeciesTypeEnum.DP: {"do3D": True, "vertical_mixing": True},
-}
+# # Other config defaults per species (z, do3D, etc.)
+# SPECIES_HAB_MANAGER_DEFAULTS: dict[HABSpeciesTypeEnum, dict[str, object]] = {
+#     HABSpeciesTypeEnum.PN: {"z": -1.0, "do3D": True, "vertical_mixing": True},
+#     HABSpeciesTypeEnum.AX: {"z": -1.0, "do3D": True, "vertical_mixing": True},
+#     HABSpeciesTypeEnum.DP: {"do3D": True, "vertical_mixing": True},
+# }
 
 # this is for the schema
 _species_descriptions = {
