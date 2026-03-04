@@ -196,7 +196,7 @@ class OpenDriftModel(ParticleTrackingManager):
 
             o = LarvalFish(loglevel=log_level, iomodule=iomodule)
             # Configure as phytoplankton (no egg/growth stages)
-            o.set_config('biology:particle_type', 'phytoplankton')
+            o.set_config("biology:particle_type", "phytoplankton")
 
         elif self.config.drift_model == "OpenOil":
             from opendrift.models.openoil import OpenOil

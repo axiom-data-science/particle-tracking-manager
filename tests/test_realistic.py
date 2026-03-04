@@ -236,7 +236,9 @@ def test_run_Phytoplankton_vertical_behavior_dvm():
     # With vertical mixing active, the exact final position varies,
     # but it should be shallower than starting depth
     final_z = float(m.o.elements.z[0])
-    assert final_z > seeding_kwargs["z"], "Particle should swim upward toward target depth"
+    assert (
+        final_z > seeding_kwargs["z"]
+    ), "Particle should swim upward toward target depth"
 
 
 # reinstitute this test once OpenDrift PR is accepted that outputs parquet files directly
@@ -345,7 +347,9 @@ def test_run_LarvalFish_vertical_behavior_dvm():
     # Larvae start at z=-40 and swim toward daytime depth z_day=-20
     # With vertical mixing active, the particle should move upward
     final_z = float(m.o.elements.z[0])
-    assert final_z > seeding_kwargs["z"], "Larvae should swim upward toward daytime depth"
+    assert (
+        final_z > seeding_kwargs["z"]
+    ), "Larvae should swim upward toward daytime depth"
 
 
 @pytest.mark.slow
@@ -380,7 +384,7 @@ def test_run_LarvalFish_hatching_fixed_time():
 @pytest.mark.slow
 def test_run_LarvalFish_legacy_mode():
     """Set up and run LarvalFish with legacy vertical behavior mode.
-    
+
     Legacy mode preserves the original LarvalFish time-based swimming behavior.
     """
 
@@ -406,4 +410,3 @@ def test_run_LarvalFish_legacy_mode():
     assert len(m.o.elements) > 0
     # With legacy mode, vertical position is governed by time-based swimming
     # rather than target depths
-

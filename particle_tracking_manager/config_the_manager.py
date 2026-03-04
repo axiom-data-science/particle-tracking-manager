@@ -10,10 +10,10 @@ from typing import Annotated
 
 # Third-party imports
 import pandas as pd
-from typing_extensions import Self
 
 # from geojson import GeoJSON
 from pydantic import BaseModel, Field, computed_field, model_validator
+from typing_extensions import Self
 
 # Local imports
 from .config_ocean_model import (

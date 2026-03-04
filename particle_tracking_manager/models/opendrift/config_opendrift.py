@@ -30,7 +30,7 @@ from .enums import (
     PlotTypeEnum,
     RadiusTypeEnum,
     SeafloorActionEnum,
-    VerticalBehaviorModeEnum
+    VerticalBehaviorModeEnum,
 )
 
 
@@ -925,7 +925,7 @@ class LarvalFishModelConfig(OceanDriftModelConfig):
 
 class PhytoplanktonModelConfig(OceanDriftModelConfig):
     """Phytoplankton (HAB) model configuration for OpenDrift.
-    
+
     Uses the OpenDrift LarvalFish model internally but configured for
     phytoplankton particle tracking (no egg stage, no growth/weight).
     Transport-focused with optional vertical behavior (depth or DVM).
@@ -1064,17 +1064,21 @@ class PhytoplanktonModelConfig(OceanDriftModelConfig):
     def check_vertical_behavior_parameters(self) -> Self:
         """Validate that appropriate depth parameters are set for the chosen mode."""
         mode = self.vertical_behavior_mode
-        
+
         if mode == VerticalBehaviorModeEnum.depth:
             # depth mode requires z_pref
             if self.z_pref == 0.0:
-                logger.warning("depth mode with z_pref=0.0 may cause particles to stay at surface.")
-        
+                logger.warning(
+                    "depth mode with z_pref=0.0 may cause particles to stay at surface."
+                )
+
         elif mode == VerticalBehaviorModeEnum.dvm:
             # dvm mode requires z_day and z_night
             if self.z_day == self.z_night:
-                logger.warning("DVM mode with z_day == z_night behaves like depth mode.")
-        
+                logger.warning(
+                    "DVM mode with z_day == z_night behaves like depth mode."
+                )
+
         return self
 
 

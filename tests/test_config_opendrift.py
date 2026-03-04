@@ -406,4 +406,6 @@ def test_od_mapping_present():
 
     for field_name in fields_with_mapping:
         field = m.model_fields[field_name]
-        assert "od_mapping" in field.json_schema_extra, f"{field_name} missing od_mapping"
+        assert (
+            "od_mapping" in field.json_schema_extra
+        ), f"{field_name} missing od_mapping"
