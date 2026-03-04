@@ -12,12 +12,12 @@ logging.getLogger("numcodecs").setLevel(logging.WARNING)
 from .config_the_manager import TheManagerConfig
 from .models import opendrift as opendrift_models
 from .models.opendrift.config_opendrift import (
-    HarmfulAlgalBloomModelConfig,
     LarvalFishModelConfig,
     LeewayModelConfig,
     OceanDriftModelConfig,
     OpenDriftConfig,
     OpenOilModelConfig,
+    PhytoplanktonModelConfig,
 )
 from .models.opendrift.opendrift import OpenDriftModel
 
@@ -30,6 +30,6 @@ __all__ = [
     "OpenDriftConfig",
     "OpenOilModelConfig",
     "OpenDriftModel",
-    "HarmfulAlgalBloomModelConfig",
+    "PhytoplanktonModelConfig",
     "opendrift_models",
 ]

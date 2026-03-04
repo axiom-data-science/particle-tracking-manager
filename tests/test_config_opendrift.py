@@ -5,16 +5,19 @@ import pytest
 from pydantic import ValidationError
 
 from particle_tracking_manager.models.opendrift.config_opendrift import (
-    HarmfulAlgalBloomModelConfig,
     LarvalFishModelConfig,
     LeewayModelConfig,
     OceanDriftModelConfig,
     OpenDriftConfig,
     OpenOilModelConfig,
+    PhytoplanktonModelConfig,
 )
-from particle_tracking_manager.models.opendrift.enums import ObjectTypeEnum
-from particle_tracking_manager.models.opendrift.enums.species_types import (
-    SPECIES_HAB_DEFAULTS,
+from particle_tracking_manager.models.opendrift.enums import (
+    DriftModelEnum,
+    HatchingMethodEnum,
+    ObjectTypeEnum,
+    ParticleTypeEnum,
+    VerticalBehaviorModeEnum,
 )
 from particle_tracking_manager.models.opendrift.opendrift import OpenDriftModel
 
@@ -249,56 +252,158 @@ def test_interpolator_filename():
     assert m.interpolator_filename.name == "CIOFSOP_interpolator.pickle"
 
 
-## HarmfulAlgalBloom ##
+## Phytoplankton ##
 
 
-def test_HarmfulAlgalBloom_init():
-    m = HarmfulAlgalBloomModelConfig(
-        drift_model="HarmfulAlgalBloom",
+def test_Phytoplankton_init():
+    """Test PhytoplanktonModelConfig instantiation."""
+    m = PhytoplanktonModelConfig(
+        drift_model="Phytoplankton",
         steps=1,
     )
+    assert m.drift_model == DriftModelEnum.Phytoplankton
 
 
-def test_HarmfulAlgalBloom_parameters():
-    """Make sure HarmfulAlgalBloom-specific parameters are present."""
-    m = HarmfulAlgalBloomModelConfig(drift_model="HarmfulAlgalBloom", steps=1)
-    params = [
-        "species_type",
-        "temperature_death_min",
-        "temperature_death_max",
-        "salinity_death_min",
-        "salinity_death_max",
-    ]
-    for param in params:
-        assert hasattr(m, param)
-
-
-def test_HarmfulAlgalBloom_species_type():
-    """Make sure species_type parameter works as expected."""
-    m = HarmfulAlgalBloomModelConfig(
-        drift_model="HarmfulAlgalBloom",
-        species_type="PN",
+def test_Phytoplankton_defaults():
+    """Test PhytoplanktonModelConfig default values."""
+    m = PhytoplanktonModelConfig(
+        drift_model="Phytoplankton",
         steps=1,
     )
-    assert m.species_type == "PN"
-    assert m.temperature_death_min == SPECIES_HAB_DEFAULTS["PN"].temperature_death_min
-    assert m.temperature_death_max == SPECIES_HAB_DEFAULTS["PN"].temperature_death_max
-    assert m.salinity_death_min == SPECIES_HAB_DEFAULTS["PN"].salinity_death_min
-    assert m.salinity_death_max == SPECIES_HAB_DEFAULTS["PN"].salinity_death_max
+    assert m.vertical_behavior_mode == VerticalBehaviorModeEnum.depth
+    assert m.w_active == 0.001
+    assert m.z_pref == -10.0
+    assert m.do3D == True
+    assert m.vertical_mixing == True
 
 
-def test_HarmfulAlgalBloom_disallowed_settings():
-    """HarmfulAlgalBloom is incompatible with some settings depending on the species.
+def test_Phytoplankton_dvm_mode():
+    """Test PhytoplanktonModelConfig with DVM mode."""
+    m = PhytoplanktonModelConfig(
+        drift_model="Phytoplankton",
+        steps=1,
+        vertical_behavior_mode=VerticalBehaviorModeEnum.dvm,
+        z_day=-25.0,
+        z_night=-5.0,
+        w_active=0.002,
+    )
+    assert m.vertical_behavior_mode == VerticalBehaviorModeEnum.dvm
+    assert m.z_day == -25.0
+    assert m.z_night == -5.0
 
-    HarmfulAlgalBloom has to always be 3D with vertical_mixing on.
-    """
 
+def test_Phytoplankton_disallowed_settings():
+    """Phytoplankton requires 3D with vertical_mixing."""
     with pytest.raises(ValidationError):
-        m = HarmfulAlgalBloomModelConfig(
-            drift_model="HarmfulAlgalBloom",
+        m = PhytoplanktonModelConfig(
+            drift_model="Phytoplankton",
+            vertical_mixing=False,
             steps=1,
-            species_type="custom",
         )
 
-    # with pytest.raises(ValidationError):
-    #     m = HarmfulAlgalBloomModelConfig(drift_model="HarmfulAlgalBloom", do3D=True, steps=1, species_type="Pseudo_nitzschia")
+    with pytest.raises(ValidationError):
+        m = PhytoplanktonModelConfig(
+            drift_model="Phytoplankton",
+            do3D=False,
+            steps=1,
+        )
+
+
+## Enums ##
+
+
+def test_vertical_behavior_mode_enum():
+    """Test VerticalBehaviorModeEnum values."""
+    assert VerticalBehaviorModeEnum.none == "none"
+    assert VerticalBehaviorModeEnum.depth == "depth"
+    assert VerticalBehaviorModeEnum.dvm == "dvm"
+    assert VerticalBehaviorModeEnum.legacy == "legacy"
+
+
+def test_hatching_method_enum():
+    """Test HatchingMethodEnum values."""
+    assert HatchingMethodEnum.temperature == "temperature"
+    assert HatchingMethodEnum.fixed_time == "fixed_time"
+
+
+def test_particle_type_enum():
+    """Test ParticleTypeEnum values."""
+    assert ParticleTypeEnum.larva == "larva"
+    assert ParticleTypeEnum.phytoplankton == "phytoplankton"
+
+
+## LarvalFish with new features ##
+
+
+def test_LarvalFish_vertical_behavior_legacy():
+    """Test LarvalFishModelConfig with legacy vertical behavior mode."""
+    m = LarvalFishModelConfig(
+        drift_model="LarvalFish",
+        steps=1,
+        vertical_behavior_mode=VerticalBehaviorModeEnum.legacy,
+        hatching_method=HatchingMethodEnum.temperature,
+    )
+    assert m.vertical_behavior_mode == VerticalBehaviorModeEnum.legacy
+    assert m.hatching_method == HatchingMethodEnum.temperature
+
+
+def test_LarvalFish_vertical_behavior_depth():
+    """Test LarvalFishModelConfig with depth vertical behavior mode."""
+    m = LarvalFishModelConfig(
+        drift_model="LarvalFish",
+        steps=1,
+        vertical_behavior_mode=VerticalBehaviorModeEnum.depth,
+        z_pref=-15.0,
+        w_active=0.003,
+    )
+    assert m.vertical_behavior_mode == VerticalBehaviorModeEnum.depth
+    assert m.z_pref == -15.0
+
+
+def test_LarvalFish_fixed_time_hatching():
+    """Test LarvalFishModelConfig with fixed-time hatching."""
+    m = LarvalFishModelConfig(
+        drift_model="LarvalFish",
+        steps=1,
+        hatching_method=HatchingMethodEnum.fixed_time,
+        hatch_time_hours=72.0,
+    )
+    assert m.hatching_method == HatchingMethodEnum.fixed_time
+    assert m.hatch_time_hours == 72.0
+
+
+def test_LarvalFish_dvm_mode():
+    """Test LarvalFishModelConfig with DVM mode."""
+    m = LarvalFishModelConfig(
+        drift_model="LarvalFish",
+        steps=1,
+        vertical_behavior_mode=VerticalBehaviorModeEnum.dvm,
+        z_day=-20.0,
+        z_night=-8.0,
+    )
+    assert m.vertical_behavior_mode == VerticalBehaviorModeEnum.dvm
+    assert m.z_day == -20.0
+    assert m.z_night == -8.0
+
+
+def test_od_mapping_present():
+    """Test that new parameters have od_mapping configured."""
+    m = PhytoplanktonModelConfig(
+        drift_model="Phytoplankton",
+        steps=1,
+    )
+
+    fields_with_mapping = [
+        "vertical_behavior_mode",
+        "w_active",
+        "z_pref",
+        "z_day",
+        "z_night",
+        "dz_min",
+        "dz_rel",
+        "dz_max",
+    ]
+
+    for field_name in fields_with_mapping:
+        field = m.model_fields[field_name]
+        assert "od_mapping" in field.json_schema_extra, f"{field_name} missing od_mapping"

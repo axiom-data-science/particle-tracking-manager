@@ -1,4 +1,4 @@
-"""Defines classes OpenDriftConfig, LeewayModelConfig, OceanDriftModelConfig, OpenOilModelConfig, LarvalFishModelConfig, HarmfulAlgalBloomModelConfig."""
+"""Defines classes OpenDriftConfig, LeewayModelConfig, OceanDriftModelConfig, OpenOilModelConfig, LarvalFishModelConfig, PhytoplanktonModelConfig."""
 
 # Standard library imports
 import logging
@@ -24,18 +24,13 @@ from .enums import (
     DiffusivityModelEnum,
     DriftModelEnum,
     DropletSizeDistributionEnum,
-    HABSpeciesTypeEnum,
+    HatchingMethodEnum,
     ObjectTypeEnum,
     OilTypeEnum,
     PlotTypeEnum,
     RadiusTypeEnum,
     SeafloorActionEnum,
-)
-from .enums.species_types import (
-    HAB_SPECIES_LABELS,
-    SPECIES_HAB_DEFAULTS,
-    HABParameters,
-    _species_descriptions,
+    VerticalBehaviorModeEnum
 )
 
 
@@ -280,14 +275,14 @@ class OpenDriftConfig(TheManagerConfig):
             )
 
         # only keep salt and temp for LarvalFish or OpenOil
-        if self.drift_model not in ["LarvalFish", "OpenOil", "HarmfulAlgalBloom"]:
+        if self.drift_model not in ["LarvalFish", "OpenOil", "Phytoplankton"]:
             drop_vars += ["salt", "temp"]
             logger.debug(
-                "Dropping salt and temp variables because drift_model is not LarvalFish nor OpenOil nor HarmfulAlgalBloom"
+                "Dropping salt and temp variables because drift_model is not LarvalFish, OpenOil, nor Phytoplankton"
             )
         else:
             logger.debug(
-                "Retaining salt and temp variables because drift_model is LarvalFish or OpenOil or HarmfulAlgalBloom"
+                "Retaining salt and temp variables because drift_model is LarvalFish, OpenOil, or Phytoplankton"
             )
 
         # keep some ice variables for OpenOil (though later see if these are used)
@@ -763,6 +758,133 @@ class LarvalFishModelConfig(OceanDriftModelConfig):
         },
     )
 
+    # Vertical behavior parameters (shared with phytoplankton)
+    vertical_behavior_mode: VerticalBehaviorModeEnum = Field(
+        default=VerticalBehaviorModeEnum.legacy,
+        description="Vertical behavior mode. none: passive. depth: maintain preferred depth band. dvm: diel vertical migration. legacy: original larvalfish time-based swimming.",
+        title="Vertical Behavior Mode",
+        json_schema_extra={
+            "od_mapping": "biology:vertical_behavior_mode",
+            "ptm_level": 2,
+        },
+    )
+
+    w_active: float = Field(
+        default=0.003,
+        description="Maximum active vertical positioning speed (swimming for larvae).",
+        title="Vertical Speed",
+        ge=0.0,
+        le=1.0,
+        json_schema_extra={
+            "units": "m/s",
+            "od_mapping": "biology:w_active",
+            "ptm_level": 2,
+        },
+    )
+
+    z_pref: float = Field(
+        default=-10.0,
+        description="Preferred depth for depth mode (negative down from surface). Used when vertical_behavior_mode is 'depth'.",
+        title="Preferred Depth",
+        ge=-10000,
+        le=0.0,
+        json_schema_extra={
+            "units": "m",
+            "od_mapping": "biology:z_pref",
+            "ptm_level": 2,
+        },
+    )
+
+    z_day: float = Field(
+        default=-25.0,
+        description="Target depth during daytime for DVM mode (negative down from surface). Used when vertical_behavior_mode is 'dvm'.",
+        title="Day Depth",
+        ge=-10000,
+        le=0.0,
+        json_schema_extra={
+            "units": "m",
+            "od_mapping": "biology:z_day",
+            "ptm_level": 2,
+        },
+    )
+
+    z_night: float = Field(
+        default=-5.0,
+        description="Target depth during nighttime for DVM mode (negative down from surface). Used when vertical_behavior_mode is 'dvm'.",
+        title="Night Depth",
+        ge=-10000,
+        le=0.0,
+        json_schema_extra={
+            "units": "m",
+            "od_mapping": "biology:z_night",
+            "ptm_level": 2,
+        },
+    )
+
+    # Egg hatching parameters
+    hatching_method: HatchingMethodEnum = Field(
+        default=HatchingMethodEnum.temperature,
+        description="Egg hatching method. temperature: use ambient temperature (Ellertsen et al. 1988). fixed_time: hatch after fixed duration.",
+        title="Hatching Method",
+        json_schema_extra={
+            "od_mapping": "egg:hatching_method",
+            "ptm_level": 2,
+        },
+    )
+
+    hatch_time_hours: float = Field(
+        default=48.0,
+        description="Fixed time to hatching when hatching_method is fixed_time.",
+        title="Hatch Time",
+        ge=0.1,
+        le=10000,
+        json_schema_extra={
+            "units": "hours",
+            "od_mapping": "egg:hatch_time_hours",
+            "ptm_level": 2,
+        },
+    )
+
+    # Advanced band expansion parameters
+    dz_min: float = Field(
+        default=1.0,
+        description="Minimum half-width for depth bands (internal parameter).",
+        title="Min Band Half-Width",
+        ge=0.1,
+        le=100,
+        json_schema_extra={
+            "units": "m",
+            "od_mapping": "biology:dz_min",
+            "ptm_level": 3,
+        },
+    )
+
+    dz_rel: float = Field(
+        default=0.1,
+        description="Relative depth band expansion factor (internal parameter).",
+        title="Relative Band Factor",
+        ge=0.0,
+        le=1.0,
+        json_schema_extra={
+            "units": "fraction",
+            "od_mapping": "biology:dz_rel",
+            "ptm_level": 3,
+        },
+    )
+
+    dz_max: float = Field(
+        default=15.0,
+        description="Maximum half-width for depth bands (internal parameter).",
+        title="Max Band Half-Width",
+        ge=0.1,
+        le=1000,
+        json_schema_extra={
+            "units": "m",
+            "od_mapping": "biology:dz_max",
+            "ptm_level": 3,
+        },
+    )
+
     # override inherited parameter defaults
     vertical_mixing: bool = FieldInfo.merge_field_infos(
         OceanDriftModelConfig.model_fields["vertical_mixing"], Field(default=True)
@@ -801,29 +923,120 @@ class LarvalFishModelConfig(OceanDriftModelConfig):
     #     return self
 
 
-class HarmfulAlgalBloomModelConfig(HABParameters, OceanDriftModelConfig):
-    """Harmful algal bloom model configuration for OpenDrift."""
+class PhytoplanktonModelConfig(OceanDriftModelConfig):
+    """Phytoplankton (HAB) model configuration for OpenDrift.
+    
+    Uses the OpenDrift LarvalFish model internally but configured for
+    phytoplankton particle tracking (no egg stage, no growth/weight).
+    Transport-focused with optional vertical behavior (depth or DVM).
+    """
 
-    drift_model: DriftModelEnum = DriftModelEnum.HarmfulAlgalBloom
+    drift_model: DriftModelEnum = DriftModelEnum.Phytoplankton
 
-    species_type: HABSpeciesTypeEnum = Field(
-        default=HABSpeciesTypeEnum.PN,
-        description="HarmfulAlgalBloom species category for this simulation. This option maps to individual properties which can instead be set manually if desired.",
-        title="HAB Species Type",
+    # Vertical behavior parameters
+    vertical_behavior_mode: VerticalBehaviorModeEnum = Field(
+        default=VerticalBehaviorModeEnum.depth,
+        description="Vertical behavior mode. none: passive. depth: maintain preferred depth band. dvm: diel vertical migration.",
+        title="Vertical Behavior Mode",
         json_schema_extra={
+            "od_mapping": "biology:vertical_behavior_mode",
             "ptm_level": 1,
-            "oneOf": [
-                {
-                    "const": species.value,
-                    "title": HAB_SPECIES_LABELS[species],
-                    "description": _species_descriptions[species.value],
-                }
-                for species in HABSpeciesTypeEnum
-            ],
         },
     )
 
-    # override inherited parameter defaults
+    w_active: float = Field(
+        default=0.001,
+        description="Maximum active vertical positioning speed (effective swimming/buoyancy regulation).",
+        title="Vertical Speed",
+        ge=0.0,
+        le=1.0,
+        json_schema_extra={
+            "units": "m/s",
+            "od_mapping": "biology:w_active",
+            "ptm_level": 1,
+        },
+    )
+
+    z_pref: float = Field(
+        default=-10.0,
+        description="Preferred depth for depth mode (negative down from surface). Used when vertical_behavior_mode is 'depth'.",
+        title="Preferred Depth",
+        ge=-10000,
+        le=0.0,
+        json_schema_extra={
+            "units": "m",
+            "od_mapping": "biology:z_pref",
+            "ptm_level": 1,
+        },
+    )
+
+    z_day: float = Field(
+        default=-25.0,
+        description="Target depth during daytime for DVM mode (negative down from surface). Used when vertical_behavior_mode is 'dvm'.",
+        title="Day Depth",
+        ge=-10000,
+        le=0.0,
+        json_schema_extra={
+            "units": "m",
+            "od_mapping": "biology:z_day",
+            "ptm_level": 1,
+        },
+    )
+
+    z_night: float = Field(
+        default=-5.0,
+        description="Target depth during nighttime for DVM mode (negative down from surface). Used when vertical_behavior_mode is 'dvm'.",
+        title="Night Depth",
+        ge=-10000,
+        le=0.0,
+        json_schema_extra={
+            "units": "m",
+            "od_mapping": "biology:z_night",
+            "ptm_level": 1,
+        },
+    )
+
+    # Advanced band expansion parameters
+    dz_min: float = Field(
+        default=1.0,
+        description="Minimum half-width for depth bands (internal parameter).",
+        title="Min Band Half-Width",
+        ge=0.1,
+        le=100,
+        json_schema_extra={
+            "units": "m",
+            "od_mapping": "biology:dz_min",
+            "ptm_level": 3,
+        },
+    )
+
+    dz_rel: float = Field(
+        default=0.1,
+        description="Relative depth band expansion factor (internal parameter).",
+        title="Relative Band Factor",
+        ge=0.0,
+        le=1.0,
+        json_schema_extra={
+            "units": "fraction",
+            "od_mapping": "biology:dz_rel",
+            "ptm_level": 3,
+        },
+    )
+
+    dz_max: float = Field(
+        default=15.0,
+        description="Maximum half-width for depth bands (internal parameter).",
+        title="Max Band Half-Width",
+        ge=0.1,
+        le=1000,
+        json_schema_extra={
+            "units": "m",
+            "od_mapping": "biology:dz_max",
+            "ptm_level": 3,
+        },
+    )
+
+    # Override inherited parameter defaults
     vertical_mixing: bool = FieldInfo.merge_field_infos(
         OceanDriftModelConfig.model_fields["vertical_mixing"], Field(default=True)
     )
@@ -831,138 +1044,44 @@ class HarmfulAlgalBloomModelConfig(HABParameters, OceanDriftModelConfig):
         TheManagerConfig.model_fields["do3D"], Field(default=True)
     )
 
-    @model_validator(mode="before")
-    @classmethod
-    def apply_species_defaults(cls, data: Any) -> Any:
-        """
-        - If species_type has presets:
-            * Start from species HAB defaults
-            * Overlay any user-provided hab_params
-            * Set z/do3D defaults only if user didn't supply them
-        - If species_type has no presets (e.g., Custom):
-            * Require user to provide hab_params explicitly
-            * z/do3D behave as usual (user or base defaults)
-        """
-        if not isinstance(data, dict):
-            return data
-
-        # Ensure species_type has some value in raw input
-        data.setdefault("species_type", HABSpeciesTypeEnum.PN)
-        species = data["species_type"]
-
-        # -------- HAB param defaults (flattened) --------
-        if species in SPECIES_HAB_DEFAULTS:
-            # species defaults
-            default_params = SPECIES_HAB_DEFAULTS[species].model_dump()
-
-            # apply defaults only where user did not provide a value
-            for field_name, default_value in default_params.items():
-                data.setdefault(field_name, default_value)
-        else:
-            # species has no preset (e.g. Custom): require all HAB fields
-            required_fields = HABParameters.model_fields.keys()
-            missing = [f for f in required_fields if f not in data]
-            if missing:
-                raise ValueError(
-                    "Custom HAB species requires explicit values for all HAB parameters. "
-                    f"Missing: {', '.join(missing)}"
-                )
-
-        # # -------- Other config field defaults (e.g. z, do3D) --------
-        # field_defaults = SPECIES_HAB_MANAGER_DEFAULTS.get(species, {})
-        # for field_name, default_value in field_defaults.items():
-        #     # only apply if the user did not supply this field
-        #     data.setdefault(field_name, default_value)
-
-        return data
+    @model_validator(mode="after")
+    def check_do3D(self) -> Self:
+        """Check if do3D is set to True for Phytoplankton model."""
+        if not self.do3D:
+            raise ValueError("do3D must be True with the Phytoplankton drift model.")
+        return self
 
     @model_validator(mode="after")
-    def setup_species_parameters(self) -> Self:
-        """Assign species-specific parameters that depend on other inputs."""
-
-        MLD = self.mixed_layer_depth
-
-        if self.species_type == HABSpeciesTypeEnum.PN:
-            # Pseudo-nitzschia
-
-            # want to cap the resulting max depth to 25m
-            # a straight forward way to do this is to control the max MLD in this calculation
-            effective_MLD = min(MLD, 31.25)  # 0.4*31.25 + 0.4*31.25 = 25
-
-            # use the mixed layer depth to calculate band_center_depth and band_half_width
-            self.band_center_depth = -0.4 * effective_MLD
-            self.band_half_width = 0.4 * effective_MLD
-
-        elif self.species_type == HABSpeciesTypeEnum.AX:
-            # Alexandrium
-
-            # want to cap the resulting diel_night_depth to about 40m
-            # a straight forward way to do this is to control the max MLD in this calculation
-            effective_MLD = min(MLD, 30.75)  # 1.3*30.75 = 39.975
-
-            # use the mixed layer depth to calculate band_center_depth and band_half_width
-            self.diel_day_depth = -0.3 * effective_MLD
-            self.diel_night_depth = -1.3 * effective_MLD
-
-        elif self.species_type == HABSpeciesTypeEnum.DP:
-            # Dinophysis
-
-            d = 2.5
-            # want min depth to be about 5m
-            # a straight forward way to do this is to control the max MLD in this calculation
-            effective_MLD = max(MLD, 5)  # -(MLD+d)+0.5*MLD with MLD=5
-
-            # want to cap the resulting max depth to about 25m
-            # a straight forward way to do this is to control the min MLD in this calculation
-            effective_MLD = min(effective_MLD, 15)  # -(MLD+d)-0.5*MLD with MLD=15
-
-            # use the mixed layer depth to calculate band_center_depth and band_half_width
-            self.band_center_depth = -(effective_MLD + d)
-            self.band_half_width = 0.5 * effective_MLD
-
-        else:
+    def check_vertical_mixing(self) -> Self:
+        """Check if vertical_mixing is set to True for Phytoplankton model."""
+        if not self.vertical_mixing:
             raise ValueError(
-                f"Species type {self.species_type} not recognized for HarmfulAlgalBloom model."
+                "vertical_mixing must be True with the Phytoplankton drift model."
             )
         return self
 
-    #     if self.species_type == HABSpeciesTypeEnum("Pseudo_nitzschia"):
-
-    #         if self.do3D:
-    #             raise ValueError("Pseudo_nitzschia species requires do3D to be False.")
-    #         if self.z != 0.0:
-    #             raise ValueError("Pseudo_nitzschia species requires z to be 0.0 m.")
-    #         logger.debug("HAB species Pseudo_nitzschia selected.")
-
-    #     else:
-    #         raise ValueError(
-    #             f"Species type {self.species_type} not recognized for HarmfulAlgalBloom model."
-    #         )
-    #     return self
-
-    # @model_validator(mode="after")
-    # def check_do3D(self) -> Self:
-    #     """Check if do3D is set to True for LarvalFish model."""
-    #     if not self.do3D:
-    #         raise ValueError("do3D must be True with the LarvalFish drift model.")
-
-    #     return self
-
-    # @model_validator(mode="after")
-    # def check_vertical_mixing(self) -> Self:
-    #     """Check if vertical_mixing is set to True for LarvalFish model."""
-    #     if not self.vertical_mixing:
-    #         raise ValueError(
-    #             "vertical_mixing must be True with the LarvalFish drift model."
-    #         )
-
-    #     return self
+    @model_validator(mode="after")
+    def check_vertical_behavior_parameters(self) -> Self:
+        """Validate that appropriate depth parameters are set for the chosen mode."""
+        mode = self.vertical_behavior_mode
+        
+        if mode == VerticalBehaviorModeEnum.depth:
+            # depth mode requires z_pref
+            if self.z_pref == 0.0:
+                logger.warning("depth mode with z_pref=0.0 may cause particles to stay at surface.")
+        
+        elif mode == VerticalBehaviorModeEnum.dvm:
+            # dvm mode requires z_day and z_night
+            if self.z_day == self.z_night:
+                logger.warning("DVM mode with z_day == z_night behaves like depth mode.")
+        
+        return self
 
 
 open_drift_mapper: dict[str, type[OpenDriftConfig]] = {
     "OceanDrift": OceanDriftModelConfig,
     "OpenOil": OpenOilModelConfig,
     "LarvalFish": LarvalFishModelConfig,
+    "Phytoplankton": PhytoplanktonModelConfig,
     "Leeway": LeewayModelConfig,
-    "HarmfulAlgalBloom": HarmfulAlgalBloomModelConfig,
 }

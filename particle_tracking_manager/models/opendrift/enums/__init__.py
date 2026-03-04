@@ -7,11 +7,13 @@ from .others import (
     DiffusivityModelEnum,
     DriftModelEnum,
     DropletSizeDistributionEnum,
+    HatchingMethodEnum,
+    ParticleTypeEnum,
     PlotTypeEnum,
     RadiusTypeEnum,
     SeafloorActionEnum,
+    VerticalBehaviorModeEnum,
 )
-from .species_types import HABSpeciesTypeEnum
 
 
 __all__ = [
@@ -24,7 +26,9 @@ __all__ = [
     "DiffusivityModelEnum",
     "CoastlineActionEnum",
     "SeafloorActionEnum",
-    "HABSpeciesTypeEnum",
     "PlotTypeEnum",
     "DropletSizeDistributionEnum",
+    "VerticalBehaviorModeEnum",
+    "HatchingMethodEnum",
+    "ParticleTypeEnum",
 ]

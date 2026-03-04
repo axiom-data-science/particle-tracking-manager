@@ -6,10 +6,11 @@ import logging
 from datetime import datetime, timedelta
 from enum import Enum
 from os import PathLike
-from typing import Annotated, Self
+from typing import Annotated
 
 # Third-party imports
 import pandas as pd
+from typing_extensions import Self
 
 # from geojson import GeoJSON
 from pydantic import BaseModel, Field, computed_field, model_validator
