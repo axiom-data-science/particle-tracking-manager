@@ -118,7 +118,7 @@ def make_filename_string(plot_name, filename, kwargs):
 
     elif "animation" in plot_name:
         if "filetype" not in kwargs:
-            filename += ".gif"
+            filename += ".mp4"
         else:
             filename += "." + kwargs["filetype"]
             kwargs.pop("filetype")
@@ -165,6 +165,19 @@ def plot(plot_name, input_kwargs, o, filename, drift_model):
 
         # add input plot kwargs to the default kwargs
         kwargs = {"fast": True, "fps": 4}
+
+        # selections for plotting landmask depend on whether the global
+        # landmask is being used ("auto landmask")
+        # if not using the global land mask, then plot the wetdry model
+        # landmask with these special inputs to look best.
+        if o._config["general:use_auto_landmask"]["value"] == False:
+            kwargs.update(
+                {
+                    "background": "land_binary_mask",
+                    "cmap": "cmo.deep",
+                    "hide_landmask": True,  # hides global land mask, which is not being used in this case
+                }
+            )
         kwargs.update(input_kwargs)
 
         # modify filename with plot kwargs
@@ -218,6 +231,36 @@ def plot(plot_name, input_kwargs, o, filename, drift_model):
 
         # add input plot kwargs to the default kwargs
         kwargs = {}
+        kwargs.update(input_kwargs)
+
+        # modify filename with plot kwargs
+        filename = make_filename_string(plot_name, filename, kwargs)
+
+        o.plot_property(filename=filename, **kwargs)
+
+    elif (
+        plot_name == "all"
+    ):  # include a property plot showing depth as function of time too
+
+        filename += "_property_depth"
+
+        # add input plot kwargs to the default kwargs
+        kwargs = {"variable": "z"}
+        kwargs.update(input_kwargs)
+
+        # modify filename with plot kwargs
+        filename = make_filename_string(plot_name, filename, kwargs)
+
+        o.plot_property(filename=filename, **kwargs)
+
+    elif (
+        plot_name == "all"
+    ):  # include a mean property plot showing depth as function of time too
+
+        filename += "_property_depth_mean"
+
+        # add input plot kwargs to the default kwargs
+        kwargs = {"variable": "z", "mean": True}
         kwargs.update(input_kwargs)
 
         # modify filename with plot kwargs
