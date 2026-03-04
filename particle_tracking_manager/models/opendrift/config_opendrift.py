@@ -892,6 +892,12 @@ class LarvalFishModelConfig(OceanDriftModelConfig):
     do3D: bool = FieldInfo.merge_field_infos(
         TheManagerConfig.model_fields["do3D"], Field(default=True)
     )
+    stokes_drift: bool = FieldInfo.merge_field_infos(
+        OpenDriftConfig.model_fields["stokes_drift"], Field(default=False)
+    )
+    wind_drift_factor: float = FieldInfo.merge_field_infos(
+        OceanDriftModelConfig.model_fields["wind_drift_factor"], Field(default=0.0)
+    )
 
     @model_validator(mode="after")
     def check_do3D(self) -> Self:
@@ -1042,6 +1048,12 @@ class PhytoplanktonModelConfig(OceanDriftModelConfig):
     )
     do3D: bool = FieldInfo.merge_field_infos(
         TheManagerConfig.model_fields["do3D"], Field(default=True)
+    )
+    stokes_drift: bool = FieldInfo.merge_field_infos(
+        OpenDriftConfig.model_fields["stokes_drift"], Field(default=False)
+    )
+    wind_drift_factor: float = FieldInfo.merge_field_infos(
+        OceanDriftModelConfig.model_fields["wind_drift_factor"], Field(default=0.0)
     )
 
     @model_validator(mode="after")
