@@ -109,12 +109,19 @@ class TheManagerConfig(BaseModel):
         description="Interval between particles updates, in seconds.",
         json_schema_extra=dict(ptm_level=3, units="seconds"),
     )
-    time_step_output: float = Field(
-        3600,
+    # time_step_output: float = Field(
+    #     3600,
+    #     ge=1,
+    #     le=86400,
+    #     description="Time step at which element properties are stored and eventually written to file. This must be larger than the calculation time step, and be an integer multiple of this.",
+    #     json_schema_extra=dict(ptm_level=3, units="seconds"),
+    # )
+    time_step_output_integer: int = Field(
+        12,
         ge=1,
-        le=86400,
-        description="Time step at which element properties are stored and eventually written to file. This must be larger than the calculation time step, and be an integer multiple of this.",
-        json_schema_extra=dict(ptm_level=3, units="seconds"),
+        le=300,
+        description="Time step at which element properties are stored and eventually written to file, calculated as time_step*time_step_output_integer. This must be an integer multiple of this.",
+        json_schema_extra=dict(ptm_level=3, units=""),
     )
     steps: int | None = Field(
         None,
@@ -150,8 +157,8 @@ class TheManagerConfig(BaseModel):
         json_schema_extra=dict(ptm_level=1),
     )
     use_static_masks: bool = Field(
-        True,
-        description="If False, use static ocean model land masks. This saves some computation time but since the available ocean models run in wet/dry mode, it is inconsistent with the ROMS output files in some places since the drifters may be allowed (due to the static mask) to enter a cell they wouldn't otherwise. However, it doesn't make much of a difference for simulations that aren't in the tidal flats. Use the time-varying wet/dry masks (set to True) if drifters are expected to run in the tidal flats. This costs some more computational time but is fully consistent with the ROMS output files.",
+        False,
+        description="If True, use static ocean model land masks. This saves some computation time but since the available ocean models run in wet/dry mode, it is inconsistent with the ROMS output files in some places since the drifters may be allowed (due to the static mask) to enter a cell they wouldn't otherwise. However, it doesn't make much of a difference for simulations that aren't in the tidal flats. Use the time-varying wet/dry masks (set to False) if drifters are expected to run in the tidal flats. This costs some more computational time but is fully consistent with the ROMS output files.",
         json_schema_extra=dict(ptm_level=3),
     )
     output_file: PathLike[str] | None = Field(
@@ -284,6 +291,13 @@ class TheManagerConfig(BaseModel):
         if self.start_time is None and self.end_time is None:
             raise ValueError("One of start_time or end_time must be non-None.")
         return self
+
+    @computed_field
+    def time_step_output(self) -> float:
+        """Calculate time_step_output as time_step multiplied by time_step_output_integer."""
+        value = self.time_step * self.time_step_output_integer
+        logger.debug(f"Calculated time_step_output as {value} seconds.")
+        return value
 
     @computed_field
     def timedir(self) -> int:

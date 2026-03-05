@@ -1,5 +1,13 @@
 # What's New
 
+## Unreleased
+
+* Changed default value of `use_static_masks` to False from True, so that wet/dry masks from ocean models are used by default.
+* Added `time_step_output_integer` to the schema which is a multiplier on `time_step` to calculate `time_step_output`. `time_step_output` is calculated in a field and input to the `OpenDrift` model.
+* If global land mask was not used in simulation, plot the model land mask in animations and not the global land mask. This is especially helpful for a wet/dry landmask to see how it changes in time.
+* "all" plots option now includes two more plots: depth of all particles in time and mean depth of particles in time.
+* Changed to mp4 instead of gif for built in animations default.
+
 ## v2.3.0 (January 15, 2026)
 
 * The depths required for `HarmfulAlgalBloom` species types are now calculated for the 3 available species from the mixed layer depth.
