@@ -367,7 +367,7 @@ def test_run_LarvalFish_hatching_fixed_time():
         ocean_model_local=False,
         drift_model="LarvalFish",
         hatching_method="fixed_time",
-        hatch_time_hours=0.99,  # Set to 1 hour for quick test but isn't exact
+        hatch_time_days=0.04,  # Set to ~1 hour for quick test
         hatched=0,  # Start as egg
         do3D=True,
     )

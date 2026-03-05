@@ -355,7 +355,7 @@ def test_LarvalFish_hatching_seeding():
     m = OpenDriftModel(
         drift_model="LarvalFish",
         hatching_method="fixed_time",
-        hatch_time_hours=72.0,
+        hatch_time_days=3.0,
         lon=-151,
         lat=60,
         do3D=True,
@@ -365,7 +365,7 @@ def test_LarvalFish_hatching_seeding():
     )
     m.setup_for_simulation()  # creates m.o
     assert m.o._config["egg:hatching_method"]["value"] == "fixed_time"
-    assert m.o._config["egg:hatch_time_hours"]["value"] == 72.0
+    assert m.o._config["egg:hatch_time_days"]["value"] == 3.0
 
 
 def test_wind_drift():

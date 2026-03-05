@@ -366,10 +366,10 @@ def test_LarvalFish_fixed_time_hatching():
         drift_model="LarvalFish",
         steps=1,
         hatching_method=HatchingMethodEnum.fixed_time,
-        hatch_time_hours=72.0,
+        hatch_time_days=3.0,
     )
     assert m.hatching_method == HatchingMethodEnum.fixed_time
-    assert m.hatch_time_hours == 72.0
+    assert m.hatch_time_days == 3.0
 
 
 def test_LarvalFish_dvm_mode():

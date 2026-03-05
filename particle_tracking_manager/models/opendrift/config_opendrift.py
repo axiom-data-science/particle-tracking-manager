@@ -832,15 +832,15 @@ class LarvalFishModelConfig(OceanDriftModelConfig):
         },
     )
 
-    hatch_time_hours: float = Field(
-        default=48.0,
+    hatch_time_days: float = Field(
+        default=2.0,
         description="Fixed time to hatching when hatching_method is fixed_time.",
         title="Hatch Time",
-        ge=0.1,
-        le=10000,
+        ge=0.004,
+        le=416,
         json_schema_extra={
-            "units": "hours",
-            "od_mapping": "egg:hatch_time_hours",
+            "units": "days",
+            "od_mapping": "egg:hatch_time_days",
             "ptm_level": 2,
         },
     )

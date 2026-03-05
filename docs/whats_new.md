@@ -1,6 +1,6 @@
 # What's New
 
-## Unreleased
+## v2.4.0 (March 5, 2026)
 
 * Changed default value of `use_static_masks` to False from True, so that wet/dry masks from ocean models are used by default.
 * Added `time_step_output_integer` to the schema which is a multiplier on `time_step` to calculate `time_step_output`. `time_step_output` is calculated in a field and input to the `OpenDrift` model.
@@ -18,7 +18,7 @@
   * Added new depth-targeting parameters: `z_pref`, `z_day`, `z_night`, `w_active`
   * Added band expansion parameters: `dz_min`, `dz_rel`, `dz_max`
   * Added `hatching_method` parameter: `temperature` (default, legacy) or `fixed_time`
-  * Added `hatch_time_hours` parameter for fixed-time hatching method
+  * Added `hatch_time_days` parameter for fixed-time hatching method
 * Updated test suite to use `Phytoplankton` instead of `HarmfulAlgalBloom` and added comprehensive tests for new `LarvalFish` features
 
 ## v2.3.0 (January 15, 2026)

@@ -32,7 +32,7 @@ dependencies:
   - pip
   - pytest
   - pip:
-    - git+https://github.com/kthyng/opendrift.git@start_habs
+    - git+https://github.com/kthyng/opendrift.git@larvalfish_with_phytoplankton
     # - adios_db
     # - git+https://github.com/OpenDrift/opendrift
     # - git+https://github.com/fsspec/kerchunk
