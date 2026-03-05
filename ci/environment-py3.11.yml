@@ -33,6 +33,6 @@ dependencies:
   - pytest
   - pip:
     # - adios_db
-    - git+https://github.com/kthyng/opendrift.git@start_habs
+    - git+https://github.com/kthyng/opendrift.git@larvalfish_with_phytoplankton
     # - git+https://github.com/fsspec/kerchunk
     # - xroms  # can't be found on conda-forge for CI, but don't need since in runslow tests?

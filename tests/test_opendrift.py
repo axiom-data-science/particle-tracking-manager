@@ -286,13 +286,14 @@ def test_OpenOil_all_oils_exact_match():
     assert ptm_oils == od_oils
 
 
-def test_HarmfulAlgalBloom_seeding():
-    """Make sure special parameter comes through"""
+def test_Phytoplankton_seeding():
+    """Make sure special parameters come through"""
 
     m = OpenDriftModel(
-        drift_model="HarmfulAlgalBloom",
-        species_type="PN",
-        temperature_death_min=1,
+        drift_model="Phytoplankton",
+        vertical_behavior_mode="depth",
+        z_pref=-15.0,
+        w_active=0.002,
         lon=-151,
         lat=60,
         start_time="2022-01-01T00:00:00",
@@ -300,7 +301,71 @@ def test_HarmfulAlgalBloom_seeding():
         steps=1,
     )
     m.setup_for_simulation()  # creates m.o
-    assert m.o._config["hab:temperature_death_min"]["value"] == 1
+    assert m.o._config["biology:vertical_behavior_mode"]["value"] == "depth"
+    assert m.o._config["biology:z_pref"]["value"] == -15.0
+    assert m.o._config["biology:w_active"]["value"] == 0.002
+
+
+def test_Phytoplankton_dvm_seeding():
+    """Test DVM mode parameter passing for Phytoplankton"""
+
+    m = OpenDriftModel(
+        drift_model="Phytoplankton",
+        vertical_behavior_mode="dvm",
+        z_day=-20.0,
+        z_night=-5.0,
+        w_active=0.0015,
+        lon=-151,
+        lat=60,
+        start_time="2022-01-01T00:00:00",
+        use_auto_landmask=True,
+        steps=1,
+    )
+    m.setup_for_simulation()  # creates m.o
+    assert m.o._config["biology:vertical_behavior_mode"]["value"] == "dvm"
+    assert m.o._config["biology:z_day"]["value"] == -20.0
+    assert m.o._config["biology:z_night"]["value"] == -5.0
+    assert m.o._config["biology:w_active"]["value"] == 0.0015
+
+
+def test_LarvalFish_vertical_behavior_mode_seeding():
+    """Test new vertical behavior mode parameter passing for LarvalFish"""
+
+    m = OpenDriftModel(
+        drift_model="LarvalFish",
+        vertical_behavior_mode="depth",
+        z_pref=-12.0,
+        w_active=0.003,
+        lon=-151,
+        lat=60,
+        do3D=True,
+        start_time="2022-01-01T00:00:00",
+        use_auto_landmask=True,
+        steps=1,
+    )
+    m.setup_for_simulation()  # creates m.o
+    assert m.o._config["biology:vertical_behavior_mode"]["value"] == "depth"
+    assert m.o._config["biology:z_pref"]["value"] == -12.0
+    assert m.o._config["biology:w_active"]["value"] == 0.003
+
+
+def test_LarvalFish_hatching_seeding():
+    """Test hatching method parameter passing for LarvalFish"""
+
+    m = OpenDriftModel(
+        drift_model="LarvalFish",
+        hatching_method="fixed_time",
+        hatch_time_days=3.0,
+        lon=-151,
+        lat=60,
+        do3D=True,
+        start_time="2022-01-01T00:00:00",
+        use_auto_landmask=True,
+        steps=1,
+    )
+    m.setup_for_simulation()  # creates m.o
+    assert m.o._config["egg:hatching_method"]["value"] == "fixed_time"
+    assert m.o._config["egg:hatch_time_days"]["value"] == 3.0
 
 
 def test_wind_drift():

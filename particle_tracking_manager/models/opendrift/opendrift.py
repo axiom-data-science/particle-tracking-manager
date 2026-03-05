@@ -41,7 +41,7 @@ class OpenDriftModel(ParticleTrackingManager):
     Parameters
     ----------
     drift_model : str
-        Options: "OceanDrift", "LarvalFish", "OpenOil", "Leeway", "HarmfulAlgalBloom". Default is "OceanDrift".
+        Options: "OceanDrift", "LarvalFish", "Phytoplankton", "OpenOil", "Leeway". Default is "OceanDrift".
     export_variables : list
         List of variables to export, by default None. See PTM docs for options.
     radius : int
@@ -191,15 +191,17 @@ class OpenDriftModel(ParticleTrackingManager):
 
             o = LarvalFish(loglevel=log_level, iomodule=iomodule)
 
+        elif self.config.drift_model == "Phytoplankton":
+            from opendrift.models.larvalfish import LarvalFish
+
+            o = LarvalFish(loglevel=log_level, iomodule=iomodule)
+            # Configure as phytoplankton (no egg/growth stages)
+            o.set_config("biology:particle_type", "phytoplankton")
+
         elif self.config.drift_model == "OpenOil":
             from opendrift.models.openoil import OpenOil
 
             o = OpenOil(loglevel=log_level, iomodule=iomodule, weathering_model="noaa")
-
-        elif self.config.drift_model == "HarmfulAlgalBloom":
-            from opendrift.models.harmfulalgalbloom import HarmfulAlgalBloom
-
-            o = HarmfulAlgalBloom(loglevel=log_level, iomodule=iomodule)
 
         else:
             raise ValueError(

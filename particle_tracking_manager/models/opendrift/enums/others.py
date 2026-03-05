@@ -9,9 +9,9 @@ class DriftModelEnum(str, Enum):
 
     OceanDrift = "OceanDrift"
     LarvalFish = "LarvalFish"
+    Phytoplankton = "Phytoplankton"
     OpenOil = "OpenOil"
     Leeway = "Leeway"
-    HarmfulAlgalBloom = "HarmfulAlgalBloom"
 
 
 # Enum for radius_type
@@ -68,3 +68,26 @@ class DropletSizeDistributionEnum(str, Enum):
     uniform = "uniform"
     normal = "normal"
     lognormal = "lognormal"
+
+
+class VerticalBehaviorModeEnum(str, Enum):
+    """Enum for vertical behavior modes in biological models."""
+
+    none = "none"
+    depth = "depth"
+    dvm = "dvm"
+    legacy = "legacy"
+
+
+class HatchingMethodEnum(str, Enum):
+    """Enum for egg hatching methods in larval fish models."""
+
+    temperature = "temperature"
+    fixed_time = "fixed_time"
+
+
+class ParticleTypeEnum(str, Enum):
+    """Enum for particle types in biological models."""
+
+    larva = "larva"
+    phytoplankton = "phytoplankton"

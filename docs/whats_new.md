@@ -1,12 +1,25 @@
 # What's New
 
-## Unreleased
+## v2.4.0 (March 5, 2026)
 
 * Changed default value of `use_static_masks` to False from True, so that wet/dry masks from ocean models are used by default.
 * Added `time_step_output_integer` to the schema which is a multiplier on `time_step` to calculate `time_step_output`. `time_step_output` is calculated in a field and input to the `OpenDrift` model.
 * If global land mask was not used in simulation, plot the model land mask in animations and not the global land mask. This is especially helpful for a wet/dry landmask to see how it changes in time.
 * "all" plots option now includes two more plots: depth of all particles in time and mean depth of particles in time.
 * Changed to mp4 instead of gif for built in animations default.
+* Deprecated `HarmfulAlgalBloom` drift model in favor of `Phytoplankton` drift model:
+  * Removed biomass tracking and temperature/salinity response parameters
+  * Removed `species_type` presets (PN, AX, DP)
+  * Renamed parameters: `swim_speed` → `w_active`, `band_center_depth` → `z_pref`, `diel_day_depth`/`diel_night_depth` → `z_day`/`z_night`
+  * Changed `vertical_behavior` → `vertical_behavior_mode` with new options: `none`, `depth`, `dvm`
+  * Phytoplankton requires `do3D=True` and `vertical_mixing=True`
+* Enhanced `LarvalFish` drift model with new vertical behavior modes and hatching methods:
+  * Added `vertical_behavior_mode` parameter: `none`, `depth`, `dvm`, or `legacy` (preserves original behavior)
+  * Added new depth-targeting parameters: `z_pref`, `z_day`, `z_night`, `w_active`
+  * Added band expansion parameters: `dz_min`, `dz_rel`, `dz_max`
+  * Added `hatching_method` parameter: `temperature` (default, legacy) or `fixed_time`
+  * Added `hatch_time_days` parameter for fixed-time hatching method
+* Updated test suite to use `Phytoplankton` instead of `HarmfulAlgalBloom` and added comprehensive tests for new `LarvalFish` features
 
 ## v2.3.0 (January 15, 2026)
 

@@ -29,7 +29,7 @@ dependencies:
    - recommonmark
    - pip
    - pip:
-     - git+https://github.com/kthyng/opendrift.git@start_habs
+     - git+https://github.com/kthyng/opendrift.git@larvalfish_with_phytoplankton
      - particle-tracking-manager
      - docstring-inheritance
      - docrep<=0.2.7
