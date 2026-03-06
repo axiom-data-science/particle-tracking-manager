@@ -1,5 +1,11 @@
 # What's New
 
+## 2.4.2 (March 6, 2026)
+
+* changed some defaults in new work
+* updated tests accordingly
+* do not use land_binary_mask to plot in animation when plotting after the simulation has been run previously
+
 ## v2.4.0 (March 5, 2026)
 
 * Changed default value of `use_static_masks` to False from True, so that wet/dry masks from ocean models are used by default.
