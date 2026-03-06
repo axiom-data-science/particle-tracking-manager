@@ -170,7 +170,13 @@ def plot(plot_name, input_kwargs, o, filename, drift_model):
         # landmask is being used ("auto landmask")
         # if not using the global land mask, then plot the wetdry model
         # landmask with these special inputs to look best.
-        if o._config["general:use_auto_landmask"]["value"] == False:
+        # cannot plot land separate from simulation since then the reader
+        # is not available with the information. Checking for readers checks
+        # for that.
+        if (
+            o._config["general:use_auto_landmask"]["value"] == False
+            and len(o.env.readers.keys()) > 0
+        ):
             kwargs.update(
                 {
                     "background": "land_binary_mask",

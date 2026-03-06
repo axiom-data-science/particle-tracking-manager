@@ -823,7 +823,7 @@ class LarvalFishModelConfig(OceanDriftModelConfig):
 
     # Egg hatching parameters
     hatching_method: HatchingMethodEnum = Field(
-        default=HatchingMethodEnum.temperature,
+        default=HatchingMethodEnum.fixed_time,
         description="Egg hatching method. temperature: use ambient temperature (Ellertsen et al. 1988). fixed_time: hatch after fixed duration.",
         title="Hatching Method",
         json_schema_extra={
@@ -941,7 +941,7 @@ class PhytoplanktonModelConfig(OceanDriftModelConfig):
 
     # Vertical behavior parameters
     vertical_behavior_mode: VerticalBehaviorModeEnum = Field(
-        default=VerticalBehaviorModeEnum.depth,
+        default=VerticalBehaviorModeEnum.dvm,
         description="Vertical behavior mode. none: passive. depth: maintain preferred depth band. dvm: diel vertical migration.",
         title="Vertical Behavior Mode",
         json_schema_extra={

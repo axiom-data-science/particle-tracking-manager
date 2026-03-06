@@ -135,8 +135,8 @@ def test_seed_location_inputs():
 
     m = TheManagerConfig(steps=1, start_time="2022-01-01", geojson=None)
     # these are set in a validator if geojson is None and lon/lat are None
-    assert m.lon == -151.0
-    assert m.lat == 58.0
+    assert m.lon == -152.6
+    assert m.lat == 59.3
 
     with pytest.raises(ValidationError):
         m = TheManagerConfig(
