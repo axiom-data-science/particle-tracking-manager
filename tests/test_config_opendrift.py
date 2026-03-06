@@ -270,7 +270,7 @@ def test_Phytoplankton_defaults():
         drift_model="Phytoplankton",
         steps=1,
     )
-    assert m.vertical_behavior_mode == VerticalBehaviorModeEnum.depth
+    assert m.vertical_behavior_mode == VerticalBehaviorModeEnum.dvm
     assert m.w_active == 0.001
     assert m.z_pref == -10.0
     assert m.do3D == True

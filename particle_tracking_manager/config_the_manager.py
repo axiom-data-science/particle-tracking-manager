@@ -232,8 +232,8 @@ class TheManagerConfig(BaseModel):
         """Check if lon and lat are set when geojson is None, and vice versa."""
         if self.geojson is None:
             if self.lon is None and self.lat is None:
-                self.lon = -151.0
-                self.lat = 58.0
+                self.lon = -152.6
+                self.lat = 59.3
                 logger.info(
                     "Using default lon and lat set to -151.0 and 58.0 respectively."
                 )
