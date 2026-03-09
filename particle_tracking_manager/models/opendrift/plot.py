@@ -244,36 +244,6 @@ def plot(plot_name, input_kwargs, o, filename, drift_model):
 
         o.plot_property(filename=filename, **kwargs)
 
-    elif (
-        plot_name == "all"
-    ):  # include a property plot showing depth as function of time too
-
-        filename += "_property_depth"
-
-        # add input plot kwargs to the default kwargs
-        kwargs = {"variable": "z"}
-        kwargs.update(input_kwargs)
-
-        # modify filename with plot kwargs
-        filename = make_filename_string(plot_name, filename, kwargs)
-
-        o.plot_property(filename=filename, **kwargs)
-
-    elif (
-        plot_name == "all"
-    ):  # include a mean property plot showing depth as function of time too
-
-        filename += "_property_depth_mean"
-
-        # add input plot kwargs to the default kwargs
-        kwargs = {"variable": "z", "mean": True}
-        kwargs.update(input_kwargs)
-
-        # modify filename with plot kwargs
-        filename = make_filename_string(plot_name, filename, kwargs)
-
-        o.plot_property(filename=filename, **kwargs)
-
     logger.info(f"Saved plot to {filename}")
 
     return filename
@@ -290,6 +260,8 @@ def make_plots(which_plots, o, filename, drift_model):
     if "all" in which_plots:
         which_plots = {
             "spaghetti": {},
+            "property_depth": {"variable": "z"},
+            "property_depth_mean": {"variable": "z", "mean": True},
             "animation": {},
             "animation_profile": {},
         }
