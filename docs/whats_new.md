@@ -1,8 +1,9 @@
 # What's New
 
-## Unreleased
+## 2.5.0 (March 9, 2026)
 
 * Change to NWGOA config to fix issue with wet/dry sims not running with NWGOA.
+* Fixed change to "all" plots to add depth and mean depth in time.
 
 ## 2.4.2 (March 6, 2026)
 
