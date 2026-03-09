@@ -1,5 +1,9 @@
 # What's New
 
+## Unreleased
+
+* Change to NWGOA config to fix issue with wet/dry sims not running with NWGOA.
+
 ## 2.4.2 (March 6, 2026)
 
 * changed some defaults in new work
