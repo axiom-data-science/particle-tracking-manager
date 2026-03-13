@@ -438,6 +438,15 @@ class OceanDriftModelConfig(OpenDriftConfig):
         },
     )
 
+    wind_drift: bool = Field(
+        default=True,
+        description="If on, elements at surface are moved with a fraction, the wind draft factor, of the wind speed from the surface down to the wind drift depth.",
+        title="Wind Drift",
+        json_schema_extra={
+            "ptm_level": 1,
+        },
+    )
+
     wind_drift_depth: float = Field(
         default=0.1,
         description="The direct wind drift (windage) is linearly decreasing from the surface value (wind_drift_factor) until 0 at this depth.",
@@ -506,6 +515,14 @@ class OceanDriftModelConfig(OpenDriftConfig):
             "ptm_level": 2,
         },
     )
+
+    @model_validator(mode="after")
+    def check_wind_drift(self) -> Self:
+        """If wind_drift is False, set wind_drift_factor to 0."""
+        if not self.wind_drift:
+            self.wind_drift_factor = 0
+            logger.debug("Setting wind_drift_factor to 0 because wind_drift is False.")
+        return self
 
 
 class OpenOilModelConfig(OceanDriftModelConfig):
