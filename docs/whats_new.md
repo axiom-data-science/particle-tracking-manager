@@ -4,6 +4,7 @@
 
 * Fixed bug so that horizontal diffusivity is now properly applied to model output.
 * Added `wind_drift` parameter which when False makes sure that `wind_drift_factor=0` so that wind drift is not on.
+* If `do3D==False`, vertical_mixing is now also turned to False. Otherwise it is easy to run 2D with vertical mixing on.
 
 ## 2.5.0 (March 9, 2026)
 
