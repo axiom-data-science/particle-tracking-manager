@@ -476,7 +476,7 @@ class OceanDriftModelConfig(OpenDriftConfig):
     )
 
     vertical_mixing: bool = Field(
-        default=False,
+        default=True,
         description="Activate vertical mixing scheme. Vertical mixing includes movement due to buoyancy and turbulent mixing.",
         title="Vertical Mixing",
         json_schema_extra={
@@ -486,7 +486,7 @@ class OceanDriftModelConfig(OpenDriftConfig):
     )
 
     vertical_mixing_at_surface: bool = Field(
-        default=False,
+        default=True,
         description="If vertical mixing is activated, surface elements (z=0) can only be mixed (downwards) if this setting it True.",
         title="Vertical Mixing At Surface",
         json_schema_extra={
@@ -519,6 +519,46 @@ class OceanDriftModelConfig(OpenDriftConfig):
         if not self.do3D:
             self.vertical_mixing = False
             logger.debug("Setting vertical_mixing to False because do3D is False.")
+        return self
+
+    @model_validator(mode="after")
+    def check_vertical_advection_at_surface_True(self) -> Self:
+        """If do3D is True, vertical_advection_at_surface is also True."""
+        if self.do3D:
+            self.vertical_advection_at_surface = True
+            logger.debug(
+                "Setting vertical_advection_at_surface to True because do3D is True."
+            )
+        return self
+
+    @model_validator(mode="after")
+    def check_vertical_advection_at_surface_False(self) -> Self:
+        """If do3D is False, vertical_advection_at_surface is also False."""
+        if not self.do3D:
+            self.vertical_advection_at_surface = False
+            logger.debug(
+                "Setting vertical_advection_at_surface to False because do3D is False."
+            )
+        return self
+
+    @model_validator(mode="after")
+    def check_vertical_mixing_at_surface_True(self) -> Self:
+        """If vertical_mixing is True, vertical_mixing_at_surface must also be True."""
+        if self.vertical_mixing:
+            self.vertical_mixing_at_surface = True
+            logger.debug(
+                "Setting vertical_mixing_at_surface to True because vertical_mixing is True."
+            )
+        return self
+
+    @model_validator(mode="after")
+    def check_vertical_mixing_at_surface_False(self) -> Self:
+        """If vertical_mixing is False, vertical_mixing_at_surface must also be False."""
+        if not self.vertical_mixing:
+            self.vertical_mixing_at_surface = False
+            logger.debug(
+                "Setting vertical_mixing_at_surface to False because vertical_mixing is False."
+            )
         return self
 
 
@@ -685,11 +725,11 @@ class OpenOilModelConfig(OceanDriftModelConfig):
         OceanDriftModelConfig.model_fields["wind_drift_factor"], Field(default=0.03)
     )
     vertical_mixing: bool = FieldInfo.merge_field_infos(
-        OceanDriftModelConfig.model_fields["vertical_mixing"], Field(default=False)
+        OceanDriftModelConfig.model_fields["vertical_mixing"], Field(default=True)
     )
     vertical_mixing_at_surface: bool = FieldInfo.merge_field_infos(
         OceanDriftModelConfig.model_fields["vertical_mixing_at_surface"],
-        Field(default=False),
+        Field(default=True),
     )
     vertical_advection_at_surface: bool = FieldInfo.merge_field_infos(
         OceanDriftModelConfig.model_fields["vertical_advection_at_surface"],
