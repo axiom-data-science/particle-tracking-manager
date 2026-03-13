@@ -3,6 +3,7 @@
 ## Unreleased
 
 * Fixed bug so that horizontal diffusivity is now properly applied to model output.
+* Added `wind_drift` parameter which when False makes sure that `wind_drift_factor=0` so that wind drift is not on.
 
 ## 2.5.0 (March 9, 2026)
 

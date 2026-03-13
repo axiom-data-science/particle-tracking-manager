@@ -147,6 +147,24 @@ def test_OceanDrift_init():
     )
 
 
+def test_OceanDrift_wind_drift():
+    m = OceanDriftModelConfig(
+        drift_model="OceanDrift",
+        steps=1,
+        wind_drift=False,
+    )
+
+    assert m.wind_drift_factor == 0
+
+    m = OceanDriftModelConfig(
+        drift_model="OceanDrift",
+        steps=1,
+        wind_drift=True,
+    )
+
+    assert m.wind_drift_factor == 0.02
+
+
 def test_OceanDrift_parameters():
     """Make sure OceanDrift-specific parameters are present."""
     m = OceanDriftModelConfig(drift_model="OceanDrift", steps=1)
