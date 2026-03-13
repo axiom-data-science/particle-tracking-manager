@@ -1,5 +1,9 @@
 # What's New
 
+## Unreleased
+
+* Fixed bug so that horizontal diffusivity is now properly applied to model output.
+
 ## 2.5.0 (March 9, 2026)
 
 * Change to NWGOA config to fix issue with wet/dry sims not running with NWGOA.
