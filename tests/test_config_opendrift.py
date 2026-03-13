@@ -187,6 +187,149 @@ def test_do3D_vertical_mixing_False():
     assert m.vertical_mixing == False
 
 
+def test_vertical_advection_surface():
+    """If do3D is False, vertical_advection_at_surface should be set to False
+
+    and if True, vertical_advection_at_surface should be set to True."""
+
+    # OceanDrift
+    m = OceanDriftModelConfig(
+        steps=1,
+        do3D=False,
+        start_time="2022-01-01",
+        vertical_advection_at_surface=True,
+    )
+    assert m.vertical_advection_at_surface == False
+
+    m = OceanDriftModelConfig(
+        steps=1,
+        do3D=True,
+        start_time="2022-01-01",
+        vertical_advection_at_surface=False,
+    )
+    assert m.vertical_advection_at_surface == True
+
+    # OpenOil
+    m = OpenOilModelConfig(
+        steps=1,
+        do3D=False,
+        start_time="2022-01-01",
+        vertical_advection_at_surface=True,
+    )
+    assert m.vertical_advection_at_surface == False
+
+    m = OpenOilModelConfig(
+        steps=1,
+        do3D=True,
+        start_time="2022-01-01",
+        vertical_advection_at_surface=False,
+    )
+    assert m.vertical_advection_at_surface == True
+
+    # Phytoplankton
+    m = PhytoplanktonModelConfig(
+        steps=1,
+        do3D=False,
+        start_time="2022-01-01",
+        vertical_advection_at_surface=True,
+    )
+    assert m.vertical_advection_at_surface == False
+
+    m = PhytoplanktonModelConfig(
+        steps=1,
+        do3D=True,
+        start_time="2022-01-01",
+        vertical_advection_at_surface=False,
+    )
+    assert m.vertical_advection_at_surface == True
+
+    m = LarvalFishModelConfig(
+        steps=1,
+        do3D=True,
+        start_time="2022-01-01",
+        vertical_advection_at_surface=False,
+    )
+    assert m.vertical_advection_at_surface == True
+
+
+def test_vertical_mixing_surface():
+    """If vertical_mixing is True, vertical_mixing_at_surface should be True
+
+    and if False, vertical_mixing_at_surface should be False."""
+
+    # OceanDrift
+    m = OceanDriftModelConfig(
+        steps=1,
+        vertical_mixing=True,
+        start_time="2022-01-01",
+        vertical_mixing_at_surface=False,
+        do3D=True,
+    )
+    assert m.vertical_mixing_at_surface == True
+
+    m = OceanDriftModelConfig(
+        steps=1,
+        vertical_mixing=False,
+        start_time="2022-01-01",
+        vertical_mixing_at_surface=True,
+    )
+    assert m.vertical_mixing_at_surface == False
+
+    # OpenOil
+    m = OpenOilModelConfig(
+        steps=1,
+        vertical_mixing=True,
+        start_time="2022-01-01",
+        vertical_mixing_at_surface=False,
+        do3D=True,
+    )
+    assert m.vertical_mixing_at_surface == True
+
+    m = OpenOilModelConfig(
+        steps=1,
+        vertical_mixing=False,
+        start_time="2022-01-01",
+        vertical_mixing_at_surface=True,
+    )
+    assert m.vertical_mixing_at_surface == False
+
+    # Phytoplankton
+    m = PhytoplanktonModelConfig(
+        steps=1,
+        vertical_mixing=True,
+        start_time="2022-01-01",
+        vertical_mixing_at_surface=False,
+        do3D=True,
+    )
+    assert m.vertical_mixing_at_surface == True
+
+    m = PhytoplanktonModelConfig(
+        steps=1,
+        vertical_mixing=False,
+        start_time="2022-01-01",
+        vertical_mixing_at_surface=True,
+    )
+    assert m.vertical_mixing_at_surface == False
+
+    # LarvalFish
+    m = LarvalFishModelConfig(
+        steps=1,
+        vertical_mixing=True,
+        start_time="2022-01-01",
+        vertical_mixing_at_surface=False,
+        do3D=True,
+    )
+    assert m.vertical_mixing_at_surface == True
+
+    m = LarvalFishModelConfig(
+        steps=1,
+        vertical_mixing=False,
+        start_time="2022-01-01",
+        vertical_mixing_at_surface=True,
+    )
+    assert m.vertical_mixing_at_surface == False
+
+
 def test_OceanDrift_parameters():
     """Make sure OceanDrift-specific parameters are present."""
     m = OceanDriftModelConfig(drift_model="OceanDrift", steps=1)
