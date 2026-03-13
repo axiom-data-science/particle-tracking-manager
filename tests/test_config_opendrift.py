@@ -59,19 +59,19 @@ def test_LarvalFish_parameters():
         assert hasattr(m, param)
 
 
-def test_LarvalFish_disallowed_settings():
-    """LarvalFish is incompatible with some settings.
+# def test_LarvalFish_disallowed_settings():
+#     """LarvalFish is incompatible with some settings.
 
-    LarvalFish has to always be 3D with vertical_mixing on.
-    """
+#     LarvalFish has to always be 3D with vertical_mixing on.
+#     """
 
-    with pytest.raises(ValidationError):
-        m = LarvalFishModelConfig(
-            drift_model="LarvalFish", vertical_mixing=False, steps=1
-        )
+#     with pytest.raises(ValidationError):
+#         m = LarvalFishModelConfig(
+#             drift_model="LarvalFish", vertical_mixing=False, steps=1
+#         )
 
-    with pytest.raises(ValidationError):
-        m = LarvalFishModelConfig(drift_model="LarvalFish", do3D=False, steps=1)
+#     with pytest.raises(ValidationError):
+#         m = LarvalFishModelConfig(drift_model="LarvalFish", do3D=False, steps=1)
 
 
 def test_LarvalFish_hatched_stage_fraction():
@@ -163,6 +163,28 @@ def test_OceanDrift_wind_drift():
     )
 
     assert m.wind_drift_factor == 0.02
+
+
+def test_do3D_vertical_mixing_False():
+    """If do3D is False, vertical_mixing should be set to False."""
+
+    # OceanDrift
+    m = OceanDriftModelConfig(
+        steps=1, do3D=False, start_time="2022-01-01", vertical_mixing=True
+    )
+    assert m.vertical_mixing == False
+
+    # OpenOil
+    m = OpenOilModelConfig(
+        steps=1, do3D=False, start_time="2022-01-01", vertical_mixing=True
+    )
+    assert m.vertical_mixing == False
+
+    # Phytoplankton
+    m = PhytoplanktonModelConfig(
+        steps=1, do3D=False, start_time="2022-01-01", vertical_mixing=True
+    )
+    assert m.vertical_mixing == False
 
 
 def test_OceanDrift_parameters():
@@ -310,21 +332,21 @@ def test_Phytoplankton_dvm_mode():
     assert m.z_night == -5.0
 
 
-def test_Phytoplankton_disallowed_settings():
-    """Phytoplankton requires 3D with vertical_mixing."""
-    with pytest.raises(ValidationError):
-        m = PhytoplanktonModelConfig(
-            drift_model="Phytoplankton",
-            vertical_mixing=False,
-            steps=1,
-        )
+# def test_Phytoplankton_disallowed_settings():
+#     """Phytoplankton requires 3D with vertical_mixing."""
+#     with pytest.raises(ValidationError):
+#         m = PhytoplanktonModelConfig(
+#             drift_model="Phytoplankton",
+#             vertical_mixing=False,
+#             steps=1,
+#         )
 
-    with pytest.raises(ValidationError):
-        m = PhytoplanktonModelConfig(
-            drift_model="Phytoplankton",
-            do3D=False,
-            steps=1,
-        )
+#     with pytest.raises(ValidationError):
+#         m = PhytoplanktonModelConfig(
+#             drift_model="Phytoplankton",
+#             do3D=False,
+#             steps=1,
+#         )
 
 
 ## Enums ##

@@ -188,17 +188,6 @@ class OpenDriftConfig(TheManagerConfig):
     #             raise ValueError("z needs to be None if seed_seafloor is True.")
     #     return self
 
-    # this is not true! For example, OpenOil has by default no vertical advection but yes vertical mixing
-    # @model_validator(mode="after")
-    # def check_config_do3D(self) -> Self:
-    #     """Check if do3D is set correctly."""
-    #     if hasattr(self, "vertical_mixing"):
-    #         if not self.do3D and self.vertical_mixing:
-    #             raise ValueError(
-    #                 "If do3D is False, vertical_mixing must also be False."
-    #             )
-    #     return self
-
     @model_validator(mode="after")
     def setup_interpolator(self) -> Self:
         """Setup interpolator."""
@@ -497,7 +486,7 @@ class OceanDriftModelConfig(OpenDriftConfig):
     )
 
     vertical_mixing_at_surface: bool = Field(
-        default=True,
+        default=False,
         description="If vertical mixing is activated, surface elements (z=0) can only be mixed (downwards) if this setting it True.",
         title="Vertical Mixing At Surface",
         json_schema_extra={
@@ -507,7 +496,7 @@ class OceanDriftModelConfig(OpenDriftConfig):
     )
 
     vertical_advection_at_surface: bool = Field(
-        default=True,
+        default=False,
         description="If vertical advection is activated, surface elements (z=0) can only be advected (downwards) if this setting it True.",
         title="Vertical Advection At Surface",
         json_schema_extra={
@@ -522,6 +511,14 @@ class OceanDriftModelConfig(OpenDriftConfig):
         if not self.wind_drift:
             self.wind_drift_factor = 0
             logger.debug("Setting wind_drift_factor to 0 because wind_drift is False.")
+        return self
+
+    @model_validator(mode="after")
+    def check_config_do3D(self) -> Self:
+        """If do3D is False, set vertical_mixing to False."""
+        if not self.do3D:
+            self.vertical_mixing = False
+            logger.debug("Setting vertical_mixing to False because do3D is False.")
         return self
 
 
@@ -688,7 +685,7 @@ class OpenOilModelConfig(OceanDriftModelConfig):
         OceanDriftModelConfig.model_fields["wind_drift_factor"], Field(default=0.03)
     )
     vertical_mixing: bool = FieldInfo.merge_field_infos(
-        OceanDriftModelConfig.model_fields["vertical_mixing"], Field(default=True)
+        OceanDriftModelConfig.model_fields["vertical_mixing"], Field(default=False)
     )
     vertical_mixing_at_surface: bool = FieldInfo.merge_field_infos(
         OceanDriftModelConfig.model_fields["vertical_mixing_at_surface"],
@@ -928,15 +925,15 @@ class LarvalFishModelConfig(OceanDriftModelConfig):
 
         return self
 
-    @model_validator(mode="after")
-    def check_vertical_mixing(self) -> Self:
-        """Check if vertical_mixing is set to True for LarvalFish model."""
-        if not self.vertical_mixing:
-            raise ValueError(
-                "vertical_mixing must be True with the LarvalFish drift model."
-            )
+    # @model_validator(mode="after")
+    # def check_vertical_mixing(self) -> Self:
+    #     """Check if vertical_mixing is set to True for LarvalFish model."""
+    #     if not self.vertical_mixing:
+    #         raise ValueError(
+    #             "vertical_mixing must be True with the LarvalFish drift model."
+    #         )
 
-        return self
+    #     return self
 
     # @model_validator(mode="after")
     # def check_hatched_and_stage_fraction(self) -> Self:
@@ -1077,21 +1074,21 @@ class PhytoplanktonModelConfig(OceanDriftModelConfig):
         OceanDriftModelConfig.model_fields["wind_drift_factor"], Field(default=0.0)
     )
 
-    @model_validator(mode="after")
-    def check_do3D(self) -> Self:
-        """Check if do3D is set to True for Phytoplankton model."""
-        if not self.do3D:
-            raise ValueError("do3D must be True with the Phytoplankton drift model.")
-        return self
+    # # @model_validator(mode="after")
+    # # def check_do3D(self) -> Self:
+    # #     """Check if do3D is set to True for Phytoplankton model."""
+    # #     if not self.do3D:
+    # #         raise ValueError("do3D must be True with the Phytoplankton drift model.")
+    # #     return self
 
-    @model_validator(mode="after")
-    def check_vertical_mixing(self) -> Self:
-        """Check if vertical_mixing is set to True for Phytoplankton model."""
-        if not self.vertical_mixing:
-            raise ValueError(
-                "vertical_mixing must be True with the Phytoplankton drift model."
-            )
-        return self
+    # @model_validator(mode="after")
+    # def check_vertical_mixing(self) -> Self:
+    #     """Check if vertical_mixing is set to True for Phytoplankton model."""
+    #     if not self.vertical_mixing:
+    #         raise ValueError(
+    #             "vertical_mixing must be True with the Phytoplankton drift model."
+    #         )
+    #     return self
 
     @model_validator(mode="after")
     def check_vertical_behavior_parameters(self) -> Self:
