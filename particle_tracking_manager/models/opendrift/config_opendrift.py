@@ -144,7 +144,11 @@ class OpenDriftConfig(TheManagerConfig):
     # add od_mapping to what should otherwise be in TheManagerConfig
     horizontal_diffusivity: float | None = FieldInfo.merge_field_infos(
         TheManagerConfig.model_fields["horizontal_diffusivity"],
-        Field(json_schema_extra=dict(od_mapping="environment:constant:horizontal_diffusivity")),
+        Field(
+            json_schema_extra=dict(
+                od_mapping="environment:constant:horizontal_diffusivity"
+            )
+        ),
     )
     stokes_drift: bool = FieldInfo.merge_field_infos(
         TheManagerConfig.model_fields["stokes_drift"],
