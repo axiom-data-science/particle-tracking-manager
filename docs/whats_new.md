@@ -1,5 +1,9 @@
 # What's New
 
+## Unreleased
+
+* Fixed bug so that `seed_floor` can be used. Now if `seed_seafloor` is selected, `z` is automatically set to `None` which activates `seed_seafloor` in `OpenDrift`.
+
 ## 3.0.0 (March 12, 2026)
 
 * Fixed bug so that horizontal diffusivity is now properly applied to model output.

@@ -115,6 +115,7 @@ def test_run_netcdf_and_plot():
             **seeding_kwargs,
             use_static_masks=True,
             steps=2,
+            seed_seafloor=True,
             output_format="netcdf",
             use_cache=True,
             interpolator_filename=temp_file.name,
@@ -146,6 +147,9 @@ def test_run_netcdf_and_plot():
         == manager.config.time_step
         # == m.o.get_configspec()["general:time_step_minutes"]["value"]  # this is not correct, don't know why
     )
+
+    # make sure initial depth is not 0 since seed_seafloor=True
+    assert manager.o.elements.z[0] != 0
 
 
 @pytest.mark.slow
