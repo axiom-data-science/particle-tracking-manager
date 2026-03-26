@@ -154,7 +154,7 @@ class OpenDriftConfig(TheManagerConfig):
         TheManagerConfig.model_fields["stokes_drift"],
         Field(json_schema_extra=dict(od_mapping="drift:stokes_drift")),
     )
-    z: float = FieldInfo.merge_field_infos(
+    z: float | None = FieldInfo.merge_field_infos(
         TheManagerConfig.model_fields["z"],
         Field(json_schema_extra=dict(od_mapping="seed:z")),
     )
@@ -177,16 +177,6 @@ class OpenDriftConfig(TheManagerConfig):
                 "If interpolator_filename is input, use_cache must be True."
             )
         return self
-
-    # @model_validator(mode="after")
-    # def check_config_z_value(self) -> Self:
-    #     """Check if z is set correctly."""
-    #     if hasattr(self, "seed_seafloor"):
-    #         if not self.seed_seafloor and self.z is None:
-    #             raise ValueError("z needs a non-None value if seed_seafloor is False.")
-    #         if self.seed_seafloor and self.z is not None:
-    #             raise ValueError("z needs to be None if seed_seafloor is True.")
-    #     return self
 
     @model_validator(mode="after")
     def setup_interpolator(self) -> Self:
@@ -559,6 +549,15 @@ class OceanDriftModelConfig(OpenDriftConfig):
             logger.debug(
                 "Setting vertical_mixing_at_surface to False because vertical_mixing is False."
             )
+        return self
+
+    @model_validator(mode="after")
+    def check_seed_seafloor(self) -> Self:
+        """If seed_seafloor True, z is set to None."""
+        if hasattr(self, "seed_seafloor"):
+            if self.seed_seafloor:
+                self.z = None
+                logger.debug("Setting z to None because seed_seafloor is True.")
         return self
 
 

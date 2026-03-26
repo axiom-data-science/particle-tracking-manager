@@ -412,14 +412,14 @@ def test_z_OceanDrift():
     m = OceanDriftModelConfig(steps=1, start_time="2022-01-01", z=-10)
     assert m.seed_seafloor == False
 
-    with pytest.raises(ValidationError):
-        m = OceanDriftModelConfig(
-            steps=1, start_time="2022-01-01", z=None, seed_seafloor=True
-        )
+    m = OceanDriftModelConfig(
+        steps=1, start_time="2022-01-01", z=None, seed_seafloor=True
+    )
 
     m = OceanDriftModelConfig(
         steps=1, start_time="2022-01-01", z=-10, seed_seafloor=True
     )
+    assert m.z == None
 
 
 def test_interpolator_filename():

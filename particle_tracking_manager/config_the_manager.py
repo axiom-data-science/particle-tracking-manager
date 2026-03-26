@@ -200,7 +200,7 @@ class TheManagerConfig(BaseModel):
         json_schema_extra=dict(ptm_level=2),
     )
 
-    z: float = Field(
+    z: float | None = Field(
         default=0,
         description="Depth below sea level where elements are released. This depth is neglected if seafloor seeding is set selected.",
         title="Z",
