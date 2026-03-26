@@ -1,6 +1,6 @@
 # What's New
 
-## Unreleased
+## 3.1.0 (March 26, 2026)
 
 * Fixed bug so that `seed_floor` can be used. Now if `seed_seafloor` is selected, `z` is automatically set to `None` which activates `seed_seafloor` in `OpenDrift`.
 
