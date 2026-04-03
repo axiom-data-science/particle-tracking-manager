@@ -9,6 +9,7 @@ from os import PathLike
 from typing import Annotated
 
 # Third-party imports
+import numpy as np
 import pandas as pd
 
 # from geojson import GeoJSON
@@ -246,6 +247,45 @@ class TheManagerConfig(BaseModel):
                 raise ValueError(
                     "If `geojson` is set, both `lon` and `lat` must be None."
                 )
+
+            if "geometry" not in self.geojson:
+                raise ValueError(
+                    "If `geojson` is set, it must contain a `geometry` field."
+                )
+
+            # check number of points being consistent with geojson geometry type
+            if self.geojson["geometry"]["type"] == "Point":
+                if np.asarray(self.geojson["geometry"]["coordinates"]).ndim != 1:
+                    raise ValueError(
+                        "If `geojson` geometry type is Point, it must have 1 set of coordinates."
+                    )
+            elif self.geojson["geometry"]["type"] == "LineString":
+                if np.asarray(self.geojson["geometry"]["coordinates"]).ndim != 2:
+                    raise ValueError(
+                        "If `geojson` geometry type is LineString, it must be a list of coordinates."
+                    )
+            elif self.geojson["geometry"]["type"] == "Polygon":
+                if np.asarray(self.geojson["geometry"]["coordinates"]).ndim != 3:
+                    raise ValueError(
+                        "If `geojson` geometry type is Polygon, it must be a list of lists of coordinates."
+                    )
+
+            if self.geojson["geometry"]["type"] == "Point":
+                if len(self.geojson["geometry"]["coordinates"]) != 2:
+                    raise ValueError(
+                        "If `geojson` geometry type is Point, it must have 2 coordinates (lon and lat)."
+                    )
+            if self.geojson["geometry"]["type"] == "LineString":
+                if len(self.geojson["geometry"]["coordinates"]) != 2:
+                    raise ValueError(
+                        "If `geojson` geometry type is LineString, it must have exactly two sets of coordinates."
+                    )
+            elif self.geojson["geometry"]["type"] == "Polygon":
+                if len(self.geojson["geometry"]["coordinates"][0]) < 3:
+                    raise ValueError(
+                        "If `geojson` geometry type is Polygon, it must have at least three sets of coordinates."
+                    )
+
         return self
 
     @computed_field

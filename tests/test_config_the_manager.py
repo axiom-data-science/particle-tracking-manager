@@ -156,6 +156,100 @@ def test_seed_location_inputs():
     m = TheManagerConfig(steps=1, lon=-154, lat=58)
 
 
+def test_geojson_Point():
+    """Check that npts is consisntent with geojson shape used."""
+
+    # point
+    geojson = {
+        "type": "Feature",
+        "properties": {},
+        "geometry": {"type": "Point", "coordinates": [0, 0]},
+    }
+
+    m = TheManagerConfig(steps=1, start_time="2022-01-01", geojson=geojson)
+
+    geojson = {
+        "type": "Feature",
+        "properties": {},
+        "geometry": {"type": "Point", "coordinates": [[0, 0]]},
+    }
+
+    with pytest.raises(ValidationError):
+        m = TheManagerConfig(steps=1, start_time="2022-01-01", geojson=geojson)
+
+    geojson = {
+        "type": "Feature",
+        "properties": {},
+        "geometry": {"type": "Point", "coordinates": [[0, 0], [1, 1]]},
+    }
+
+    with pytest.raises(ValidationError):
+        m = TheManagerConfig(steps=1, start_time="2022-01-01", geojson=geojson)
+
+
+def test_geojson_LineString():
+
+    # LineString
+    geojson = {
+        "type": "Feature",
+        "properties": {},
+        "geometry": {"type": "LineString", "coordinates": [[0, 0], [1, 1]]},
+    }
+
+    m = TheManagerConfig(steps=1, start_time="2022-01-01", geojson=geojson)
+
+    # LineString
+    geojson = {
+        "type": "Feature",
+        "properties": {},
+        "geometry": {"type": "LineString", "coordinates": [[0, 0], [1, 1], [2, 2]]},
+    }
+
+    with pytest.raises(ValidationError):
+        m = TheManagerConfig(steps=1, start_time="2022-01-01", geojson=geojson)
+
+    # LineString
+    geojson = {
+        "type": "Feature",
+        "properties": {},
+        "geometry": {"type": "LineString", "coordinates": [[[0, 0], [1, 1]]]},
+    }
+
+    with pytest.raises(ValidationError):
+        m = TheManagerConfig(steps=1, start_time="2022-01-01", geojson=geojson)
+
+
+def test_geojson_Polygon():
+
+    # Polygon
+    geojson = {
+        "type": "Feature",
+        "properties": {},
+        "geometry": {"type": "Polygon", "coordinates": [[[0, 0], [1, 1], [2, 2]]]},
+    }
+
+    m = TheManagerConfig(steps=1, start_time="2022-01-01", geojson=geojson)
+
+    # Polygon
+    geojson = {
+        "type": "Feature",
+        "properties": {},
+        "geometry": {"type": "Polygon", "coordinates": [[0, 0], [1, 1], [2, 2]]},
+    }
+
+    with pytest.raises(ValidationError):
+        m = TheManagerConfig(steps=1, start_time="2022-01-01", geojson=geojson)
+
+    geojson = {
+        "type": "Feature",
+        "properties": {},
+        "geometry": {"type": "Polygon", "coordinates": [[[0, 0], [2, 2]]]},
+    }
+
+    with pytest.raises(ValidationError):
+        m = TheManagerConfig(steps=1, start_time="2022-01-01", geojson=geojson)
+
+
 def test_misc_parameters():
     """Test values of parameters being input."""
 
