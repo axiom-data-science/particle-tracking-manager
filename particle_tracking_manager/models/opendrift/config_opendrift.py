@@ -277,7 +277,7 @@ class OpenDriftConfig(TheManagerConfig):
 
         # if using static masks, drop wetdry masks.
         # if using wetdry masks, drop static masks.
-        
+
         # Removed this because it is too easy to miss what is happening
         # Running with static masks when wet/dry are available is going to be uncommon
         # # TODO: is standard_name_mapping working correctly?
