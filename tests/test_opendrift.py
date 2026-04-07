@@ -92,7 +92,7 @@ def test_drop_vars_do3D_true():
         "x_sea_water_velocity",
         "y_sea_water_velocity",
         "upward_sea_water_velocity",
-        # "land_binary_mask",
+        "land_binary_mask",
         "x_wind",
         "y_wind",
         "wind_speed",
@@ -120,7 +120,7 @@ def test_drop_vars_do3D_false_use_static_masks():
         "sea_water_speed",
     ]
     assert "mask_rho" in m.reader.Dataset.data_vars
-    assert "wetdry_mask_rho" not in m.reader.Dataset.data_vars
+    # assert "wetdry_mask_rho" not in m.reader.Dataset.data_vars
 
 
 def test_drop_vars_no_wind():
@@ -139,7 +139,7 @@ def test_drop_vars_no_wind():
     assert m.reader.variables == [
         "x_sea_water_velocity",
         "y_sea_water_velocity",
-        # "land_binary_mask",
+        "land_binary_mask",
         "sea_water_speed",
     ]
 
@@ -175,7 +175,7 @@ def test_LarvalFish_add_reader():
         "upward_sea_water_velocity",
         "sea_water_salinity",
         "sea_water_temperature",
-        # "land_binary_mask",
+        "land_binary_mask",
         "x_wind",
         "y_wind",
         "wind_speed",

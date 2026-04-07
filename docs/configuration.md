@@ -19,7 +19,7 @@ A handful of `pydantic` BaseModels make up the configuration for PTM. This allow
 
 The main configuration classes are:
 1. `TheManagerConfig`
-1. `OpenDriftConfig` and instances `LarvalFishModelConfig`, `LeewayModelConfig`, `OceanDriftModelConfig`, `OpenOilModelConfig`, `HarmfulAlgalBloomModelConfig`
+1. `OpenDriftConfig` and instances `LarvalFishModelConfig`, `LeewayModelConfig`, `OceanDriftModelConfig`, `OpenOilModelConfig`, `PhytoplanktonModelConfig`
 
 Other configuration classes are:
 1. `OceanModelConfig`
@@ -65,10 +65,10 @@ schema = ptm.OpenOilModelConfig.model_json_schema()
 print(json.dumps(schema, indent=2))
 ```
 
-#### HarmfulAlgalBloomModelConfig
+#### PhytoplanktonModelConfig
 
 ```{code-cell} ipython3
-schema = ptm.HarmfulAlgalBloomModelConfig.model_json_schema()
+schema = ptm.PhytoplanktonModelConfig.model_json_schema()
 print(json.dumps(schema, indent=2))
 ```
 
@@ -97,8 +97,8 @@ Though `OpenDrift` has more models available, the currently wrapped `drift_model
 * OceanDrift: physics-only scenario (default)
 * Leeway: scenario for Search and Rescue of various objects at the surface
 * OpenOil: oil spill scenarios
-* LarvalFish: scenario for fish eggs and larvae that can grow
-* HarmfulAlgalBloom: scenario for modeling harmful algal blooms once they exist to see where they travel or where they came from
+* LarvalFish: scenario for fish eggs and larvae with vertical behavior
+* Phytoplankton: scenario for modeling phytoplankton/harmful algal blooms with vertical behavior
 
 Set these with e.g.:
 
@@ -174,3 +174,33 @@ The user can add horizontal diffusivity which is time-step independent diffusion
 ##### Additional Uncertainty
 
 One can also add time-step-dependent uncertainty to the currents and winds with `current_uncertainty` and `wind_uncertainty`, respectively.
+
+
+#### Wind Drift
+
+Wind drift is on by default for most drift models. To explicitly turn it off:
+
+```
+m = ptm.OpenDriftModel(wind_drift=False)
+```
+
+When `wind_drift` is False, `wind_drift_factor` is automatically set to 0.
+
+
+#### Output Time Step
+
+The output time step is controlled by `time_step_output_integer`, which is a multiplier on `time_step`. For example, if `time_step` is 900 seconds (default) and `time_step_output_integer` is 4, the output time step will be 3600 seconds (1 hour).
+
+```
+m = ptm.OpenDriftModel(time_step_output_integer=4)
+```
+
+
+#### Vertical Mixing and 3D
+
+Note that if `do3D` is set to False, `vertical_mixing` is automatically turned off as well. The parameters `vertical_mixing_at_surface` and `vertical_advection_at_surface` control behavior at the surface boundary and are automatically set to be consistent with `vertical_mixing` and `do3D` settings, respectively.
+
+
+#### Static vs. Wet/Dry Masks
+
+The default value of `use_static_masks` is False, meaning time-varying wet/dry masks from ocean models are used by default. Set `use_static_masks=True` to use the typical, static ROMS masks instead (faster but less accurate in tidal flat regions).

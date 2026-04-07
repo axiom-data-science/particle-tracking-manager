@@ -3,6 +3,7 @@
 ## Unreleased
 
 * Now validates geojson geometries to have the correct number of dimensions and coordinates.
+* Updated docs.
 
 ## 3.1.0 (March 26, 2026)
 
