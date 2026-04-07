@@ -13,7 +13,7 @@ kernelspec:
 
 # Tutorial
 
-Particle Tracking Manager (PTM) is a wrapper around particle tracking codes to easily run particle simulations in select (or user-input) ocean models. Currently, `OpenDrift` is included. In this tutorial we demonstrate using the four wrapped drift models from `OpenDrift` along with some high level configuration changes.
+Particle Tracking Manager (PTM) is a wrapper around particle tracking codes to easily run particle simulations in select (or user-input) ocean models. Currently, `OpenDrift` is included. In this tutorial we demonstrate using the five wrapped drift models from `OpenDrift` along with some high level configuration changes.
 
 ```{code-cell} ipython3
 import xarray as xr
@@ -53,52 +53,36 @@ m.run_all()
 ```
 
 
-## Harmful Algal Bloom
+## Phytoplankton
 
-The goal of this scenario is to examine the transport of an existing harmful algal bloom or determine where an existing bloom originated, respecting temperature and salinity bounds for the species.
+The goal of this scenario is to examine the transport of phytoplankton (e.g. harmful algal blooms) forward in time or run backward in time to determine where a bloom originated. Optional vertical behavior modes allow particles to actively seek preferred depths or perform diel vertical migration.
+
+More detail about the model framework is available in {doc}`scenario_details`, including suggested parameter values for specific species of interest.
 
 ### Initialize manager `m`
 
+The key parameters for this model are the vertical behavior mode and associated depth settings. The two vertical behavior modes are:
+* `depth`: particles maintain a preferred depth band around `z_pref`
+* `dvm`: diel vertical migration between `z_day` (daytime) and `z_night` (nighttime)
+
 ```{code-cell} ipython3
-m = ptm.OpenDriftModel(drift_model="HarmfulAlgalBloom", lon = -89.8, lat = 29.08,
+m = ptm.OpenDriftModel(drift_model="Phytoplankton", lon=-89.8, lat=29.08,
                        number=10, steps=40,
                        ocean_model="TXLA",
                        start_time="2009-11-19T12:00",
                        ocean_model_local=False,
-                       species_type="Pseudo nitzschia",
+                       vertical_behavior_mode="dvm",
+                       w_active=0.001,
+                       z_day=-20.0, z_night=-5.0,
                        plots={'spaghetti': {}})
 ```
 
-The currently available species are:
-
-```{code-cell} ipython3
-ptm.HarmfulAlgalBloomModelConfig.model_json_schema()["$defs"]["HABSpeciesTypeEnum"]["enum"]
-```
-
-where `custom` is an option to allow the user to input all necessary parameters to represent a species of their choice.
-
-There are parameters available just for the HAB model:
+The full set of configuration options for this scenario:
 
 ```{code-cell} ipython3
 import json
-print(json.dumps(ptm.models.opendrift.enums.species_types.HABParameters.model_json_schema(), indent=2))
-```
-
-
-The special parameters for each available species are:
-
-```{code-cell} ipython3
-species = ptm.HarmfulAlgalBloomModelConfig.model_json_schema()["$defs"]["HABSpeciesTypeEnum"]["enum"]
-species.remove('custom')
-for specie in species:
-    print(f"{specie}: {ptm.models.opendrift.enums.species_types.SPECIES_HAB_DEFAULTS[specie]}")
-```
-
-The regular parameters that are set for each available species are:
-
-```{code-cell} ipython3
-for specie in species:
-    print(f"{specie}: {ptm.models.opendrift.enums.species_types.SPECIES_HAB_MANAGER_DEFAULTS[specie]}")
+schema = ptm.PhytoplanktonModelConfig.model_json_schema()
+print(json.dumps(schema, indent=2))
 ```
 
 The configuration parameters for this simulation are:
@@ -163,34 +147,38 @@ m.run_all()
 
 ## LarvalFish
 
-This model simulates eggs and larvae that move in 3D with the currents and some basic behavior and vertical movement. It also simulates some basic growth of the larvae.
+This model simulates eggs and larvae that move in 3D with the currents. Eggs drift passively until they hatch, after which larvae can exhibit vertical behavior. The user chooses whether to initialize particles as eggs or larvae.
 
-There are specific seeding options for this model:
-* 'diameter'
-* 'neutral_buoyancy_salinity'
-* 'stage_fraction'
-* 'hatched'
-* 'length'
-* 'weight'
+Key parameters for this model include:
+* `hatched`: 0 for eggs (default), 1 for larvae
+* `hatching_method`: `"fixed_time"` — eggs hatch after a fixed duration
+* `hatch_time_days`: number of days until hatching (default 2.0)
+* `vertical_behavior_mode`: `"depth"` (maintain preferred depth) or `"dvm"` (diel vertical migration)
+* `w_active`: maximum active vertical swimming speed (m/s)
+* `z_pref`: preferred depth for `"depth"` mode (m, negative down)
+* `z_day` / `z_night`: target depths for `"dvm"` mode (m, negative down)
 
-### Eggs
+More detail and suggested parameter values for specific fish species are available in {doc}`scenario_details`.
 
 An optional general flag is to initialize the drifters at the seabed, which might make sense for eggs and is demonstrated here.
 
-#### Initialize manager `m`
+### Initialize manager `m`
 
 ```{code-cell} ipython3
 m = ptm.OpenDriftModel(drift_model="LarvalFish", lon=-89.85, lat=28.8, number=10, steps=45,
                        z=None,
+                       hatched=0,
+                       hatching_method="fixed_time",
+                       hatch_time_days=(1/24),
+                       vertical_behavior_mode="depth",
+                       w_active=0.002, z_pref=-2,
                        do3D=True, seed_seafloor=True,
                        ocean_model="TXLA",
                        start_time="2009-11-19T12:00",
                        ocean_model_local=False,
                        plots={'spaghetti': {'linecolor': 'z', 'cmap': 'cmo.deep'},
-                              'property1': {'variable': 'length'},
-                              'property2': {'variable': 'weight'},
-                              'property3': {'variable': 'diameter'},
-                              'property4': {'variable': 'stage_fraction'}})
+                              'property1': {'variable': 'z'},
+                              })
 ```
 
 The configuration parameters for this simulation are:
@@ -199,7 +187,7 @@ The configuration parameters for this simulation are:
 pprint.pprint(m.config.model_dump())
 ```
 
-#### Run
+### Run
 
 ```{code-cell} ipython3
 m.run_all()
@@ -217,36 +205,6 @@ m.o.result["z"]
 
 ```{code-cell} ipython3
 m.o.elements
-```
-
-### Hatched!
-
-#### Initialize manager `m`
-
-```{code-cell} ipython3
-m = ptm.OpenDriftModel(drift_model="LarvalFish", lon=-89.85, lat=28.8, number=10, steps=45,
-                       do3D=True, seed_seafloor=True, hatched=1, stage_fraction=None,
-                       z=None,
-                       ocean_model="TXLA",
-                       start_time="2009-11-19T12:00",
-                       ocean_model_local=False,
-                       plots={'spaghetti': {'linecolor': 'z', 'cmap': 'cmo.deep'},
-                              'property1': {'variable': 'length'},
-                              'property2': {'variable': 'weight'},
-                              'property3': {'variable': 'diameter'},
-                              'property4': {'variable': 'stage_fraction'}})
-```
-
-The configuration parameters for this simulation are:
-
-```{code-cell} ipython3
-pprint.pprint(m.config.model_dump())
-```
-
-#### Run
-
-```{code-cell} ipython3
-m.run_all()
 ```
 
 

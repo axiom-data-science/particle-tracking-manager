@@ -31,7 +31,6 @@ Run directly from the Lagrangian model you want to use, which will inherit from 
 import particle_tracking_manager as ptm
 
 m = ptm.OpenDriftModel(steps=1)
-# Can modify `m` between these steps, or look at `OpenDrift` config with `m.drift_model_config()`
 m.run_all()
 ```
 

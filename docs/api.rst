@@ -12,6 +12,7 @@ Main Modules
 
    the_manager
    models.opendrift.opendrift
+   plotting
 
 Configuration Classes
 ---------------------
@@ -26,3 +27,13 @@ Configuration Classes
    config_ocean_model
    config_logging
    config_misc
+
+Plotting and Utilities
+----------------------
+
+.. autosummary::
+   :toctree: generated/
+   :recursive:
+
+   models.opendrift.plot
+   models.opendrift.utils

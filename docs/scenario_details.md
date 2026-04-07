@@ -1,86 +1,101 @@
-# Details about individual drift models
+# Drift Model Details and Species Reference
 
-## Harmful Algal Blooms
+## Phytoplankton (Harmful Algal Blooms)
 
-With the `HarmfulAlgalBloom` model, users can transport an existing bloom forward in time or run backward in time to determine where it originated.
+With the `Phytoplankton` model, users can transport an existing bloom forward in time or run backward in time to determine where it originated.
 
-Currently users can model *Pseudo nitzschia* as a near-surface-limited bloom that experiences high mortality when outside viable temperature and salinity ranges. No growth is currently included. This is the start to tracking relative biomass of the particles making up the bloom.
+The model uses the OpenDrift `LarvalFish` model internally, configured for phytoplankton particle tracking. It supports optional vertical behavior modes that allow particles to actively seek preferred depths or perform diel vertical migration. There is no direct species selection parameter; instead, users configure vertical behavior and other parameters to approximate the species of interest (see {ref}`phyto_species_reference` below).
 
-### Biomass and Mortality Framework
+### Vertical Behavior
 
-The model includes a simple habitat-dependent survival model in which temperature and salinity determine mortality, and biomass evolves according to an exponential decay equation.
+The `Phytoplankton` model supports active vertical positioning through the `vertical_behavior_mode` parameter:
 
-#### Environmental Zone Classification
+* **`depth`**: Particles maintain a preferred depth band around `z_pref`. Useful for species that stay near the surface or at a fixed depth in the water column.
+* **`dvm`** (diel vertical migration): Particles move between `z_day` (daytime depth) and `z_night` (nighttime depth). Useful for motile dinoflagellates that migrate vertically over the day-night cycle.
 
-For each particle, the model first evaluates its local temperature and salinity to determine whether environmental conditions fall within a **preferred**, **marginal**, or **lethal** range. This classification is handled by `classify_zone`, which assigns each element to one of:
+The speed at which particles swim toward their target depth is controlled by `w_active` (m/s).
 
-- `baseline_mortality` (preferred habitat)
-- `medium_mortality` (suboptimal but viable habitat)
-- `high_mortality` (outside survival limits)
+(phyto_species_reference)=
+### Phytoplankton Species Reference
 
-Temperature classification uses four thresholds:
+When using the Phytoplankton scenario, note that it may be important to choose depths in spatial relation to the mixed layer depth (another parameter). Simplified representations of species of interest are suggested here as a reference:
 
-- `temperature_pref_min`
-- `temperature_pref_max`
-- `temperature_death_min`
-- `temperature_death_max`
+**Alexandrium spp** (motile dinoflagellate):
+* Vertical Speed (`w_active`): 0.0005–0.002 m/s
+* Vertical Behavior Mode: `dvm` (Diel Vertical Migration)
+* Daytime Depth (`z_day`): -10 to -30 meters
+* Nighttime Depth (`z_night`): -1 to -5 meters
 
-Salinity classification uses an analogous set:
+**Pseudo-nitzschia spp** (weakly/non-motile diatom):
+* Vertical Speed (`w_active`): 0.0001–0.0005 m/s
+* Vertical Behavior Mode: `depth` (Preferred Depth)
+* Preferred Depth (`z_pref`): -0.5 to -15 meters
 
-- `salinity_pref_min`
-- `salinity_pref_max`
-- `salinity_death_min`
-- `salinity_death_max`
+**Dinophysis spp** (motile dinoflagellate):
+* Vertical Speed (`w_active`): 0.0005–0.002 m/s
+* Vertical Behavior Mode: `dvm` (Diel Vertical Migration)
+* Daytime Depth (`z_day`): -10 to -40 meters
+* Nighttime Depth (`z_night`): -1 to -10 meters
 
-
-The result is a per-particle assessment of environmental stress.
-
-#### Mortality Rate Selection
-
-The model then assigns each particle a mortality rate according to a tiered decision rule implemented in `choose_mortality_rate`:
-
-1. If **temperature OR salinity** is in a `high_mortality` zone →
-   use `mortality_rate_high`.
-
-2. Else, if **either** variable is in a `medium_mortality` zone
-   (and neither is high) →
-   use `mortality_rate_medium`.
-
-3. Only when **both** temperature and salinity lie in preferred ranges →
-   use `mortality_rate_baseline`.
-
-This "worst-condition wins" approach prevents double-counting stress while ensuring that the most limiting factor controls mortality.
-
-The output is an array `mortality_rates` (units: days$^{-1}$).
-
-#### Biomass Evolution
-
-Biomass is updated using an exponential decay formulation. Growth is not yet implemented, so the net rate is purely negative:
+```{note}
+These are rough estimates and may not be accurate for all species or conditions. We recommend consulting the literature for more specific information about the species you are interested in modeling.
+```
 
 
-This corresponds to integrating:
+## Larval Fish
 
-$$
-\frac{dB}{dt} = (\text{growth_rate} - \text{mortality_rate}) \times B,
-$$
+With the `LarvalFish` model, users simulate the transport and behavior of fish eggs and larvae. The user should first choose whether to initialize the simulation particles as eggs or larvae.
 
-so biomass decays on a timescale determined by the assigned mortality rate. Particles in lethal zones decay fastest; particles in preferred zones decay slowly (not yet implemented). The solution to the equation is
+**Eggs** are modeled as passive particles that drift with the water until they hatch. Hatching occurs after `hatch_time_days` has passed (using `hatching_method="fixed_time"`). After hatching, particles are modeled as larvae with vertical behavior and vertical speed.
 
-$$
-B(t) = B(0) \exp^{(\text{growth_rate} - \text{mortality_rate})t}
-$$
+**Larvae** are initialized directly by setting `hatched=1` and immediately exhibit vertical behavior.
 
-#### Deactivation of Dead Particles
+### Vertical Behavior
 
-Once biomass is updated, particles whose biomass falls below the threshold `biomass_dead_threshold` are removed from the simulation (or deactivated). Deactivated particles no longer participate in advection, mixing, or further biological updates, allowing the Lagrangian population to thin naturally in unfavorable environments.
+After hatching (or when initialized as larvae), larvae can actively position themselves in the water column through the `vertical_behavior_mode` parameter:
 
+* **`depth`**: Larvae maintain a preferred depth band around `z_pref`. Useful for species that remain at a relatively fixed depth.
+* **`dvm`** (diel vertical migration): Larvae move between `z_day` (daytime depth) and `z_night` (nighttime depth). Useful for species that migrate vertically over the day-night cycle.
 
+The speed at which larvae swim toward their target depth is controlled by `w_active` (m/s).
 
-### Next steps:
-* add growth
-* add medium level and baseline mortality
-* add Alexandrium catenella and Dinophysis spp.
-* add vertical behavior framework - Implement a shared parameterized vertical-movement function (band / diel_band)
-    * Pseudo-nitzschia: shallow band
-    * Alexandrium: diel vertical migration (shallow band by day, deeper band by night)
-    * Dinophysis: mid-depth band (around the pycnocline)
+(larval_species_reference)=
+### Larval Fish Species Reference
+
+When using the LarvalFish scenario, note that it may be important to choose depths in spatial relation to the mixed layer depth (another parameter). Simplified representations of species of interest are suggested here as a reference:
+
+**Walleye Pollock:**
+* Start as eggs with 18–25 days to hatch (`hatch_time_days`)
+* Vertical Speed (`w_active`): 0.001–0.003 m/s
+* Vertical Behavior Mode: `dvm` (Diel Vertical Migration)
+* Daytime Depth (`z_day`): -20 to -40 meters
+* Nighttime Depth (`z_night`): -5 to -20 meters
+
+**Pacific Cod:**
+* Start as eggs with 14–18 days to hatch (`hatch_time_days`)
+* Vertical Speed (`w_active`): 0.001–0.003 m/s
+* Vertical Behavior Mode: `dvm` (Diel Vertical Migration)
+* Daytime Depth (`z_day`): -15 to -35 meters
+* Nighttime Depth (`z_night`): -5 to -15 meters
+
+**Pacific Herring:**
+* Start as larvae (`hatched=1`)
+* Vertical Speed (`w_active`): 0.001–0.005 m/s
+* Vertical Behavior Mode: `depth` (Preferred Depth)
+* Preferred Depth (`z_pref`): -5 to -15 meters
+
+**Rockfish:**
+* Start as larvae (`hatched=1`)
+* Vertical Speed (`w_active`): 0.001–0.01 m/s
+* Vertical Behavior Mode: `depth` (Preferred Depth)
+* Preferred Depth (`z_pref`): -10 to -40 meters
+
+**Razor Clams:**
+* Start as larvae (`hatched=1`)
+* Vertical Speed (`w_active`): 0.0005–0.003 m/s
+* Vertical Behavior Mode: `depth` (Preferred Depth)
+* Preferred Depth (`z_pref`): -3 to -10 meters
+
+```{note}
+These are rough estimates and may not be accurate for all species or conditions. We recommend consulting the literature for more specific information about the species you are interested in modeling.
+```

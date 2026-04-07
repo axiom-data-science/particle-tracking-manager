@@ -1,4 +1,4 @@
-name: ptm_docs
+name: ptm_docs2
 channels:
   - conda-forge
   - nodefaults
@@ -8,7 +8,9 @@ dependencies:
    - adios_db
    - aiohttp
    - appdirs
+   - bottleneck
    - fastparquet
+   - ffmpeg
    - importlib_resources  # should update past opendrift 1.12 and remove this when possible
    - numpy
    - xarray

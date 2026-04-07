@@ -8,7 +8,9 @@ dependencies:
   - adios_db
   - aiohttp
   - appdirs
+  - bottleneck
   - fastparquet
+  - ffmpeg
   # - geojson_pydantic
   - importlib_resources
   - jupyter

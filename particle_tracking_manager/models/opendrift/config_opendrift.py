@@ -277,18 +277,21 @@ class OpenDriftConfig(TheManagerConfig):
 
         # if using static masks, drop wetdry masks.
         # if using wetdry masks, drop static masks.
-        # TODO: is standard_name_mapping working correctly?
-        if self.use_static_masks:
-            # TODO: Can the mapping include all possible mappings or does it need to be exact?
-            # standard_name_mapping.update({"mask_rho": "land_binary_mask"})
-            drop_vars += ["wetdry_mask_rho", "wetdry_mask_u", "wetdry_mask_v"]
-            logger.debug("Dropping wetdry masks because using static masks instead.")
-        else:
-            # standard_name_mapping.update({"wetdry_mask_rho": "land_binary_mask"})
-            drop_vars += ["mask_rho", "mask_u", "mask_v", "mask_psi"]
-            logger.debug(
-                "Dropping mask_rho, mask_u, mask_v, mask_psi because using wetdry masks instead."
-            )
+        
+        # Removed this because it is too easy to miss what is happening
+        # Running with static masks when wet/dry are available is going to be uncommon
+        # # TODO: is standard_name_mapping working correctly?
+        # if self.use_static_masks:
+        #     # TODO: Can the mapping include all possible mappings or does it need to be exact?
+        #     # standard_name_mapping.update({"mask_rho": "land_binary_mask"})
+        #     drop_vars += ["wetdry_mask_rho", "wetdry_mask_u", "wetdry_mask_v"]
+        #     logger.debug("Dropping wetdry masks because using static masks instead.")
+        # else:
+        #     # standard_name_mapping.update({"wetdry_mask_rho": "land_binary_mask"})
+        #     drop_vars += ["mask_rho", "mask_u", "mask_v", "mask_psi"]
+        #     logger.debug(
+        #         "Dropping mask_rho, mask_u, mask_v, mask_psi because using wetdry masks instead."
+        #     )
         return drop_vars
 
     @model_validator(mode="after")

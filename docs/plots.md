@@ -23,7 +23,7 @@ The available plot types are:
 * animation
 * animation profile
 
-To create a type of plot, the listed words must be in the plot dictionary key and it will work by word-matching. Each plot key must also be distinct. A basic version of each available plot (except "property", which requires an input property to plot) will be plotted for "all". Some examples will be demonstrated here, as well as how to get the plot whether using PTM as a Python package or through the CLI.
+To create a type of plot, the listed words must be in the plot dictionary key and it will work by word-matching. Each plot key must also be distinct. A basic version of each available plot (except "property", which requires an input property to plot) will be plotted for "all", including depth and mean depth property plots. Some examples will be demonstrated here, as well as how to get the plot whether using PTM as a Python package or through the CLI.
 
 Examples will be shown with code run at the bottom of this page. First we show options.
 
@@ -93,7 +93,7 @@ plots="{'animation': {}}"
 
 ### Options
 
-You can choose the filetype with `"filetype": "mp4"` in the input plot dictionary. The default is "gif".
+You can choose the filetype with `"filetype": "mp4"` in the input plot dictionary. The default is "mp4".
 
 You can change the background of the animation and colormap, along with the frames per second, such as, `'animation': {'background': 'sea_surface_height', 'filetype': '.mp4', 'fps': 2, 'cmap': 'cmo.deep_r'`.
 
@@ -207,21 +207,6 @@ m = ptm.OpenDriftModel(lon=-90, lat=28.7, number=10, duration="3h",
 m.run_all()
 ```
 
-To show the animations:
-
-```{code-cell} ipython3
-from IPython.display import Image
-import ast
-
-gif_filename = ast.literal_eval(m.config.plots)["animation"]["filename"]
-Image(filename=gif_filename)
-```
-
-```{code-cell} ipython3
-gif_filename = ast.literal_eval(m.config.plots)["animation_profile"]["filename"]
-Image(filename=gif_filename)
-```
-
 
 ### Demo with larval fish scenario
 
@@ -245,10 +230,10 @@ import particle_tracking_manager.models.opendrift.plot as plot
 out_plots = plot.make_plots_after_simulation(m.config.output_file,
           plots={'spaghetti': {},
                   'spaghetti2': {'linecolor': 'sea_water_temperature', 'cmap': 'cmo.thermal'},
-                  'animation': {},
-                  'animation_profile': {},
+                  'animation': {'filetype': 'gif'},
+                  'animation_profile': {'filetype': 'gif'},
                   'animation_profile2': {'markersize_scaling': 80, 'cmap': 'cmo.amp',
-                                        'color': 'weight', 'fps': 4},
+                                        'color': 'weight', 'fps': 4, 'filetype': 'gif'},
                   'property': {'variable': 'z'},
                   'propertymean': {'variable': 'z', 'mean': True},})
 ```
@@ -286,12 +271,12 @@ m = ptm.OpenDriftModel(drift_model="OpenOil", lon=-90, lat=28.7, number=10, dura
                        start_time="2009-11-19T12:00",
                        plots={'spaghetti': {},
                               'spaghetti2': {'linecolor': 'viscosity', 'cmap': 'cmo.speed'},
-                              'animation': {},
+                              'animation': {'filetype': 'gif'},
                               'animation2': {'background': 'sea_floor_depth_below_sea_level',
-                                             'cmap': 'cmo.deep'},
-                              'animation_profile': {},
+                                             'cmap': 'cmo.deep', 'filetype': 'gif'},
+                              'animation_profile': {'filetype': 'gif'},
                               'animation_profile2': {'markersize_scaling': 80, 'cmap': 'cmo.amp',
-                                                     'color': 'mass_oil', 'fps': 4},
+                                                     'color': 'mass_oil', 'fps': 4, 'filetype': 'gif'},
                               'property': {'variable': 'sea_water_salinity'},
                               'propertymean': {'variable': 'sea_water_salinity', 'mean': True},
                               'oil': {},
@@ -303,12 +288,13 @@ m.run_all()
 ```
 
 ```{code-cell} ipython3
-from IPython.display import Image
+from IPython.display import Image, HTML
 import ast
 
 filename = ast.literal_eval(m.config.plots)["oil"]["filename"]
 Image(filename=filename)
 ```
+
 
 To show the animations:
 
