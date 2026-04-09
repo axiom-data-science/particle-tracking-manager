@@ -500,7 +500,6 @@ def test_vertical_behavior_mode_enum():
     assert VerticalBehaviorModeEnum.none == "none"
     assert VerticalBehaviorModeEnum.depth == "depth"
     assert VerticalBehaviorModeEnum.dvm == "dvm"
-    assert VerticalBehaviorModeEnum.legacy == "legacy"
 
 
 def test_hatching_method_enum():
@@ -518,15 +517,15 @@ def test_particle_type_enum():
 ## LarvalFish with new features ##
 
 
-def test_LarvalFish_vertical_behavior_legacy():
-    """Test LarvalFishModelConfig with legacy vertical behavior mode."""
+def test_LarvalFish_vertical_behavior_dvm():
+    """Test LarvalFishModelConfig with dvm vertical behavior mode."""
     m = LarvalFishModelConfig(
         drift_model="LarvalFish",
         steps=1,
-        vertical_behavior_mode=VerticalBehaviorModeEnum.legacy,
+        vertical_behavior_mode=VerticalBehaviorModeEnum.dvm,
         hatching_method=HatchingMethodEnum.temperature,
     )
-    assert m.vertical_behavior_mode == VerticalBehaviorModeEnum.legacy
+    assert m.vertical_behavior_mode == VerticalBehaviorModeEnum.dvm
     assert m.hatching_method == HatchingMethodEnum.temperature
 
 

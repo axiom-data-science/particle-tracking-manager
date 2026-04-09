@@ -76,7 +76,6 @@ class VerticalBehaviorModeEnum(str, Enum):
     none = "none"
     depth = "depth"
     dvm = "dvm"
-    legacy = "legacy"
 
 
 class HatchingMethodEnum(str, Enum):
