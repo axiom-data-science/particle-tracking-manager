@@ -232,8 +232,6 @@ out_plots = plot.make_plots_after_simulation(m.config.output_file,
                   'spaghetti2': {'linecolor': 'sea_water_temperature', 'cmap': 'cmo.thermal'},
                   'animation': {'filetype': 'gif'},
                   'animation_profile': {'filetype': 'gif'},
-                  'animation_profile2': {'markersize_scaling': 80, 'cmap': 'cmo.amp',
-                                        'color': 'weight', 'fps': 4, 'filetype': 'gif'},
                   'property': {'variable': 'z'},
                   'propertymean': {'variable': 'z', 'mean': True},})
 ```
@@ -250,12 +248,6 @@ Image(filename=gif_filename)
 ```{code-cell} ipython3
 gif_filename = out_plots["animation_profile"]["filename"]
 Image(filename=gif_filename)
-```
-
-```{code-cell} ipython3
-gif_filename = out_plots["animation_profile2"]["filename"]
-Image(filename=gif_filename)
-
 ```
 
 

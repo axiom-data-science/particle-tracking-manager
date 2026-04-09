@@ -820,8 +820,8 @@ class LarvalFishModelConfig(OceanDriftModelConfig):
 
     # Vertical behavior parameters (shared with phytoplankton)
     vertical_behavior_mode: VerticalBehaviorModeEnum = Field(
-        default=VerticalBehaviorModeEnum.legacy,
-        description="Vertical behavior mode. none: passive. depth: maintain preferred depth band. dvm: diel vertical migration. legacy: original larvalfish time-based swimming.",
+        default=VerticalBehaviorModeEnum.dvm,
+        description="Vertical behavior mode. none: passive. depth: maintain preferred depth band. dvm: diel vertical migration.",
         title="Vertical Behavior Mode",
         json_schema_extra={
             "od_mapping": "biology:vertical_behavior_mode",

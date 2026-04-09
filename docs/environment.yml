@@ -31,7 +31,7 @@ dependencies:
    - recommonmark
    - pip
    - pip:
-     - git+https://github.com/kthyng/opendrift.git@larvalfish_with_phytoplankton
+     - git+https://github.com/OpenDrift/opendrift.git@ac830da95d5f10e056eb2cdc8533792a2749a166#egg=opendrift
      - particle-tracking-manager
      - docstring-inheritance
      - docrep<=0.2.7

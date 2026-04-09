@@ -1,9 +1,11 @@
 # What's New
 
-## Unreleased
+## 3.2.0 (April 9, 2026)
 
 * Now validates geojson geometries to have the correct number of dimensions and coordinates.
 * Updated docs.
+* Updated environment files to point to the commit for changes to `OpenDrift` that support `LarvalFish` and `Phytoplankton` models.
+* Removed references to "legacy" in `LarvalFish` and now points to `LarvalFishExtended` in `OpenDrift` instead of the original `LarvalFish` model.
 
 ## 3.1.0 (March 26, 2026)
 

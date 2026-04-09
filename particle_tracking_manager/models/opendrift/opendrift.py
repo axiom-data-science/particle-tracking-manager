@@ -187,14 +187,14 @@ class OpenDriftModel(ParticleTrackingManager):
             o = OceanDrift(loglevel=log_level, iomodule=iomodule)
 
         elif self.config.drift_model == "LarvalFish":
-            from opendrift.models.larvalfish import LarvalFish
+            from opendrift.models.larvalfish_extended import LarvalFishExtended
 
-            o = LarvalFish(loglevel=log_level, iomodule=iomodule)
+            o = LarvalFishExtended(loglevel=log_level, iomodule=iomodule)
 
         elif self.config.drift_model == "Phytoplankton":
-            from opendrift.models.larvalfish import LarvalFish
+            from opendrift.models.larvalfish_extended import LarvalFishExtended
 
-            o = LarvalFish(loglevel=log_level, iomodule=iomodule)
+            o = LarvalFishExtended(loglevel=log_level, iomodule=iomodule)
             # Configure as phytoplankton (no egg/growth stages)
             o.set_config("biology:particle_type", "phytoplankton")
 

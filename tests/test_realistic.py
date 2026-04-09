@@ -386,10 +386,10 @@ def test_run_LarvalFish_hatching_fixed_time():
 
 
 @pytest.mark.slow
-def test_run_LarvalFish_legacy_mode():
-    """Set up and run LarvalFish with legacy vertical behavior mode.
+def test_run_LarvalFish_dvm_mode():
+    """Set up and run LarvalFish with dvm vertical behavior mode.
 
-    Legacy mode preserves the original LarvalFish time-based swimming behavior.
+    DVM mode uses diel vertical migration between day/night target depths.
     """
 
     seeding_kwargs = dict(
@@ -402,7 +402,7 @@ def test_run_LarvalFish_legacy_mode():
         ocean_model="TXLA",
         ocean_model_local=False,
         drift_model="LarvalFish",
-        vertical_behavior_mode="legacy",
+        vertical_behavior_mode="dvm",
         hatched=1,
         stage_fraction=1.0,
         do3D=True,
@@ -410,7 +410,7 @@ def test_run_LarvalFish_legacy_mode():
     m.add_reader()
     m.run_all()
 
-    # Verify simulation completed successfully with legacy mode
+    # Verify simulation completed successfully with dvm mode
     assert len(m.o.elements) > 0
-    # With legacy mode, vertical position is governed by time-based swimming
-    # rather than target depths
+    # With dvm mode, vertical position is governed by solar-elevation-based
+    # target depths rather than time-based swimming
