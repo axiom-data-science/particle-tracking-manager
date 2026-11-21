@@ -483,7 +483,9 @@ class TheManagerConfig(BaseModel):
         # the model end time because the model is dynamic. That way the time extent
         # validation is up to date.
         if self.ocean_model == "CIOFSOP":
-            new_end = get_model_end_time("CIOFSOP")
+            new_end = get_model_end_time(
+                "CIOFSOP", self.ocean_model_config.local_data_path
+            )
             # Update the existing model in the registry
             register_on_the_fly({"end_time_fixed": new_end}, ocean_model="CIOFSOP")
 

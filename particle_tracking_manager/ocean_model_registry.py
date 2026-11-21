@@ -4,7 +4,7 @@ Set up ocean model configuration: doesn't depend on a tracking simulation.
 OceanModelConfig instances contain information about ocean models that is relevant to the model itself, separate from a particle tracking simulation.
 """
 
-import itertools
+import logging
 
 # Standard library imports
 import os
@@ -18,16 +18,23 @@ import pandas as pd
 import xarray as xr
 import yaml
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
 from typing_extensions import Annotated
 
+from .formatters import pretty_validation_errors
 
-def calculate_CIOFSOP_max() -> datetime:
+
+logger = logging.getLogger()
+
+
+def calculate_CIOFSOP_max(data_path: Path | None) -> datetime:
     """read in CIOFSOP max time available, as datetime object"""
     try:
+        if data_path is None:
+            raise
         date = (
             xr.open_dataset(
-                "/mnt/depot/data/packrat/prod/noaa/coops/ofs/aws_ciofs/processed/aws_ciofs_kerchunk.parq",
+                data_path / "aws_ciofs_kerchunk.parq",
                 engine="kerchunk",
             )
             .ocean_time[-1]
@@ -39,11 +46,11 @@ def calculate_CIOFSOP_max() -> datetime:
     return date
 
 
-def get_model_end_time(name: str) -> datetime:
+def get_model_end_time(name: str, data_path: Path | None) -> datetime:
     """Get the end time of the model based on its name."""
     # This is only run when the property is requested
     if name == "CIOFSOP":
-        return calculate_CIOFSOP_max()
+        return calculate_CIOFSOP_max(data_path)
     else:
         raise NotImplementedError(f"get_model_end_time not implemented for {name}.")
 
@@ -123,6 +130,9 @@ class OceanModelConfig(BaseModel):
             description="Name of function to create a kerchunk file for the model, mapped to function name in function_map."
         ),
     ]
+    local_data_path: Annotated[
+        Path | None, Field(description="Path to local model data", default=None)
+    ]
 
     @property
     def end_time_model(self) -> datetime:
@@ -130,7 +140,7 @@ class OceanModelConfig(BaseModel):
         if self.end_time_fixed:
             return self.end_time_fixed
         else:  # there is only one that uses this currently
-            return get_model_end_time(self.name)
+            return get_model_end_time(self.name, self.local_data_path)
 
     @property
     def horizontal_diffusivity(self) -> float | None:
@@ -152,6 +162,8 @@ class OceanModelConfig(BaseModel):
 
 class OceanModelRegistry:
     """Registry for OceanModelConfig instances."""
+
+    _registry: dict[str, OceanModelConfig]
 
     def __init__(self):
         """Initialize the OceanModelRegistry."""
@@ -194,33 +206,50 @@ class OceanModelRegistry:
             raise ValueError(f"Model {name} not found in registry.")
 
 
-# Directory with YAML files
-directory = (
-    Path(__file__).resolve().parent / "ocean_models"
-)  # This is the directory where the current script is located
+def initialize_registry() -> OceanModelRegistry:
+    """Initialize the Ocean Model Registry from YAML configurations."""
 
-file_paths: list = list(directory.glob("*.yaml"))
+    package_root = (
+        Path(__file__).resolve().parent
+    )  # This is the directory where the current script is located
 
-# Directory with user-defined files, if any
-config_dir = Path(os.getenv("PTM_CONFIG_DIR", ""))
-if len(str(config_dir)) > 1:
-    file_paths = list(itertools.chain(file_paths, config_dir.glob("*.yaml")))
+    file_paths = [
+        *(package_root / "ocean_models").glob("*.yaml"),
+        # also combine *.yaml files in the user_ocean_models directory specifically (not just by default)
+        *(package_root / "user_ocean_models").glob("*.yaml"),
+    ]
 
-# also combine *.yaml files in the user_ocean_models directory specifically (not just by default)
-config_dir = Path(__file__).resolve().parent / "user_ocean_models"
-file_paths = list(itertools.chain(file_paths, config_dir.glob("*.yaml")))
+    # Directory with user-defined files, if any
+    user_config_dir = os.getenv("PTM_CONFIG_DIR")
+    if user_config_dir:
+        file_paths.extend(Path(user_config_dir).glob("*.yaml"))
 
-# Create an instance of the OceanModelRegistry
-ocean_model_registry = OceanModelRegistry()
+    # Create an instance of the OceanModelRegistry
+    ocean_model_registry = OceanModelRegistry()
 
-# Iterate through all .yaml files in the directory
-for file_path in file_paths:
-    with open(file_path, "r") as f:
-        config_data = yaml.safe_load(f)[file_path.stem]
+    # Iterate through all .yaml files in the directories
+    for file_path in file_paths:
+        with open(file_path, "r") as f:
+            config_data = yaml.safe_load(f)[file_path.stem]
 
-        # Assuming your config_data needs to be loaded into a Pydantic model
-        # Create the OceanModelConfig instance from the data
-        config = OceanModelConfig(**config_data)
+        # Load optional model data path override from environment
+        data_path = os.getenv(f"PTM_{file_path.stem}_PATH")
+        if data_path:
+            config_data["local_data_path"] = data_path
+
+        try:
+            # Create the OceanModelConfig instance from the data
+            config = OceanModelConfig(**config_data)
+        except ValidationError as err:
+            logger.error(
+                f"Model {file_path.stem} configuration is invalid ({err.error_count()} errors):\n{pretty_validation_errors(err)}"
+            )
+            continue
 
         # Register the configuration, perhaps by its name
         ocean_model_registry.register(config.name, config)
+
+    return ocean_model_registry
+
+
+ocean_model_registry = initialize_registry()

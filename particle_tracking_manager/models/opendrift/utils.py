@@ -6,7 +6,7 @@
 # Standard library imports
 from datetime import datetime
 from pathlib import Path
-from typing import Callable, Iterable, List
+from typing import Callable, List
 
 # Third-party imports
 import fsspec
@@ -14,6 +14,8 @@ import pandas as pd
 import xarray as xr
 
 from kerchunk.combine import MultiZarrToZarr
+
+from particle_tracking_manager.ocean_model_registry import OceanModelConfig
 
 
 def narrow_dataset_to_simulation_time(
@@ -132,7 +134,9 @@ def find_json_files_in_date_range(
     ]
 
 
-def make_ciofs_kerchunk(start: datetime, end: datetime, name: str) -> dict:
+def make_ciofs_kerchunk(
+    start: datetime, end: datetime, model: OceanModelConfig
+) -> dict:
     """_summary_
 
     Parameters
@@ -146,20 +150,13 @@ def make_ciofs_kerchunk(start: datetime, end: datetime, name: str) -> dict:
         _description_
     """
 
-    if name == "CIOFS":
-        output_dir_single_files = "/mnt/vault/ciofs/HINDCAST/.kerchunk_json"
-    elif name == "CIOFS3":
-        output_dir_single_files = "/mnt/vault/ciofs/CIOFS3/HINDCAST/.kerchunk_json"
-    elif name == "CIOFSFRESH":
-        output_dir_single_files = "/mnt/vault/ciofs/HINDCAST_FRESHWATER/.kerchunk_json"
-    elif name == "CIOFSOP":
-        output_dir_single_files = "/mnt/depot/data/packrat/prod/noaa/coops/ofs/aws_ciofs/processed/.kerchunk_json"
-    else:
-        raise ValueError(f"Name {name} not recognized")
+    if model.local_data_path is None:
+        raise ValueError(f"Model data path must be configured for {model.name}")
+    output_dir_single_files = model.local_data_path / ".kerchunk_json"
 
     fs2 = fsspec.filesystem("")  # local file system to save final jsons to
 
-    if name == "CIOFSOP":
+    if model.name == "CIOFSOP":
         # base for matching
         def base_str(a_time: str) -> str:
             return f"{output_dir_single_files}/ciofs_{a_time}*.json"
@@ -287,7 +284,9 @@ def make_ciofs_kerchunk(start: datetime, end: datetime, name: str) -> dict:
     return out
 
 
-def make_nwgoa_kerchunk(start: datetime, end: datetime, name: str = "NWGOA") -> dict:
+def make_nwgoa_kerchunk(
+    start: datetime, end: datetime, model: OceanModelConfig
+) -> dict:
     """_summary_
 
     Parameters
@@ -302,9 +301,9 @@ def make_nwgoa_kerchunk(start: datetime, end: datetime, name: str = "NWGOA") -> 
     """
 
     # this version of the daily json files has the grid file merged
-    output_dir_single_files = (
-        "/mnt/depot/data/packrat/prod/aoos/nwgoa/processed/.kerchunk_json"
-    )
+    if model.local_data_path is None:
+        raise ValueError(f"Model data path must be configured for {model.name}")
+    output_dir_single_files = model.local_data_path / ".kerchunk_json"
 
     fs2 = fsspec.filesystem("")  # local file system to save final jsons to
 
