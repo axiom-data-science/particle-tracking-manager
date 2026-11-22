@@ -12,7 +12,7 @@ dependencies:
   - jupyter
   - jupyterlab
   - kerchunk ==0.2.7
-  - xarray
+  - xarray<2026.9.0
   - numpy <=1.26.4  # req from opendrift
   # - opendrift ==1.13.0
   - scipy
