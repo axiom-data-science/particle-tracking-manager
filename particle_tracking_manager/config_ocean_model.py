@@ -184,7 +184,7 @@ for ocean_model in ocean_model_registry.all_models():
 
 
 MAKE_KERCHUNK_FUNCTIONS: dict[
-    str, Callable[[datetime, datetime, str], dict[Any, Any]]
+    str, Callable[[datetime, datetime, OceanModelConfig], dict[Any, Any]]
 ] = {
     "make_nwgoa_kerchunk": make_nwgoa_kerchunk,
     "make_ciofs_kerchunk": make_ciofs_kerchunk,
@@ -204,7 +204,10 @@ def loc_local(
         start_time = start_sim + timedelta(days=1)
         end_time = end_sim - timedelta(days=1)
 
-    return MAKE_KERCHUNK_FUNCTIONS[kerchunk_func_str](start_time, end_time, name)
+    model = ocean_model_registry.get(name)
+    if model is None:
+        raise ValueError(f"Name {name} not recognized")
+    return MAKE_KERCHUNK_FUNCTIONS[kerchunk_func_str](start_time, end_time, model)
 
 
 def register_on_the_fly(ds_info: dict, ocean_model: str = "ONTHEFLY") -> None:

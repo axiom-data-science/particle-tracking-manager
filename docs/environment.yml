@@ -13,7 +13,7 @@ dependencies:
    - ffmpeg
    - importlib_resources  # should update past opendrift 1.12 and remove this when possible
    - numpy
-   - xarray
+   - xarray<2026.9.0
    - kerchunk==0.2.7
    - numpydoc
   #  - opendrift ==1.13.0
